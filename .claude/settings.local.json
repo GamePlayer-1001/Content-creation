@@ -23,7 +23,21 @@
       "Bash(node:*)",
       "Bash(npm:*)",
       "Bash(pip:*)",
-      "WebFetch(domain:*)"
+      "WebFetch(domain:*)",
+      "Bash(start \"\" \"d:/Software/内容生成输出/tools/compliance/index.html\")",
+      "Bash(claude --version)",
+      "Bash(curl -s http://localhost:3210/api/content)",
+      "Bash(curl -s http://localhost:3210/api/skills)",
+      "Bash(curl -s http://localhost:3210/api/schedule)",
+      "Bash(start \"\" http://localhost:3210)",
+      "Bash(curl -s http://localhost:3210/)",
+      "Bash(pkill -f \"node server.js\")",
+      "Bash(curl -s http://localhost:3210/api/engines)",
+      "Bash(curl -s http://localhost:3210/api/dashboard)",
+      "Bash(curl -s http://localhost:3210/api/review/weekly)",
+      "Bash(curl -s http://localhost:3210/api/trending/topics)",
+      "Bash(curl -s -X POST http://localhost:3210/api/compliance/check -H \"Content-Type: application/json\" -d \"{\"\"text\"\":\"\"VPN is forbidden. Add me on wechat. My product can help you. Tested and verified.\"\"}\")",
+      "Bash(taskkill //F //IM node.exe)"
     ]
   }
 }
