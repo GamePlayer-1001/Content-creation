@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>内容合规检查器</title>
+<style>
+/* ============================================================
+ *  合规检查器 — 黑白极简风格
+ *  [INPUT]: compliance.yaml 规则内联
+ *  [OUTPUT]: 本地可视化合规扫描工具
+ *  [POS]: tools/compliance/ 的核心页面
+ *  [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ * ============================================================ */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #fff;
+  --fg: #111;
+  --border: #ccc;
+  --muted: #666;
+  --light: #f5f5f5;
+  --danger: #111;
+  --danger-bg: #e8e8e8;
+  --warn-bg: #f0f0f0;
+  --pass-bg: #fafafa;
+}
+
+body {
+  font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  line-height: 1.6;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 40px 24px;
+}
+
+/* --- Header --- */
+header {
+  border-bottom: 2px solid var(--fg);
+  padding-bottom: 16px;
+  margin-bottom: 32px;
+}
+header h1 {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+header p {
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+/* --- Tabs --- */
+.tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 24px;
+  gap: 0;
+}
+.tab {
+  padding: 10px 20px;
+  cursor: pointer;
+  font-size: 14px;
+  border: 1px solid transparent;
+  border-bottom: none;
+  background: none;
+  color: var(--muted);
+  transition: all .15s;
+}
+.tab:hover { color: var(--fg); }
+.tab.active {
+  color: var(--fg);
+  font-weight: 600;
+  border-color: var(--border);
+  border-bottom: 1px solid var(--bg);
+  margin-bottom: -1px;
+  background: var(--bg);
+}
+
+/* --- Panels --- */
+.panel { display: none; }
+.panel.active { display: block; }
+
+/* --- Check Panel --- */
+textarea {
+  width: 100%;
+  height: 260px;
+  border: 1px solid var(--border);
+  padding: 16px;
+  font-size: 14px;
+  font-family: inherit;
+  line-height: 1.8;
+  resize: vertical;
+  outline: none;
+  background: var(--light);
+}
+textarea:focus { border-color: var(--fg); }
+
+.actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+}
+.char-count { color: var(--muted); font-size: 13px; }
+
+button {
+  padding: 10px 28px;
+  background: var(--fg);
+  color: var(--bg);
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: opacity .15s;
+}
+button:hover { opacity: .8; }
+button:disabled { opacity: .4; cursor: not-allowed; }
+
+/* --- Results --- */
+.results {
+  margin-top: 32px;
+  border-top: 1px solid var(--border);
+  padding-top: 24px;
+}
+.results.hidden { display: none; }
+
+.verdict {
+  font-size: 20px;
+  font-weight: 700;
+  padding: 16px;
+  border: 2px solid var(--fg);
+  text-align: center;
+  margin-bottom: 24px;
+}
+.verdict.pass { border-style: solid; }
+.verdict.warn { border-style: dashed; }
+.verdict.fail { background: var(--danger-bg); }
+
+.section {
+  margin-bottom: 20px;
+  border: 1px solid var(--border);
+}
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--light);
+  cursor: pointer;
+  user-select: none;
+}
+.section-header h3 { font-size: 14px; font-weight: 600; }
+.section-status {
+  font-size: 12px;
+  padding: 2px 10px;
+  border: 1px solid var(--fg);
+  font-weight: 600;
+}
+.section-status.pass { background: var(--pass-bg); }
+.section-status.warn { background: var(--warn-bg); border-style: dashed; }
+.section-status.fail { background: var(--danger-bg); }
+
+.section-body {
+  padding: 16px;
+  font-size: 13px;
+  display: none;
+}
+.section.open .section-body { display: block; }
+
+.hit {
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  border-left: 3px solid var(--fg);
+  background: var(--light);
+}
+.hit-word {
+  font-weight: 700;
+  margin-right: 8px;
+}
+.hit-category {
+  color: var(--muted);
+  font-size: 12px;
+}
+.hit-context {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.no-issue {
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* --- Highlight in textarea --- */
+.highlight-layer {
+  position: relative;
+}
+.highlight-container {
+  position: relative;
+}
+.highlight-backdrop {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  padding: 16px;
+  font-size: 14px;
+  font-family: inherit;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow: auto;
+  pointer-events: none;
+  color: transparent;
+  background: var(--light);
+  border: 1px solid transparent;
+}
+.highlight-backdrop mark {
+  background: #d0d0d0;
+  color: transparent;
+  border-bottom: 2px solid var(--fg);
+  padding: 0 1px;
+}
+
+/* --- Rules Panel --- */
+.rule-group {
+  margin-bottom: 24px;
+}
+.rule-group h3 {
+  font-size: 15px;
+  font-weight: 700;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 12px;
+}
+.rule-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.rule-tag {
+  font-size: 12px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  background: var(--light);
+}
+.rule-tag.danger {
+  border-color: var(--fg);
+  font-weight: 600;
+}
+.rule-tag.caution {
+  border-style: dashed;
+}
+.rule-tag.safe {
+  color: var(--muted);
+}
+.rule-note {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 8px;
+}
+
+/* --- Stats bar --- */
+.stats {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 24px;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  background: var(--light);
+  font-size: 13px;
+}
+.stat-item strong { margin-right: 4px; }
+
+/* --- Footer --- */
+footer {
+  margin-top: 48px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>内容合规检查器</h1>
+  <p>基于小红书社区规范 + 审核实战经验 · 适用：小红书 / 公众号 / 百家号 / 头条 / 即刻</p>
+</header>
+
+<!-- Tabs -->
+<div class="tabs">
+  <div class="tab active" data-panel="check">合规检查</div>
+  <div class="tab" data-panel="rules">规则总览</div>
+</div>
+
+<!-- ==================== 合规检查面板 ==================== -->
+<div id="check" class="panel active">
+  <div class="highlight-container">
+    <div class="highlight-backdrop" id="backdrop"></div>
+    <textarea id="content" placeholder="在此粘贴待检查的内容...&#10;&#10;支持直接粘贴文章全文，工具将自动扫描 6 大维度：&#10;1. 敏感词黑名单（政治/迷信/商业/违禁/低俗）&#10;2. 功效暗示模式&#10;3. 导流行为&#10;4. 谨慎词频次（单篇 ≤ 3 次）&#10;5. 内容真实性&#10;6. 不当行为"></textarea>
+  </div>
+
+  <div class="actions">
+    <span class="char-count" id="charCount">0 字</span>
+    <div>
+      <button id="clearBtn" style="background:none;color:var(--fg);border:1px solid var(--border);margin-right:8px;" onclick="clearAll()">清空</button>
+      <button id="checkBtn" onclick="runCheck()">开始检查</button>
+    </div>
+  </div>
+
+  <div class="results hidden" id="results">
+    <div class="verdict" id="verdict"></div>
+    <div class="stats" id="stats"></div>
+    <div id="sections"></div>
+  </div>
+</div>
+
+<!-- ==================== 规则总览面板 ==================== -->
+<div id="rules" class="panel"></div>
+
+<footer>
+  内容合规检查器 · 规则来源：config/compliance.yaml · 纯本地运行，不上传任何内容
+</footer>
+
+<script>
+/* ============================================================
+ *  合规规则 — 内联自 compliance.yaml
+ * ============================================================ */
+
+const RULES = {
+  blacklist: {
+    political: ["颠覆国家","分裂国家","泄露国家秘密","煽动民族仇恨","民族歧视","邪教","封建迷信","恐怖主义","极端主义"],
+    superstition: ["占卜","算命","算卦","卜卦","问卦","求签","抽签","看相","面相","风水","法事","做法","通灵","附体","驱邪","符咒","开光","消灾","改命","渡劫","化解","补运","改运","转运","开运","旺运","招财","挡煞","破太岁","流年","咸池","线上法事","道场","做功德"],
+    commercial: ["私信","加微信","加我","优惠","折扣","限时","免费领","扣1","需要的私","感兴趣的来","评论666"],
+    prohibited: ["翻墙软件","VPN","外挂程序","传销","假货","代购"],
+    vulgar: ["一夜情","性虐待","约炮"]
+  },
+  efficacy: {
+    forbidden: ["帮你","让你","教你","化解","缓解","改善","提升XX运势","避免","招XX","挡XX","转运","开运","旺运","影响","不XX的话会YY","需要XX才能YY","我就是这样解决的","照着做就行","亲测有效","建议你XX","可以试试XX","记得XX","这样能XX","会带来XX","有助于XX"],
+    safe: ["我当时的选择是","我自己的体验","纯分享不推荐","只是记录","随便说说","仅供参考","我觉得有意思","挺准的（个人感受）","好玩"]
+  },
+  diversion: {
+    forbidden: ["手机号","微信号","邮箱","地址","网址链接","二维码","水印"],
+    safe: ["评论区互动引导","平台内搜索引导","个人主页简介"]
+  },
+  caution: {
+    maxPerPost: 3,
+    words: ["塔罗","星盘","合盘","水逆","八字","紫微","六爻","奇门","命盘","宫位","桃花运"]
+  },
+  authenticity: {
+    forbidden: ["亲身经历","亲测","真实故事","这是真事","100%准","必灵"],
+    safe: ["创作","故事","代餐文学","情景模拟"]
+  },
+  behavior: {
+    unfriendly: ["人身攻击","恶意骚扰","标题党","图文不符"],
+    fraud: ["编造名人谣言","违背科学常识"],
+    cheating: ["批量发布","高频发布","机器发布","刷粉","刷赞"]
+  }
+};
+
+const CATEGORY_NAMES = {
+  political: "政治安全",
+  superstition: "迷信/玄学",
+  commercial: "商业导流",
+  prohibited: "违禁物品",
+  vulgar: "色情低俗"
+};
+
+/* ============================================================
+ *  Tab 切换
+ * ============================================================ */
+
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(tab.dataset.panel).classList.add('active');
+  });
+});
+
+/* ============================================================
+ *  字数统计
+ * ============================================================ */
+
+const textarea = document.getElementById('content');
+const charCount = document.getElementById('charCount');
+
+textarea.addEventListener('input', () => {
+  const len = textarea.value.length;
+  charCount.textContent = len + ' 字';
+  // 清除高亮
+  document.getElementById('backdrop').innerHTML = '';
+});
+
+/* ============================================================
+ *  清空
+ * ============================================================ */
+
+function clearAll() {
+  textarea.value = '';
+  charCount.textContent = '0 字';
+  document.getElementById('results').classList.add('hidden');
+  document.getElementById('backdrop').innerHTML = '';
+}
+
+/* ============================================================
+ *  核心检查引擎
+ * ============================================================ */
+
+function runCheck() {
+  const text = textarea.value.trim();
+  if (!text) return;
+
+  const results = {
+    blacklist: scanBlacklist(text),
+    efficacy: scanEfficacy(text),
+    diversion: scanDiversion(text),
+    caution: scanCaution(text),
+    authenticity: scanAuthenticity(text),
+    behavior: scanBehavior(text)
+  };
+
+  renderResults(results, text);
+  highlightText(results, text);
+}
+
+/* --- 1. 敏感词黑名单 --- */
+function scanBlacklist(text) {
+  const hits = [];
+  for (const [cat, words] of Object.entries(RULES.blacklist)) {
+    for (const w of words) {
+      const idx = text.indexOf(w);
+      if (idx !== -1) {
+        const start = Math.max(0, idx - 10);
+        const end = Math.min(text.length, idx + w.length + 10);
+        hits.push({
+          word: w,
+          category: CATEGORY_NAMES[cat] || cat,
+          context: '...' + text.slice(start, end) + '...',
+          severity: 'fail'
+        });
+      }
+    }
+  }
+  return { hits, severity: hits.length > 0 ? 'fail' : 'pass' };
+}
+
+/* --- 2. 功效暗示 --- */
+function scanEfficacy(text) {
+  const hits = [];
+  for (const pattern of RULES.efficacy.forbidden) {
+    // 去掉模式中的 XX/YY 占位符做模糊匹配
+    const clean = pattern.replace(/XX|YY/g, '.+?');
+    try {
+      const re = new RegExp(clean);
+      const m = text.match(re);
+      if (m) {
+        hits.push({
+          word: m[0],
+          category: '功效暗示',
+          pattern: pattern,
+          severity: 'fail'
+        });
+      }
+    } catch(e) {
+      // 直接字符串匹配
+      if (text.includes(pattern)) {
+        hits.push({ word: pattern, category: '功效暗示', severity: 'fail' });
+      }
+    }
+  }
+  return { hits, severity: hits.length > 0 ? 'fail' : 'pass' };
+}
+
+/* --- 3. 导流行为 --- */
+function scanDiversion(text) {
+  const hits = [];
+  for (const w of RULES.diversion.forbidden) {
+    if (text.includes(w)) {
+      hits.push({ word: w, category: '导流行为', severity: 'fail' });
+    }
+  }
+  // 检测手机号模式
+  const phoneRe = /1[3-9]\d{9}/g;
+  const phones = text.match(phoneRe);
+  if (phones) {
+    phones.forEach(p => hits.push({ word: p, category: '疑似手机号', severity: 'fail' }));
+  }
+  // 检测邮箱模式
+  const emailRe = /[\w.-]+@[\w.-]+\.\w+/g;
+  const emails = text.match(emailRe);
+  if (emails) {
+    emails.forEach(e => hits.push({ word: e, category: '疑似邮箱', severity: 'fail' }));
+  }
+  // 检测URL
+  const urlRe = /https?:\/\/[^\s]+/g;
+  const urls = text.match(urlRe);
+  if (urls) {
+    urls.forEach(u => hits.push({ word: u, category: '疑似链接', severity: 'fail' }));
+  }
+  return { hits, severity: hits.length > 0 ? 'fail' : 'pass' };
+}
+
+/* --- 4. 谨慎词频次 --- */
+function scanCaution(text) {
+  const hits = [];
+  const max = RULES.caution.maxPerPost;
+  for (const w of RULES.caution.words) {
+    const re = new RegExp(w, 'g');
+    const matches = text.match(re);
+    const count = matches ? matches.length : 0;
+    if (count > 0) {
+      hits.push({
+        word: w,
+        count: count,
+        over: count > max,
+        severity: count > max ? 'warn' : 'pass'
+      });
+    }
+  }
+  const hasOver = hits.some(h => h.over);
+  return { hits, severity: hasOver ? 'warn' : 'pass', max };
+}
+
+/* --- 5. 内容真实性 --- */
+function scanAuthenticity(text) {
+  const hits = [];
+  for (const w of RULES.authenticity.forbidden) {
+    if (text.includes(w)) {
+      hits.push({ word: w, category: '虚假真实性声明', severity: 'fail' });
+    }
+  }
+  return { hits, severity: hits.length > 0 ? 'fail' : 'pass' };
+}
+
+/* --- 6. 不当行为 --- */
+function scanBehavior(text) {
+  const hits = [];
+  const groups = { unfriendly: '不友好内容', fraud: '欺骗行为', cheating: '作弊行为' };
+  for (const [key, label] of Object.entries(groups)) {
+    for (const w of RULES.behavior[key]) {
+      if (text.includes(w)) {
+        hits.push({ word: w, category: label, severity: 'fail' });
+      }
+    }
+  }
+  return { hits, severity: hits.length > 0 ? 'fail' : 'pass' };
+}
+
+/* ============================================================
+ *  渲染结果
+ * ============================================================ */
+
+function renderResults(results, text) {
+  const container = document.getElementById('results');
+  container.classList.remove('hidden');
+
+  // 总体判定
+  const allSeverities = Object.values(results).map(r => r.severity);
+  const hasFail = allSeverities.includes('fail');
+  const hasWarn = allSeverities.includes('warn');
+  const overall = hasFail ? 'fail' : hasWarn ? 'warn' : 'pass';
+  const labels = { pass: '通过 — 未发现违规', warn: '有风险 — 建议修改后发布', fail: '不通过 — 存在违规内容' };
+  const symbols = { pass: '[ PASS ]', warn: '[ WARN ]', fail: '[ FAIL ]' };
+
+  const verdict = document.getElementById('verdict');
+  verdict.className = 'verdict ' + overall;
+  verdict.textContent = symbols[overall] + '  ' + labels[overall];
+
+  // 统计
+  const totalHits = Object.values(results).reduce((s, r) => s + r.hits.length, 0);
+  document.getElementById('stats').innerHTML =
+    `<span class="stat-item"><strong>内容长度</strong>${text.length} 字</span>` +
+    `<span class="stat-item"><strong>扫描维度</strong>6 项</span>` +
+    `<span class="stat-item"><strong>命中总数</strong>${totalHits} 处</span>`;
+
+  // 各 section
+  const sectionDefs = [
+    { key: 'blacklist', title: '1. 敏感词黑名单', desc: '政治 / 迷信 / 商业 / 违禁 / 低俗' },
+    { key: 'efficacy', title: '2. 功效暗示', desc: '禁止以功效为噱头推荐服务' },
+    { key: 'diversion', title: '3. 导流行为', desc: '手机号 / 微信 / 链接 / 二维码' },
+    { key: 'caution', title: '4. 谨慎词频次', desc: '单篇不超过 ' + RULES.caution.maxPerPost + ' 次' },
+    { key: 'authenticity', title: '5. 内容真实性', desc: '禁止伪造真实性声明' },
+    { key: 'behavior', title: '6. 不当行为', desc: '不友好 / 欺骗 / 作弊' }
+  ];
+
+  const sectionsEl = document.getElementById('sections');
+  sectionsEl.innerHTML = '';
+
+  for (const def of sectionDefs) {
+    const r = results[def.key];
+    const statusLabel = { pass: '通过', warn: '警告', fail: '违规' }[r.severity];
+
+    const section = document.createElement('div');
+    section.className = 'section' + (r.severity !== 'pass' ? ' open' : '');
+
+    let bodyHTML = '';
+    if (r.hits.length === 0) {
+      bodyHTML = '<div class="no-issue">未检出问题</div>';
+    } else if (def.key === 'caution') {
+      bodyHTML = r.hits.map(h =>
+        `<div class="hit">` +
+        `<span class="hit-word">${h.word}</span>` +
+        `<span class="hit-category">出现 ${h.count} 次${h.over ? ' — 超过上限 ' + r.max + ' 次' : ' — 正常'}</span>` +
+        `</div>`
+      ).join('');
+    } else {
+      bodyHTML = r.hits.map(h =>
+        `<div class="hit">` +
+        `<span class="hit-word">${h.word}</span>` +
+        `<span class="hit-category">${h.category || ''}</span>` +
+        (h.context ? `<div class="hit-context">${escapeHTML(h.context)}</div>` : '') +
+        (h.pattern ? `<div class="hit-context">匹配模式: ${h.pattern}</div>` : '') +
+        `</div>`
+      ).join('');
+    }
+
+    // 安全替代建议
+    if (def.key === 'efficacy' && r.hits.length > 0) {
+      bodyHTML += `<div style="margin-top:12px;padding:12px;border:1px dashed var(--border);font-size:12px;">` +
+        `<strong>安全替代表述：</strong>${RULES.efficacy.safe.join(' / ')}` +
+        `</div>`;
+    }
+    if (def.key === 'authenticity' && r.hits.length > 0) {
+      bodyHTML += `<div style="margin-top:12px;padding:12px;border:1px dashed var(--border);font-size:12px;">` +
+        `<strong>安全替代：</strong>${RULES.authenticity.safe.join(' / ')}` +
+        `</div>`;
+    }
+
+    section.innerHTML =
+      `<div class="section-header" onclick="this.parentElement.classList.toggle('open')">` +
+        `<h3>${def.title} <span style="color:var(--muted);font-weight:400;font-size:12px;margin-left:8px;">${def.desc}</span></h3>` +
+        `<span class="section-status ${r.severity}">${statusLabel}${r.hits.length > 0 ? ' (' + r.hits.length + ')' : ''}</span>` +
+      `</div>` +
+      `<div class="section-body">${bodyHTML}</div>`;
+
+    sectionsEl.appendChild(section);
+  }
+}
+
+/* ============================================================
+ *  文本高亮
+ * ============================================================ */
+
+function highlightText(results, text) {
+  // 收集所有命中词
+  const hitWords = new Set();
+  for (const r of Object.values(results)) {
+    for (const h of r.hits) {
+      if (h.word && text.includes(h.word)) {
+        hitWords.add(h.word);
+      }
+    }
+  }
+
+  if (hitWords.size === 0) {
+    document.getElementById('backdrop').innerHTML = '';
+    return;
+  }
+
+  // 按长度降序排，避免短词先匹配
+  const sorted = [...hitWords].sort((a, b) => b.length - a.length);
+  const escaped = sorted.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const re = new RegExp('(' + escaped.join('|') + ')', 'g');
+
+  const highlighted = escapeHTML(text).replace(re, '<mark>$1</mark>');
+  document.getElementById('backdrop').innerHTML = highlighted;
+
+  // 同步滚动
+  textarea.addEventListener('scroll', syncScroll);
+}
+
+function syncScroll() {
+  const backdrop = document.getElementById('backdrop');
+  backdrop.scrollTop = textarea.scrollTop;
+  backdrop.scrollLeft = textarea.scrollLeft;
+}
+
+function escapeHTML(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/* ============================================================
+ *  规则总览页渲染
+ * ============================================================ */
+
+function renderRulesPanel() {
+  const panel = document.getElementById('rules');
+  let html = '';
+
+  // 黑名单
+  for (const [cat, words] of Object.entries(RULES.blacklist)) {
+    html += `<div class="rule-group">` +
+      `<h3>${CATEGORY_NAMES[cat] || cat} 黑名单</h3>` +
+      `<div class="rule-tags">${words.map(w => `<span class="rule-tag danger">${w}</span>`).join('')}</div>` +
+      `<div class="rule-note">命中即违规，严格禁止出现及变体</div>` +
+      `</div>`;
+  }
+
+  // 功效暗示
+  html += `<div class="rule-group">` +
+    `<h3>功效暗示 — 禁止表述</h3>` +
+    `<div class="rule-tags">${RULES.efficacy.forbidden.map(w => `<span class="rule-tag danger">${w}</span>`).join('')}</div>` +
+    `<div class="rule-note" style="margin-top:12px;"><strong>安全替代：</strong></div>` +
+    `<div class="rule-tags" style="margin-top:4px;">${RULES.efficacy.safe.map(w => `<span class="rule-tag safe">${w}</span>`).join('')}</div>` +
+    `</div>`;
+
+  // 导流
+  html += `<div class="rule-group">` +
+    `<h3>导流行为 — 禁止</h3>` +
+    `<div class="rule-tags">${RULES.diversion.forbidden.map(w => `<span class="rule-tag danger">${w}</span>`).join('')}</div>` +
+    `<div class="rule-note" style="margin-top:12px;"><strong>安全方式：</strong></div>` +
+    `<div class="rule-tags" style="margin-top:4px;">${RULES.diversion.safe.map(w => `<span class="rule-tag safe">${w}</span>`).join('')}</div>` +
+    `</div>`;
+
+  // 谨慎词
+  html += `<div class="rule-group">` +
+    `<h3>谨慎词（单篇 ≤ ${RULES.caution.maxPerPost} 次）</h3>` +
+    `<div class="rule-tags">${RULES.caution.words.map(w => `<span class="rule-tag caution">${w}</span>`).join('')}</div>` +
+    `</div>`;
+
+  // 真实性
+  html += `<div class="rule-group">` +
+    `<h3>内容真实性 — 禁止声明</h3>` +
+    `<div class="rule-tags">${RULES.authenticity.forbidden.map(w => `<span class="rule-tag danger">${w}</span>`).join('')}</div>` +
+    `<div class="rule-note" style="margin-top:12px;"><strong>安全替代：</strong></div>` +
+    `<div class="rule-tags" style="margin-top:4px;">${RULES.authenticity.safe.map(w => `<span class="rule-tag safe">${w}</span>`).join('')}</div>` +
+    `</div>`;
+
+  // 不当行为
+  const behaviorGroups = { unfriendly: '不友好内容', fraud: '欺骗行为', cheating: '作弊行为' };
+  for (const [key, label] of Object.entries(behaviorGroups)) {
+    html += `<div class="rule-group">` +
+      `<h3>不当行为 — ${label}</h3>` +
+      `<div class="rule-tags">${RULES.behavior[key].map(w => `<span class="rule-tag danger">${w}</span>`).join('')}</div>` +
+      `</div>`;
+  }
+
+  panel.innerHTML = html;
+}
+
+// 初始化规则面板
+renderRulesPanel();
+
+/* --- 快捷键 --- */
+textarea.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    e.preventDefault();
+    runCheck();
+  }
+});
+</script>
+</body>
+</html>

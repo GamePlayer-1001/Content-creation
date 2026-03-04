@@ -95,12 +95,25 @@ Claude Code Skills + YAML Config + 统一工具链
 │   ├── auto-redbook/       # Auto-Redbook-Skills 存档文档（25篇）
 │   └── 赛道存档/           # 赛道专有Skill存档（玄学赛道）
 │
+├── webapp/                 # Web 控制台（本地 HTTP 服务）
+│   ├── server.js           # Express 入口 (port 3210)
+│   ├── services/           # 核心服务层 (6个模块)
+│   ├── routes/             # API 路由层 (10个路由)
+│   └── public/             # Vanilla JS SPA (10个视图)
+│
 ├── videocheck/             # AI视频处理子系统（独立模块）
 │
+├── start.bat               # 一键启动 Web 控制台
 └── improvements-backlog.md # 改进建议跟踪
 ```
 
-## 日常使用
+## Web 控制台
+
+双击 `start.bat` 启动，浏览器自动打开 `http://localhost:3210`。
+10 个页面覆盖全部功能：仪表盘/创作工坊/全平台分发/内容管理/配置管理/合规检查/洗稿/热点抓取/排期管理/周复盘。
+AI 引擎默认 Claude CLI（本地认证），可选 OpenRouter / DeepSeek（需配置 .env Key）。
+
+## 日常使用（CLI 模式）
 
 ### 核心工作流
 ```
