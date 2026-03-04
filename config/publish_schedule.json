@@ -1,0 +1,35 @@
+{
+  "timezone": "Asia/Shanghai",
+  "posting_times": {
+    "morning": {
+      "time_range": ["07:30", "08:30"],
+      "optimal_time": "08:00",
+      "theme_rotation": ["default", "playful-geometric", "botanical"]
+    },
+    "midday": {
+      "time_range": ["11:00", "12:00"],
+      "optimal_time": "11:30",
+      "theme_rotation": ["retro", "professional", "neo-brutalism"]
+    },
+    "evening": {
+      "time_range": ["18:00", "19:30"],
+      "optimal_time": "18:30",
+      "theme_rotation": ["terminal", "sketch", "retro"]
+    }
+  },
+  "scraping_schedule": {
+    "morning": "06:00",
+    "midday": "11:00",
+    "evening": "17:00"
+  },
+  "generation_schedule": {
+    "morning": "07:00",
+    "midday": "11:00",
+    "evening": "18:00"
+  },
+  "publishing_schedule": {
+    "morning": "08:00",
+    "midday": "11:30",
+    "evening": "18:30"
+  }
+}

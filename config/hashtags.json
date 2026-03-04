@@ -1,0 +1,192 @@
+{
+  "last_updated": "2026-02-06",
+  "total_categories": 12,
+  "total_tags": 83,
+  "description": "命理领域12个关键词分类，83个核心标签",
+  "categories": {
+    "塔罗": {
+      "keyword": "tarot",
+      "tags": [
+        "塔罗占卜",
+        "每日塔罗",
+        "塔罗牌",
+        "塔罗解读",
+        "塔罗教学",
+        "塔罗牌阵",
+        "塔罗测试",
+        "塔罗分享"
+      ],
+      "usage_rate": "high",
+      "best_time_slot": ["morning", "midday"]
+    },
+    "占卜": {
+      "keyword": "divination",
+      "tags": [
+        "占卜分享",
+        "占卜日记",
+        "占卜测试",
+        "在线占卜",
+        "占卜咨询",
+        "占卜师",
+        "占卜教学"
+      ],
+      "usage_rate": "high",
+      "best_time_slot": ["morning", "evening"]
+    },
+    "运势": {
+      "keyword": "fortune",
+      "tags": [
+        "今日运势",
+        "每周运势",
+        "每月运势",
+        "运势预测",
+        "运势分析",
+        "好运来",
+        "运势测试"
+      ],
+      "usage_rate": "very_high",
+      "best_time_slot": ["morning"]
+    },
+    "星座": {
+      "keyword": "zodiac",
+      "tags": [
+        "星座运势",
+        "12星座",
+        "星座配对",
+        "星盘解读",
+        "星座知识",
+        "星座分析",
+        "星座测试",
+        "月亮星座",
+        "上升星座"
+      ],
+      "usage_rate": "very_high",
+      "best_time_slot": ["morning", "evening"]
+    },
+    "生肖": {
+      "keyword": "chinese_zodiac",
+      "tags": [
+        "生肖运势",
+        "十二生肖",
+        "生肖配对",
+        "生肖性格",
+        "属相命理",
+        "生肖分析"
+      ],
+      "usage_rate": "medium",
+      "best_time_slot": ["morning"]
+    },
+    "八字": {
+      "keyword": "bazi",
+      "tags": [
+        "八字命理",
+        "八字算命",
+        "生辰八字",
+        "八字分析",
+        "命理学习",
+        "八字测算"
+      ],
+      "usage_rate": "medium",
+      "best_time_slot": ["midday"]
+    },
+    "紫微斗数": {
+      "keyword": "ziwei",
+      "tags": [
+        "紫微命盘",
+        "紫微斗数",
+        "命宫解析",
+        "紫微入门",
+        "紫微排盘"
+      ],
+      "usage_rate": "low",
+      "best_time_slot": ["midday"]
+    },
+    "命理": {
+      "keyword": "numerology",
+      "tags": [
+        "命理解析",
+        "命理学习",
+        "命理知识",
+        "命理咨询",
+        "命理测试",
+        "命理分析"
+      ],
+      "usage_rate": "high",
+      "best_time_slot": ["midday"]
+    },
+    "风水": {
+      "keyword": "fengshui",
+      "tags": [
+        "风水布局",
+        "家居风水",
+        "办公室风水",
+        "风水知识",
+        "招财风水",
+        "风水调整",
+        "风水禁忌"
+      ],
+      "usage_rate": "medium",
+      "best_time_slot": ["midday"]
+    },
+    "水晶": {
+      "keyword": "crystal",
+      "tags": [
+        "水晶疗愈",
+        "水晶能量",
+        "水晶消磁",
+        "水晶选择",
+        "水晶知识",
+        "水晶手链"
+      ],
+      "usage_rate": "medium",
+      "best_time_slot": ["evening"]
+    },
+    "冥想": {
+      "keyword": "meditation",
+      "tags": [
+        "冥想练习",
+        "正念冥想",
+        "冥想入门",
+        "冥想疗愈",
+        "冥想音乐",
+        "冥想打坐"
+      ],
+      "usage_rate": "medium",
+      "best_time_slot": ["evening"]
+    },
+    "心灵成长": {
+      "keyword": "spiritual_growth",
+      "tags": [
+        "心灵疗愈",
+        "内在成长",
+        "自我疗愈",
+        "心理成长",
+        "灵性成长",
+        "自我觉察"
+      ],
+      "usage_rate": "high",
+      "best_time_slot": ["evening"]
+    }
+  },
+  "selection_rules": {
+    "min_tags": 5,
+    "max_tags": 8,
+    "primary_category_ratio": 0.6,
+    "secondary_category_ratio": 0.4,
+    "trending_boost": true
+  },
+  "combination_strategies": {
+    "morning": {
+      "primary": ["运势", "星座", "塔罗"],
+      "secondary": ["占卜", "生肖"]
+    },
+    "midday": {
+      "primary": ["塔罗", "命理", "八字"],
+      "secondary": ["风水", "紫微斗数"]
+    },
+    "evening": {
+      "primary": ["星座", "心灵成长", "占卜"],
+      "secondary": ["水晶", "冥想"]
+    }
+  }
+}

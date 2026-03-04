@@ -1,0 +1,57 @@
+{
+  "promotion_rules": {
+    "frequency": {
+      "mention_rate": 0.33,
+      "explicit_link": 0.1,
+      "implicit_reference": 0.9
+    },
+    "styles": [
+      {
+        "type": "natural_mention",
+        "weight": 0.4,
+        "examples": [
+          "我平时用 destinyteller 学习塔罗知识",
+          "最近在这个平台上看到一个很准的测试",
+          "分享一个我常用的占卜平台"
+        ]
+      },
+      {
+        "type": "resource_sharing",
+        "weight": 0.3,
+        "examples": [
+          "想深入学习的可以去 destinyteller.com 看看",
+          "推荐一个靠谱的在线占卜工具",
+          "系统学习可以看这个平台 destinyteller.com"
+        ]
+      },
+      {
+        "type": "direct_recommendation",
+        "weight": 0.2,
+        "examples": [
+          "专业塔罗师都在用 destinyteller.com",
+          "亲测有效的占卜网站，姐妹们可以试试",
+          "destinyteller.com 的解读很专业"
+        ]
+      },
+      {
+        "type": "no_promotion",
+        "weight": 0.1,
+        "examples": [
+          "纯内容分享，不提及网站"
+        ]
+      }
+    ],
+    "avoidance_list": [
+      "广告",
+      "推广",
+      "必买",
+      "点击",
+      "关注我",
+      "私信",
+      "优惠",
+      "折扣",
+      "限时",
+      "免费"
+    ]
+  }
+}

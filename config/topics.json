@@ -1,0 +1,147 @@
+{
+  "last_updated": "2026-02-06",
+  "source": "manual_curated",
+  "description": "命理领域15个核心热门话题",
+  "topics": [
+    {
+      "id": 1,
+      "title": "2026年十二星座运势大全",
+      "category": "星座运势",
+      "heat": "超热",
+      "keywords": ["星座", "运势", "2026"],
+      "best_time_slot": ["morning", "midday"],
+      "engagement_score": 9.5
+    },
+    {
+      "id": 2,
+      "title": "塔罗占卜每日一抽",
+      "category": "塔罗占卜",
+      "heat": "超热",
+      "keywords": ["塔罗", "占卜", "每日"],
+      "best_time_slot": ["morning"],
+      "engagement_score": 9.2
+    },
+    {
+      "id": 3,
+      "title": "水逆来了如何应对",
+      "category": "星座知识",
+      "heat": "超热",
+      "keywords": ["水逆", "星座", "应对"],
+      "best_time_slot": ["midday", "evening"],
+      "engagement_score": 8.8
+    },
+    {
+      "id": 4,
+      "title": "八字命理入门教学",
+      "category": "命理教学",
+      "heat": "超热",
+      "keywords": ["八字", "命理", "教学"],
+      "best_time_slot": ["midday"],
+      "engagement_score": 8.5
+    },
+    {
+      "id": 5,
+      "title": "梦境解析大全",
+      "category": "心灵成长",
+      "heat": "超热",
+      "keywords": ["梦境", "解析", "心灵"],
+      "best_time_slot": ["evening"],
+      "engagement_score": 9.0
+    },
+    {
+      "id": 6,
+      "title": "塔罗牌阵教学",
+      "category": "塔罗教学",
+      "heat": "超热",
+      "keywords": ["塔罗", "牌阵", "教学"],
+      "best_time_slot": ["midday"],
+      "engagement_score": 8.3
+    },
+    {
+      "id": 7,
+      "title": "星座配对指南",
+      "category": "星座知识",
+      "heat": "超热",
+      "keywords": ["星座", "配对", "情感"],
+      "best_time_slot": ["evening"],
+      "engagement_score": 9.1
+    },
+    {
+      "id": 8,
+      "title": "命理测试大全",
+      "category": "命理测试",
+      "heat": "超热",
+      "keywords": ["命理", "测试", "占卜"],
+      "best_time_slot": ["morning", "midday"],
+      "engagement_score": 8.7
+    },
+    {
+      "id": 9,
+      "title": "十二生肖本周运势",
+      "category": "生肖运势",
+      "heat": "推荐",
+      "keywords": ["生肖", "运势", "周运"],
+      "best_time_slot": ["morning"],
+      "engagement_score": 8.0
+    },
+    {
+      "id": 10,
+      "title": "紫微斗数看事业运",
+      "category": "命理分析",
+      "heat": "推荐",
+      "keywords": ["紫微斗数", "事业", "运势"],
+      "best_time_slot": ["midday"],
+      "engagement_score": 7.8
+    },
+    {
+      "id": 11,
+      "title": "家居风水布局秘诀",
+      "category": "风水知识",
+      "heat": "推荐",
+      "keywords": ["风水", "家居", "布局"],
+      "best_time_slot": ["midday"],
+      "engagement_score": 8.2
+    },
+    {
+      "id": 12,
+      "title": "水晶能量与疗愈",
+      "category": "能量疗愈",
+      "heat": "推荐",
+      "keywords": ["水晶", "能量", "疗愈"],
+      "best_time_slot": ["evening"],
+      "engagement_score": 7.9
+    },
+    {
+      "id": 13,
+      "title": "冥想入门指南",
+      "category": "心灵成长",
+      "heat": "推荐",
+      "keywords": ["冥想", "入门", "心灵"],
+      "best_time_slot": ["evening"],
+      "engagement_score": 7.7
+    },
+    {
+      "id": 14,
+      "title": "办公室风水布局",
+      "category": "风水知识",
+      "heat": "推荐",
+      "keywords": ["风水", "办公室", "事业"],
+      "best_time_slot": ["midday"],
+      "engagement_score": 7.6
+    },
+    {
+      "id": 15,
+      "title": "心灵疗愈方法",
+      "category": "心灵成长",
+      "heat": "推荐",
+      "keywords": ["心灵", "疗愈", "成长"],
+      "best_time_slot": ["evening"],
+      "engagement_score": 8.1
+    }
+  ],
+  "usage_notes": {
+    "selection_strategy": "根据时段和热度智能选择",
+    "rotation_rule": "避免7天内重复相同话题",
+    "combination_tip": "可与热门标签组合使用"
+  }
+}

@@ -1,0 +1,18 @@
+#!/bin/bash
+# [INPUT]: git diff --cached (staged changes)
+# [OUTPUT]: 检查被修改的文件是否同步更新了对应的 INDEX.md/CLAUDE.md
+# [POS]: tools/hooks 的 GEB 文档同步强制器，from CAT5_Brain 分形索引系统
+# [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+
+changed_files=$(git diff --cached --name-only)
+for file in $changed_files; do
+    dir=$(dirname "$file")
+    if [ -f "$dir/CLAUDE.md" ]; then
+        if ! git diff --cached --name-only | grep -q "$dir/CLAUDE.md"; then
+            echo "⚠️ 改了 $file，没更新 $dir/CLAUDE.md"
+            echo "确定要提交？(y/n)"
+            read answer
+            [ "$answer" != "y" ] && exit 1
+        fi
+    fi
+done

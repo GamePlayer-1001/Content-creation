@@ -1,5 +1,5 @@
 # ============================================================
-#  .gitignore — 内容生成输出项目
+#  .gitignore — 内容生成输出项目（重构后）
 #  [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
 # ============================================================
 
@@ -9,19 +9,29 @@ __pycache__/
 *.pyc
 .env
 *.egg-info/
+package-lock.json
 
-# --- 子项目（独立 git 仓库，不纳入主仓库管理）---
+# --- 子项目（独立 git 仓库，重构后可安全删除）---
 Auto-Redbook-Skills/
 内容/
 CAT5_Brain/
 
-# --- 排除目录（参考资料，已提炼入 config/）---
+# --- 排除目录（参考资料，已提炼入 config/ 和 docs/）---
 排除/
 
 # --- 输出产物（大量生成文件，按需 commit）---
 output/封面/*.png
 output/卡片/*.png
 output/卡片/*.html
+output/drafts/
+output/queue/
+output/published/
+output/scraper/
+output/test_covers/
+
+# --- 工具运行产物 ---
+tools/screenshot/.cache/
+logs/
 
 # --- 系统文件 ---
 .DS_Store

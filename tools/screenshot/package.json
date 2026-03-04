@@ -1,0 +1,12 @@
+{
+  "name": "wechat-screenshot",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "wxdh CSS + Puppeteer: MD -> pixel-perfect WeChat chat screenshots",
+  "scripts": {
+    "generate": "node generate-wechat-screenshot.mjs"
+  },
+  "dependencies": {
+    "puppeteer": "^24.2.0"
+  }
+}

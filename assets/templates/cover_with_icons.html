@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1080, height=1440">
+    <title>小红书封面 - 精美图标版</title>
+
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans SC', 'Source Han Sans CN', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            width: 1080px;
+            height: 1440px;
+            overflow: hidden;
+        }
+
+        .cover-container {
+            width: 1080px;
+            height: 1440px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 装饰性图案 */
+        .cover-container::before {
+            content: '';
+            position: absolute;
+            width: 500px;
+            height: 500px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            top: -100px;
+            right: -100px;
+        }
+
+        .cover-container::after {
+            content: '';
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.08);
+            bottom: -50px;
+            left: -50px;
+        }
+
+        .cover-inner {
+            position: absolute;
+            width: 950px;
+            height: 1310px;
+            left: 65px;
+            top: 65px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 30px;
+            display: flex;
+            flex-direction: column;
+            padding: 80px 85px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+        }
+
+        /* 图标容器 */
+        .cover-icon {
+            width: 180px;
+            height: 180px;
+            margin-bottom: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 35px;
+            box-shadow: 0 15px 35px rgba(102, 126, 234, 0.3);
+        }
+
+        .cover-icon svg {
+            width: 110px;
+            height: 110px;
+            stroke: white;
+            stroke-width: 2;
+        }
+
+        /* 小装饰图标 */
+        .decorative-icons {
+            position: absolute;
+            top: 80px;
+            right: 85px;
+            display: flex;
+            gap: 15px;
+        }
+
+        .decorative-icons svg {
+            width: 45px;
+            height: 45px;
+            stroke: #667eea;
+            opacity: 0.4;
+            stroke-width: 2;
+        }
+
+        .cover-title {
+            font-weight: 900;
+            font-size: 130px;
+            line-height: 1.3;
+            background: linear-gradient(135deg, #111827 0%, #667eea 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            flex: 1;
+            display: flex;
+            align-items: flex-start;
+            word-break: keep-all;
+            overflow-wrap: break-word;
+        }
+
+        .cover-subtitle {
+            font-weight: 400;
+            font-size: 68px;
+            line-height: 1.4;
+            color: #667eea;
+            margin-top: auto;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .cover-subtitle svg {
+            width: 55px;
+            height: 55px;
+            stroke: #667eea;
+            stroke-width: 2.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="cover-container">
+        <div class="cover-inner">
+            <!-- 主图标 -->
+            <div class="cover-icon">
+                <i data-lucide="{{ICON_NAME}}" class="main-icon"></i>
+            </div>
+
+            <!-- 装饰图标 -->
+            <div class="decorative-icons">
+                <i data-lucide="sparkles"></i>
+                <i data-lucide="star"></i>
+                <i data-lucide="zap"></i>
+            </div>
+
+            <!-- 标题 -->
+            <div class="cover-title">{{TITLE}}</div>
+
+            <!-- 副标题 -->
+            <div class="cover-subtitle">
+                <i data-lucide="arrow-right"></i>
+                <span>{{SUBTITLE}}</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 初始化所有 Lucide 图标
+        lucide.createIcons();
+    </script>
+</body>
+</html>

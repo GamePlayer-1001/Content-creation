@@ -182,3 +182,22 @@ interaction_design:
     - "每条内容结尾必须有互动钩子，这是硬性要求"
     - "没有互动引导 = 0评论 = 算法判定无互动价值 = 不推荐"
     - "优先设计能引发评论的钩子（提问/求助/争议话题）"
+
+# ---------- AI检测规避方法论 (from CAT5_Brain V1→V2) ----------
+anti_detection:
+  strategies:
+    - "打破对仗句式（避免A,B;A,B的平行结构）"
+    - "增加口语碎碎念（插入无意义的感叹/自嘲）"
+    - "减少概括性总结句（删除'总的来说''综上所述'）"
+    - "用具体场景替代抽象概念（'效率提升50%' → '原来半天的活午饭前搞完'）"
+    - "术语口语化（'吃什么进去的'替代'输入了什么数据'）"
+    - "陈述→思考过程（'我琢磨过''后来我想明白了'）"
+    - "格式化→随意化（去掉工整列表，变成自然段落）"
+    - "逻辑递进→故事展开（时间线叙事替代论证）"
+  target_detectors: ["腾讯混元", "GPTZero", "ZeroGPT"]
+  target_score: "<= 30% AI检测率"
+
+# ---------- 内容元数据规范 (from CAT5_Brain YAML headers) ----------
+metadata_spec:
+  required: ["title", "type", "date", "platform", "version"]
+  optional: ["thinking_mode", "ai_detection_score", "style", "tags"]

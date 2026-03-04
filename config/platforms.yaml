@@ -130,3 +130,14 @@ X:
     周四: "开发者视角/技术思考"
     周五: "互动型/小测试"
     周六: "轻松日常"
+
+# ============================================================
+#  配图命名规范 (from CAT5_Brain)
+#  [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+# ============================================================
+
+image_naming:
+  cover: "cover-{date}-{title_slug}.png"
+  inline: "inline-{date}-{description_slug}.png"
+  card: "card-{date}-{title_slug}-{page}.png"
+  screenshot: "{basename}-微信截图-{index}.png"
