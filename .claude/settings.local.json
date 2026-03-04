@@ -6,6 +6,14 @@
       "Bash(python *publish_xhs*:*)",
       "Bash(node *generate-wechat-screenshot*:*)",
       "Bash(node *render-dialog-video*:*)",
+      "Bash(python *xhs_trending_scraper*:*)",
+      "Bash(python *rss_trending_scraper*:*)",
+      "Bash(python *daily_scheduler*:*)",
+      "Bash(python *content_pipeline*:*)",
+      "Bash(python *content_with_icons*:*)",
+      "Bash(python *auto_publish*:*)",
+      "Bash(python *manage.py*:*)",
+      "Bash(node *render_cover*:*)",
       "Bash(git:*)",
       "Bash(mkdir:*)",
       "Bash(ls:*)",
@@ -13,6 +21,8 @@
       "Bash(find:*)",
       "Bash(python:*)",
       "Bash(node:*)",
+      "Bash(npm:*)",
+      "Bash(pip:*)",
       "WebFetch(domain:*)"
     ]
   }

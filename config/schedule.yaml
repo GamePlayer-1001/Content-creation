@@ -99,3 +99,18 @@ rules:
   - "linuxdo零容忍营销感，前2周只互动不发帖"
   - "聚焦>全面，9个渠道有无效的果断降频或砍掉"
   - "30天没起色就换方向"
+
+# ---------- 自动发布时段 (from Auto-Redbook-Skills schedule.json) ----------
+publish_slots:
+  morning:
+    time_range: "06:00-08:00"
+    best_time: "07:30"
+    content_type: "轻松运势/每日指南"
+  midday:
+    time_range: "11:00-13:00"
+    best_time: "12:00"
+    content_type: "专业干货/教程"
+  evening:
+    time_range: "17:00-19:00"
+    best_time: "18:30"
+    content_type: "情感疗愈/深度内容"

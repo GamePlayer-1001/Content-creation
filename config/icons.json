@@ -1,0 +1,248 @@
+{
+  "comment": "Lucide Icons 图标映射 - 为不同内容类型选择合适的图标",
+  "lucide_cdn": "https://unpkg.com/lucide@latest",
+  "icon_library": "https://lucide.dev/icons",
+
+  "categories": {
+    "运势占卜": {
+      "primary_icons": [
+        "sparkles",
+        "star",
+        "moon",
+        "sun",
+        "zap",
+        "compass",
+        "eye"
+      ],
+      "decorative_icons": ["sparkles", "star", "zap"],
+      "description": "星座、运势、占卜相关"
+    },
+
+    "塔罗牌": {
+      "primary_icons": [
+        "scroll",
+        "book-open",
+        "flame",
+        "gem",
+        "crown",
+        "shield"
+      ],
+      "decorative_icons": ["sparkles", "wand", "hexagon"],
+      "description": "塔罗牌解读、牌意"
+    },
+
+    "情感咨询": {
+      "primary_icons": [
+        "heart",
+        "heart-handshake",
+        "message-circle-heart",
+        "users",
+        "flower",
+        "gift"
+      ],
+      "decorative_icons": ["heart", "flower-2", "sparkles"],
+      "description": "感情、恋爱、关系"
+    },
+
+    "事业财运": {
+      "primary_icons": [
+        "trending-up",
+        "trophy",
+        "coins",
+        "wallet",
+        "briefcase",
+        "target"
+      ],
+      "decorative_icons": ["coins", "star", "trending-up"],
+      "description": "职场、创业、财富"
+    },
+
+    "心灵成长": {
+      "primary_icons": [
+        "brain",
+        "compass",
+        "leaf",
+        "sunrise",
+        "mountain",
+        "feather"
+      ],
+      "decorative_icons": ["leaf", "sun", "cloud"],
+      "description": "个人成长、心理、疗愈"
+    },
+
+    "水晶能量": {
+      "primary_icons": [
+        "gem",
+        "diamond",
+        "hexagon",
+        "triangle",
+        "circle",
+        "pentagon"
+      ],
+      "decorative_icons": ["sparkles", "gem", "zap"],
+      "description": "水晶、能量、冥想"
+    },
+
+    "命理知识": {
+      "primary_icons": [
+        "book-open",
+        "scroll",
+        "book-marked",
+        "lightbulb",
+        "graduation-cap",
+        "bookmark"
+      ],
+      "decorative_icons": ["book", "bookmark", "star"],
+      "description": "八字、紫微、风水等传统命理"
+    },
+
+    "每日指南": {
+      "primary_icons": [
+        "calendar",
+        "clock",
+        "sunrise",
+        "sun",
+        "calendar-check",
+        "alarm-clock"
+      ],
+      "decorative_icons": ["clock", "sun", "star"],
+      "description": "每日运势、每日提示"
+    },
+
+    "星座配对": {
+      "primary_icons": [
+        "users",
+        "heart-handshake",
+        "infinity",
+        "link",
+        "git-merge",
+        "puzzle"
+      ],
+      "decorative_icons": ["heart", "star", "sparkles"],
+      "description": "星座关系、配对分析"
+    },
+
+    "风水布局": {
+      "primary_icons": [
+        "home",
+        "layout",
+        "map",
+        "building",
+        "ruler",
+        "compass"
+      ],
+      "decorative_icons": ["home", "map-pin", "octagon"],
+      "description": "居家风水、办公室风水"
+    },
+
+    "梦境解析": {
+      "primary_icons": [
+        "cloud",
+        "moon-star",
+        "eye",
+        "brain",
+        "sparkles",
+        "wind"
+      ],
+      "decorative_icons": ["moon", "cloud", "sparkles"],
+      "description": "解梦、潜意识探索"
+    },
+
+    "数字命理": {
+      "primary_icons": [
+        "hash",
+        "calculator",
+        "binary",
+        "grid-3x3",
+        "percent",
+        "sigma"
+      ],
+      "decorative_icons": ["hash", "star", "sparkles"],
+      "description": "生命数字、数字能量"
+    }
+  },
+
+  "color_schemes": {
+    "purple_gradient": {
+      "background": "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+      "icon_bg": "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+      "text": "linear-gradient(135deg, #111827 0%, #667eea 100%)",
+      "subtitle_color": "#667eea"
+    },
+
+    "pink_gradient": {
+      "background": "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
+      "icon_bg": "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
+      "text": "linear-gradient(135deg, #111827 0%, #f093fb 100%)",
+      "subtitle_color": "#f093fb"
+    },
+
+    "blue_gradient": {
+      "background": "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
+      "icon_bg": "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
+      "text": "linear-gradient(135deg, #111827 0%, #4facfe 100%)",
+      "subtitle_color": "#4facfe"
+    },
+
+    "orange_gradient": {
+      "background": "linear-gradient(135deg, #fa709a 0%, #fee140 100%)",
+      "icon_bg": "linear-gradient(135deg, #fa709a 0%, #fee140 100%)",
+      "text": "linear-gradient(135deg, #111827 0%, #fa709a 100%)",
+      "subtitle_color": "#fa709a"
+    },
+
+    "green_gradient": {
+      "background": "linear-gradient(135deg, #30cfd0 0%, #330867 100%)",
+      "icon_bg": "linear-gradient(135deg, #30cfd0 0%, #330867 100%)",
+      "text": "linear-gradient(135deg, #111827 0%, #30cfd0 100%)",
+      "subtitle_color": "#30cfd0"
+    }
+  },
+
+  "usage_example": {
+    "content_type": "运势占卜",
+    "icon_name": "sparkles",
+    "color_scheme": "purple_gradient",
+    "title": "今日运势来啦",
+    "subtitle": "准到离谱"
+  },
+
+  "recommended_combinations": [
+    {
+      "category": "运势占卜",
+      "icon": "sparkles",
+      "color": "purple_gradient",
+      "use_case": "每日运势、星座运程"
+    },
+    {
+      "category": "塔罗牌",
+      "icon": "scroll",
+      "color": "pink_gradient",
+      "use_case": "塔罗解读、牌意分享"
+    },
+    {
+      "category": "情感咨询",
+      "icon": "heart",
+      "color": "pink_gradient",
+      "use_case": "感情分析、桃花运"
+    },
+    {
+      "category": "事业财运",
+      "icon": "trending-up",
+      "color": "blue_gradient",
+      "use_case": "职场建议、财运预测"
+    },
+    {
+      "category": "心灵成长",
+      "icon": "sunrise",
+      "color": "orange_gradient",
+      "use_case": "心灵疗愈、正念分享"
+    },
+    {
+      "category": "水晶能量",
+      "icon": "gem",
+      "color": "green_gradient",
+      "use_case": "水晶介绍、能量指南"
+    }
+  ]
+}

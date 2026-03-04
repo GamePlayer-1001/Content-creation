@@ -162,7 +162,7 @@ X algorithm fit：X/10
 
 如果推文适合配图，执行：
 ```bash
-cd "D:/Software/内容生成输出/内容/tools" && node generate-cover.mjs --title "{推文主题}" --type narrative --output "D:/Software/内容生成输出/output/封面/X-{日期}-{主题}.png" --keywords "{keywords}"
+cd "D:/Software/内容生成输出" && node tools/cover/generate-cover.mjs --title "{推文主题}" --type narrative --output "D:/Software/内容生成输出/output/封面/X-{日期}-{主题}.png" --keywords "{keywords}"
 ```
 
 X 算法偏好：带图推文互动率是纯文字的2-3倍。

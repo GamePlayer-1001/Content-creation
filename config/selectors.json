@@ -1,0 +1,18 @@
+{
+  "publish_page": {
+    "url": "https://creator.xiaohongshu.com/publish/publish",
+    "selectors": {
+      "image_upload_input": "input[type='file']",
+      "content_editor": "div[contenteditable='true']",
+      "publish_button": "button:has-text('发布')",
+      "success_message": "text=发布成功",
+      "success_url_pattern": "**/published"
+    },
+    "comment": "内容编辑器使用 contenteditable div，标题和描述都在同一个编辑器中"
+  },
+  "login_page": {
+    "url_pattern": "**/login",
+    "redirect_after_login": "**/publish/publish"
+  },
+  "cookies_storage": "automation/config/xhs_cookies.json"
+}

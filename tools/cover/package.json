@@ -1,0 +1,13 @@
+{
+  "name": "content-tools",
+  "version": "1.0.0",
+  "description": "内容创作辅助工具集",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@google/genai": "^1.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
