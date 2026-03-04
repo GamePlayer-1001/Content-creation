@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node *generate-cover*:*)",
+      "Bash(python *render_xhs*:*)",
+      "Bash(python *publish_xhs*:*)",
+      "Bash(node *generate-wechat-screenshot*:*)",
+      "Bash(node *render-dialog-video*:*)",
+      "Bash(git:*)",
+      "Bash(mkdir:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(find:*)",
+      "Bash(python:*)",
+      "Bash(node:*)",
+      "WebFetch(domain:*)"
+    ]
+  }
+}
