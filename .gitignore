@@ -11,10 +11,14 @@ __pycache__/
 *.egg-info/
 package-lock.json
 
-# --- 子项目（独立 git 仓库，重构后可安全删除）---
+# --- 子项目已清除，以下条目保留防止误添加 ---
 Auto-Redbook-Skills/
 内容/
 CAT5_Brain/
+子项目/
+
+# --- videocheck（3.3GB AI视频处理子系统，独立管理）---
+videocheck/
 
 # --- 排除目录（参考资料，已提炼入 config/ 和 docs/）---
 排除/

@@ -6,7 +6,7 @@ Claude Code Skills + YAML Config + 统一工具链
 ## 架构概览
 
 一篇母稿 → 9个平台衍生内容。所有创作遵循：三轮润色 → 质量门控(>=9分) → 合规检查 → 后处理。
-三个独立子项目（Auto-Redbook-Skills / 内容/ / CAT5_Brain）已融合为统一 tools/ 工具链。
+三个独立子项目已融合完毕，子项目目录已清除。差异化文件归档至 docs/。
 
 ## 目录结构
 
@@ -70,6 +70,7 @@ Claude Code Skills + YAML Config + 统一工具链
 │   ├── generator/          # AI内容生成管道
 │   ├── video/              # Remotion视频渲染
 │   ├── jianying/           # 剪映自动化
+│   ├── tests/              # 测试脚本（from Auto-Redbook-Skills）
 │   ├── hooks/              # Git hooks
 │   ├── utils/              # 日志等通用工具
 │   └── manage.py           # 交互式CLI管理器
@@ -90,7 +91,11 @@ Claude Code Skills + YAML Config + 统一工具链
 │
 ├── docs/                   # 只读参考文档
 │   ├── 推广方案/
-│   └── 社区规范/
+│   ├── 社区规范/
+│   ├── auto-redbook/       # Auto-Redbook-Skills 存档文档（25篇）
+│   └── 赛道存档/           # 赛道专有Skill存档（玄学赛道）
+│
+├── videocheck/             # AI视频处理子系统（独立模块）
 │
 └── improvements-backlog.md # 改进建议跟踪
 ```
