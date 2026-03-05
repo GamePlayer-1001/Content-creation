@@ -14,11 +14,17 @@ router.post('/generate', async (req, res) => {
   const { prompt, platform = '', topic = '', index = 0, aspectRatio = '1:1' } = req.body;
   const { imageGenerator, promptStore } = req.app.locals;
 
+  const ts = () => new Date().toLocaleTimeString('zh-CN', { hour12: false });
+  const promptPreview = (prompt || '').replace(/\s+/g, ' ').slice(0, 60);
+  console.log(`  ${ts()}  [图片] 生成请求  platform=${platform||'general'}  ratio=${aspectRatio}  prompt="${promptPreview}..."`);
+
   if (!imageGenerator) {
+    console.log(`  ${ts()}  [图片] ✗ 服务未配置 (缺少 GOOGLE_AI_KEY)`);
     return res.status(503).json({ error: '图片生成服务未配置 (缺少 GOOGLE_AI_KEY)' });
   }
 
   if (!prompt || !prompt.trim()) {
+    console.log(`  ${ts()}  [图片] ✗ prompt 为空`);
     return res.status(400).json({ error: '请输入图片描述' });
   }
 
@@ -27,6 +33,8 @@ router.post('/generate', async (req, res) => {
     promptStore.save(prompt, platform);
 
     // 生成并保存图片
+    console.log(`  ${ts()}  [图片] 调用 Nano Banana Pro API...`);
+    const start = Date.now();
     const result = await imageGenerator.generateAndSave(
       prompt, platform || 'general', topic, index, { aspectRatio }
     );
@@ -34,12 +42,16 @@ router.post('/generate', async (req, res) => {
     // 同时返回 base64 供前端预览
     const imageData = await imageGenerator.generate(prompt, { aspectRatio });
 
+    const sec = ((Date.now() - start) / 1000).toFixed(1);
+    console.log(`  ${ts()}  [图片] ✓ 生成完成  耗时=${sec}s  文件=${result.path || '(base64)'}`);
+
     res.json({
       ...result,
       base64: imageData.base64,
       mimeType: imageData.mimeType,
     });
   } catch (e) {
+    console.error(`  ${ts()}  [图片] ✗ 生成失败: ${e.message}`);
     res.status(500).json({ error: e.message });
   }
 });
