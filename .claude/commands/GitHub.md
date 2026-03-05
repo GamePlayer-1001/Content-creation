@@ -7,6 +7,7 @@
 读取以下配置文件：
 1. `D:/Software/内容生成输出/config/platforms.yaml` — GitHub 板块：tone/taboo/frequency/format/weekly_rhythm
 2. `D:/Software/内容生成输出/config/product.yaml` — 产品信息、GitHub username
+3. `D:/Software/内容生成输出/config/compliance.yaml` — 合规规则
 
 ---
 
@@ -110,7 +111,31 @@ How was this tested?
 
 ---
 
-## 第六步：保存
+## 第六步：质量门控
+
+三维评分（每项 1-10 分）：
+- 钩子强度：标题和开头是否清晰表达问题/分享的价值
+- 互动设计：是否有让人想回复/讨论的开放性问题
+- 趣味度：技术内容是否有深度和实用价值
+
+门控：>= 9 分通过，< 9 分回第四步重新优化，最多循环 5 轮。
+
+---
+
+## 第七步：合规检查
+
+按 compliance.yaml 规则执行：
+- 敏感话题检测
+- 内容真实性检查
+- 确保无推广痕迹
+
+GitHub 虽是国外平台，但管理严格，违规可能封号。
+
+不通过 → 修改后重新检查
+
+---
+
+## 第八步：保存
 
 保存到 `D:/Software/内容生成输出/output/GitHub/{日期}-{主题关键词}.md`
 
@@ -124,6 +149,8 @@ format: "Discussion/Issue/PR"
 date: "YYYY-MM-DD"
 source_draft: "母稿路径（如有）"
 language: "en"
+quality_score: X.X
+compliance: "pass"
 ---
 
 {英文内容全文}
@@ -131,7 +158,7 @@ language: "en"
 
 ---
 
-## 第七步：输出
+## 第九步：输出
 
 ### 输出规则（严格遵守）
 
@@ -143,6 +170,8 @@ language: "en"
 
 **禁止输出以下任何内容**：
 - YAML frontmatter（---title/date/tags---）
+- 质量评分表格或分数
+- 合规检查报告/结果
 - 文件路径或保存状态
 - 任何关于"授权"、"权限"、"保存"、"沙箱限制"的话术
 - 用 markdown 代码块（```markdown```）包裹正文
