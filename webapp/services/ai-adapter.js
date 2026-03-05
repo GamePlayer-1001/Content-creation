@@ -7,9 +7,6 @@
 
 const { spawn } = require('child_process');
 const https = require('https');
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
 
 class AIAdapter {
   constructor() {
@@ -60,42 +57,29 @@ class AIAdapter {
     }
   }
 
-  // --- Claude CLI: 本地已认证，通过临时文件传入长 Prompt ---
+  // --- Claude CLI: 本地已认证，stdin 管道传入 Prompt ---
   async *_claudeCLI(prompt) {
-    // 写入临时文件避免 Windows 命令行长度限制
-    const tmpFile = path.join(os.tmpdir(), `claude-prompt-${Date.now()}.txt`);
-    fs.writeFileSync(tmpFile, prompt, 'utf-8');
+    const child = spawn('claude', ['--print'], {
+      shell: true,
+      stdio: ['pipe', 'pipe', 'pipe'],
+      env: { ...process.env },
+    });
 
-    try {
-      const child = spawn('claude', [
-        '--print',
-        '-p', `请阅读以下完整指令并严格执行：\n\n$(cat "${tmpFile.replace(/\\/g, '/')}")`,
-      ], {
-        shell: true,
-        stdio: ['pipe', 'pipe', 'pipe'],
-        env: { ...process.env },
-      });
+    // stdin 管道写入 prompt，绕开 shell 语法差异和命令行长度限制
+    child.stdin.write(prompt);
+    child.stdin.end();
 
-      // 也尝试直接通过 stdin 传入
-      // 但 claude CLI --print -p 不支持 stdin 读取
-      // 所以用 cat 临时文件的方式
+    let stderr = '';
+    child.stderr.on('data', (chunk) => { stderr += chunk.toString(); });
 
-      let stderr = '';
-      child.stderr.on('data', (chunk) => { stderr += chunk.toString(); });
+    for await (const chunk of child.stdout) {
+      yield chunk.toString('utf-8');
+    }
 
-      for await (const chunk of child.stdout) {
-        yield chunk.toString('utf-8');
-      }
+    const exitCode = await new Promise((resolve) => child.on('close', resolve));
 
-      const exitCode = await new Promise((resolve) => child.on('close', resolve));
-
-      if (exitCode !== 0 && stderr) {
-        // 备选: 直接用 -p 传入（短 prompt 情况）
-        console.error('[Claude CLI stderr]', stderr.slice(0, 200));
-      }
-    } finally {
-      // 清理临时文件
-      try { fs.unlinkSync(tmpFile); } catch {}
+    if (exitCode !== 0 && stderr) {
+      console.error('[Claude CLI stderr]', stderr.slice(0, 200));
     }
   }
 
