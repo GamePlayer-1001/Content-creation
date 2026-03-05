@@ -64,8 +64,36 @@ app.locals.imageGenerator   = imageGenerator;
 app.locals.promptStore      = promptStore;
 
 // ============================================================
+//  请求日志中间件
+// ============================================================
+function requestLogger(req, res, next) {
+  const start = Date.now();
+  const { method, url } = req;
+
+  res.on('finish', () => {
+    const ms = Date.now() - start;
+    const status = res.statusCode;
+    const time = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+
+    // 状态码着色标记
+    const tag = status < 300 ? '✓' : status < 400 ? '→' : status < 500 ? '!' : '✗';
+    const line = `  ${time}  ${tag} ${method.padEnd(6)} ${status}  ${url}  ${ms}ms`;
+
+    // SSE 长连接标注
+    if (res.getHeader('content-type')?.includes('text/event-stream')) {
+      console.log(`${line}  [SSE]`);
+    } else {
+      console.log(line);
+    }
+  });
+
+  next();
+}
+
+// ============================================================
 //  中间件
 // ============================================================
+app.use(requestLogger);
 app.use(express.json({ limit: '5mb' }));
 app.use(express.text({ limit: '5mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -94,7 +122,13 @@ app.get('*', (req, res) => {
 //  错误处理
 // ============================================================
 app.use((err, req, res, _next) => {
-  console.error('[ERROR]', err.message);
+  const time = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+  console.error(`  ${time}  ✗ [ERROR] ${req.method} ${req.url}`);
+  console.error(`           ${err.message}`);
+  if (err.stack) {
+    const loc = err.stack.split('\n')[1]?.trim();
+    if (loc) console.error(`           ${loc}`);
+  }
   res.status(err.status || 500).json({ error: err.message });
 });
 
@@ -103,11 +137,22 @@ app.use((err, req, res, _next) => {
 // ============================================================
 const PORT = process.env.PORT || 3210;
 app.listen(PORT, () => {
+  const time = new Date().toLocaleTimeString('zh-CN', { hour12: false });
   console.log('');
-  console.log('  ┌──────────────────────────────────────┐');
-  console.log('  │  内容推广工具集 — Web 控制台          │');
-  console.log(`  │  http://localhost:${PORT}               │`);
-  console.log('  │  Ctrl+C 退出                          │');
-  console.log('  └──────────────────────────────────────┘');
+  console.log('  ┌──────────────────────────────────────────┐');
+  console.log('  │  内容推广工具集 — Web 控制台              │');
+  console.log(`  │  http://localhost:${PORT}                   │`);
+  console.log('  │  Ctrl+C 退出                              │');
+  console.log('  └──────────────────────────────────────────┘');
   console.log('');
+  console.log('  服务状态:');
+  console.log(`    AI 引擎    Claude CLI (本地)    ✓`);
+  console.log(`    AI 引擎    OpenRouter           ${process.env.OPENROUTER_API_KEY ? '✓' : '—'}`);
+  console.log(`    AI 引擎    DeepSeek             ${process.env.DEEPSEEK_API_KEY ? '✓' : '—'}`);
+  console.log(`    图片生成   Nano Banana Pro      ${imageGenerator ? '✓' : '—'}`);
+  console.log(`    配置目录   ${CONFIG_DIR}`);
+  console.log(`    输出目录   ${OUTPUT_DIR}`);
+  console.log('');
+  console.log(`  ${time}  服务就绪，等待请求...`);
+  console.log('  ─────────────────────────────────────────');
 });

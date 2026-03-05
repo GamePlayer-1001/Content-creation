@@ -78,10 +78,14 @@ router.post('/draft', async (req, res) => {
   const { input, style, engine = 'claude' } = req.body;
   const { aiAdapter, skillLoader, outputManager } = req.app.locals;
 
+  const inputPreview = (input || '').replace(/\s+/g, ' ').slice(0, 60);
+  console.log(`  ${_ts()}  [流水线] Step2 生成母稿  方向=${style || '默认'}  引擎=${engine}  输入="${inputPreview}..."`);
+
   _sseHeaders(res);
 
   try {
     if (!input || !input.trim()) {
+      console.log(`  ${_ts()}  [流水线] ✗ 输入为空，中止`);
       _send(res, { type: 'error', message: '请输入素材内容' });
       return res.end();
     }
@@ -98,6 +102,7 @@ router.post('/draft', async (req, res) => {
       topic: stylePrefix + input,
       draftContent: '',
     });
+    console.log(`  ${_ts()}  [流水线] Prompt 构建完成  总长=${prompt.length}字`);
 
     _send(res, { type: 'status', message: `AI 引擎: ${engine} · 开始生成母稿...` });
 
@@ -113,8 +118,10 @@ router.post('/draft', async (req, res) => {
     const filename = `${today}-${safeTopic}.md`;
     outputManager.writeFile('母稿', filename, fullContent);
 
+    console.log(`  ${_ts()}  [流水线] ✓ 母稿已保存  文件=母稿/${filename}  长度=${fullContent.length}字`);
     _send(res, { type: 'done', file: `母稿/${filename}`, length: fullContent.length });
   } catch (e) {
+    console.error(`  ${_ts()}  [流水线] ✗ 母稿生成失败: ${e.message}`);
     _send(res, { type: 'error', message: e.message });
   }
   res.end();
@@ -127,10 +134,14 @@ router.post('/platforms', async (req, res) => {
   const { draftContent, platforms, engine = 'claude' } = req.body;
   const { aiAdapter, skillLoader, outputManager } = req.app.locals;
 
+  const platformList = platforms?.join(',') || '全部';
+  console.log(`  ${_ts()}  [流水线] Step3 多平台生成  平台=[${platformList}]  引擎=${engine}  母稿=${(draftContent||'').length}字`);
+
   _sseHeaders(res);
 
   try {
     if (!draftContent) {
+      console.log(`  ${_ts()}  [流水线] ✗ 母稿内容为空`);
       _send(res, { type: 'error', message: '缺少母稿内容' });
       return res.end();
     }
@@ -144,6 +155,7 @@ router.post('/platforms', async (req, res) => {
     const results = [];
     for (let i = 0; i < targetPlatforms.length; i++) {
       const p = targetPlatforms[i];
+      console.log(`  ${_ts()}  [流水线] → 平台 ${i+1}/${targetPlatforms.length}: ${p.skill}`);
       _send(res, { type: 'platform_start', platform: p.skill, index: i });
 
       try {
@@ -160,16 +172,21 @@ router.post('/platforms', async (req, res) => {
         const filename = `${today}-${safeTopic}.md`;
         outputManager.writeFile(p.dir, filename, fullContent);
 
+        console.log(`  ${_ts()}  [流水线] ✓ ${p.skill} 完成  输出=${fullContent.length}字  文件=${p.dir}/${filename}`);
         _send(res, { type: 'platform_done', platform: p.skill, file: `${p.dir}/${filename}`, length: fullContent.length, content: fullContent });
         results.push({ platform: p.skill, dir: p.dir, file: `${p.dir}/${filename}`, content: fullContent, length: fullContent.length });
       } catch (e) {
+        console.error(`  ${_ts()}  [流水线] ✗ ${p.skill} 失败: ${e.message}`);
         _send(res, { type: 'platform_error', platform: p.skill, message: e.message });
         results.push({ platform: p.skill, error: e.message });
       }
     }
 
-    _send(res, { type: 'done', results, success: results.filter(r => !r.error).length, total: targetPlatforms.length });
+    const ok = results.filter(r => !r.error).length;
+    console.log(`  ${_ts()}  [流水线] Step3 完成  成功=${ok}/${targetPlatforms.length}`);
+    _send(res, { type: 'done', results, success: ok, total: targetPlatforms.length });
   } catch (e) {
+    console.error(`  ${_ts()}  [流水线] ✗ 多平台生成整体失败: ${e.message}`);
     _send(res, { type: 'error', message: e.message });
   }
   res.end();
@@ -183,10 +200,13 @@ router.post('/optimize', async (req, res) => {
   // contents: [{ platform, content, file }]
   const { aiAdapter, skillLoader, outputManager, complianceEngine } = req.app.locals;
 
+  console.log(`  ${_ts()}  [流水线] Step4 优化去AI  待优化=${(contents||[]).length}篇  引擎=${engine}`);
+
   _sseHeaders(res);
 
   try {
     if (!contents || contents.length === 0) {
+      console.log(`  ${_ts()}  [流水线] ✗ 待优化内容为空`);
       _send(res, { type: 'error', message: '缺少待优化内容' });
       return res.end();
     }
@@ -194,10 +214,12 @@ router.post('/optimize', async (req, res) => {
     const results = [];
     for (let i = 0; i < contents.length; i++) {
       const item = contents[i];
+      console.log(`  ${_ts()}  [流水线] → 优化 ${i+1}/${contents.length}: ${item.platform}  原文=${item.content?.length || 0}字`);
       _send(res, { type: 'optimize_start', platform: item.platform, index: i });
 
       // 合规检查
       const compliance = complianceEngine.check(item.content);
+      console.log(`  ${_ts()}  [流水线]   合规检查: 得分=${compliance.score}  命中=${compliance.hits.length}项`);
       _send(res, { type: 'compliance_result', platform: item.platform, score: compliance.score, hits: compliance.hits.length });
 
       // 调用洗稿去 AI 味 (使用口语重写版 style E)
@@ -221,16 +243,20 @@ router.post('/optimize', async (req, res) => {
           }
         }
 
+        console.log(`  ${_ts()}  [流水线] ✓ ${item.platform} 优化完成  输出=${optimized.length}字`);
         _send(res, { type: 'optimize_done', platform: item.platform, length: optimized.length, content: optimized });
         results.push({ platform: item.platform, content: optimized, length: optimized.length, complianceScore: compliance.score });
       } catch (e) {
+        console.error(`  ${_ts()}  [流水线] ✗ ${item.platform} 优化失败: ${e.message}`);
         _send(res, { type: 'optimize_error', platform: item.platform, message: e.message });
         results.push({ platform: item.platform, error: e.message });
       }
     }
 
+    console.log(`  ${_ts()}  [流水线] Step4 完成`);
     _send(res, { type: 'done', results });
   } catch (e) {
+    console.error(`  ${_ts()}  [流水线] ✗ 优化整体失败: ${e.message}`);
     _send(res, { type: 'error', message: e.message });
   }
   res.end();
@@ -245,6 +271,8 @@ router.post('/assemble', async (req, res) => {
   // images: [{ platform, path }]
   const { outputManager } = req.app.locals;
   const projectRoot = req.app.locals.projectRoot;
+
+  console.log(`  ${_ts()}  [流水线] Step6 组装最终文件  内容=${(contents||[]).length}篇  图片=${(images||[]).length}张`);
 
   try {
     const results = [];
@@ -280,8 +308,10 @@ router.post('/assemble', async (req, res) => {
       });
     }
 
+    console.log(`  ${_ts()}  [流水线] ✓ Step6 组装完成  文件=${results.map(r => r.file).join(', ')}`);
     res.json({ results });
   } catch (e) {
+    console.error(`  ${_ts()}  [流水线] ✗ 组装失败: ${e.message}`);
     res.status(500).json({ error: e.message });
   }
 });
@@ -289,6 +319,10 @@ router.post('/assemble', async (req, res) => {
 // ============================================================
 //  工具函数
 // ============================================================
+function _ts() {
+  return new Date().toLocaleTimeString('zh-CN', { hour12: false });
+}
+
 function _stripMarkdown(text) {
   return text
     .replace(/^#{1,6}\s+/gm, '')

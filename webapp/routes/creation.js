@@ -34,6 +34,9 @@ router.post('/create', async (req, res) => {
   const { skill, topic, draft, engine = 'claude' } = req.body;
   const { aiAdapter, skillLoader, outputManager } = req.app.locals;
 
+  const topicPreview = (topic || '').replace(/\s+/g, ' ').slice(0, 50);
+  console.log(`  ${_ts()}  [创作] skill=${skill}  引擎=${engine}  topic="${topicPreview}"${draft ? `  母稿=${draft}` : ''}`);
+
   // SSE 响应头
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
@@ -46,7 +49,9 @@ router.post('/create', async (req, res) => {
     if (draft) {
       try {
         draftContent = outputManager.readFile('母稿', draft);
+        console.log(`  ${_ts()}  [创作] 读取母稿成功  长度=${draftContent.length}字`);
       } catch {
+        console.log(`  ${_ts()}  [创作] ✗ 母稿文件不存在: ${draft}`);
         _sendSSE(res, { type: 'error', message: `母稿文件不存在: ${draft}` });
         return res.end();
       }
@@ -59,6 +64,7 @@ router.post('/create', async (req, res) => {
       topic: topic || '',
       draftContent,
     });
+    console.log(`  ${_ts()}  [创作] Prompt 构建完成  总长=${prompt.length}字`);
 
     // 3. 调用 AI 引擎流式生成
     _sendSSE(res, { type: 'status', message: `AI 引擎: ${engine} · 开始生成...` });
@@ -83,6 +89,7 @@ router.post('/create', async (req, res) => {
 
     outputManager.writeFile(platform, filename, fullContent);
 
+    console.log(`  ${_ts()}  [创作] ✓ 完成  文件=${platform}/${filename}  输出=${fullContent.length}字`);
     _sendSSE(res, {
       type: 'done',
       file: `${platform}/${filename}`,
@@ -90,6 +97,7 @@ router.post('/create', async (req, res) => {
     });
 
   } catch (e) {
+    console.error(`  ${_ts()}  [创作] ✗ 失败: ${e.message}`);
     _sendSSE(res, { type: 'error', message: e.message });
   }
 
@@ -98,6 +106,10 @@ router.post('/create', async (req, res) => {
 
 function _sendSSE(res, data) {
   res.write(`data: ${JSON.stringify(data)}\n\n`);
+}
+
+function _ts() {
+  return new Date().toLocaleTimeString('zh-CN', { hour12: false });
 }
 
 module.exports = router;

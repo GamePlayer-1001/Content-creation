@@ -39,26 +39,36 @@ class AIAdapter {
   async *stream(prompt, engine = 'claude') {
     const cfg = this.engines[engine];
     if (!cfg || !cfg.available) {
+      console.log(`  [AI] ✗ 引擎不可用: ${engine}`);
       throw new Error(`AI 引擎不可用: ${engine}`);
     }
 
-    switch (engine) {
-      case 'claude':
-        yield* this._claudeCLI(prompt);
-        break;
-      case 'openrouter':
-        yield* this._apiStream(cfg, prompt);
-        break;
-      case 'deepseek':
-        yield* this._apiStream(cfg, prompt);
-        break;
-      default:
-        throw new Error(`未知引擎: ${engine}`);
+    const t = _ts();
+    const promptLen = prompt.length;
+    const promptPreview = prompt.replace(/\s+/g, ' ').slice(0, 80);
+    console.log(`  ${t}  [AI] 引擎=${engine}  prompt=${promptLen}字`);
+    console.log(`  ${t}  [AI] 内容预览: ${promptPreview}...`);
+
+    const start = Date.now();
+    let totalChars = 0;
+
+    const gen = engine === 'claude'
+      ? this._claudeCLI(prompt)
+      : this._apiStream(cfg, prompt);
+
+    for await (const chunk of gen) {
+      totalChars += chunk.length;
+      yield chunk;
     }
+
+    const sec = ((Date.now() - start) / 1000).toFixed(1);
+    console.log(`  ${_ts()}  [AI] 生成完成  输出=${totalChars}字  耗时=${sec}s  引擎=${engine}`);
   }
 
   // --- Claude CLI: 本地已认证，stdin 管道传入 Prompt ---
   async *_claudeCLI(prompt) {
+    console.log(`  ${_ts()}  [AI] Claude CLI 启动 → claude --print (stdin 管道)`);
+
     const child = spawn('claude', ['--print'], {
       shell: true,
       stdio: ['pipe', 'pipe', 'pipe'],
@@ -72,19 +82,28 @@ class AIAdapter {
     let stderr = '';
     child.stderr.on('data', (chunk) => { stderr += chunk.toString(); });
 
+    let firstChunk = true;
     for await (const chunk of child.stdout) {
+      if (firstChunk) {
+        console.log(`  ${_ts()}  [AI] Claude CLI 开始输出...`);
+        firstChunk = false;
+      }
       yield chunk.toString('utf-8');
     }
 
     const exitCode = await new Promise((resolve) => child.on('close', resolve));
 
-    if (exitCode !== 0 && stderr) {
-      console.error('[Claude CLI stderr]', stderr.slice(0, 200));
+    if (exitCode !== 0) {
+      console.error(`  ${_ts()}  [AI] ✗ Claude CLI 退出码=${exitCode}`);
+      if (stderr) console.error(`  ${_ts()}  [AI] ✗ stderr: ${stderr.slice(0, 300)}`);
+    } else {
+      console.log(`  ${_ts()}  [AI] Claude CLI 正常退出`);
     }
   }
 
   // --- OpenRouter / DeepSeek: 标准 OpenAI 兼容 API ---
   async *_apiStream(cfg, prompt) {
+    console.log(`  ${_ts()}  [AI] API 请求 → ${cfg.endpoint}  model=${cfg.model}`);
     const url = new URL(cfg.endpoint);
     const body = JSON.stringify({
       model: cfg.model,
@@ -141,6 +160,10 @@ class AIAdapter {
       req.end();
     });
   }
+}
+
+function _ts() {
+  return new Date().toLocaleTimeString('zh-CN', { hour12: false });
 }
 
 module.exports = AIAdapter;
