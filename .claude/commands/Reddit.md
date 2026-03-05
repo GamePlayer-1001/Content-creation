@@ -63,16 +63,50 @@ Reddit 属于 E组（国际社交），英文社区平台，读者对AI内容高
 
 ---
 
-## 第四步：合规检查
+## 第四步：三轮润色（内部执行，不可跳过）
+
+Reddit 对AI高度敏感，润色力度适中：
+
+### 第一轮：降AI味
+- 删除正式连接词
+- 打破工整的并列结构
+- 用缩写替换全称
+
+### 第二轮：加 Reddit 人味（8-12%）
+- 网络口语：honestly / ngl / lowkey / tbh
+- 自我质疑："idk if this is just me but..."
+- Reddit特有："Edit: typo" / "YMMV" / "imo"
+
+### 第三轮：加口语句式（1-2个）
+- 碎片句："Best decision ever."
+- 自嘲式："Yeah, I know. Don't judge."
+
+---
+
+## 第五步：质量门控
+
+四维评分（每项 1-10 分）：
+- 钩子强度：标题和开头是否吸引点击
+- 互动设计：是否让人想 upvote/comment
+- 人味指数：是否像真实 Reddit 用户写的
+- 趣味度：看完是否有收获/想参与讨论
+
+门控：>= 9 分通过，< 9 分回第三步重新优化，最多循环 5 轮。
+
+---
+
+## 第六步：合规检查
 
 按 compliance.yaml 规则检查。Reddit 重点检查：
 - 无明显营销/推广痕迹
 - 内容真实可信
 - 符合 subreddit 规则
 
+不通过 → 修改后重新检查
+
 ---
 
-## 第五步：保存
+## 第七步：保存
 
 保存到 `D:/Software/内容生成输出/output/Reddit/`：
 - `{日期}-{topic-slug}-reddit.md`
@@ -85,21 +119,19 @@ title: "Post Title"
 platform: "Reddit"
 subreddit: "r/xxx"
 date: "YYYY-MM-DD"
-type: "story/discussion/resource"
 source_draft: "母稿路径（如有）"
+quality_score: X.X
+compliance: "pass"
 ---
 
 {Title}
 
 {Body}
-
----
-Edit: {预留编辑区}
 ```
 
 ---
 
-## 第六步：输出
+## 第八步：输出
 
 ### 输出规则（严格遵守）
 
@@ -118,11 +150,10 @@ Edit: {预留编辑区}
 - YAML frontmatter（---title/date/tags---）
 - 质量评分表格或分数
 - 合规检查报告/结果
-- 创作说明/适配报告/改写策略
+- 创作说明/适配报告
 - 文件路径或保存状态
 - 任何关于"授权"、"权限"、"保存"、"沙箱限制"的话术
 - 用 markdown 代码块（```markdown```）包裹正文
-- 推荐洗稿风格
 - 字数统计
 
 质量门控、合规检查——全部在内部思维链中完成。用户看到的只有干净的帖子 + 推荐 Subreddit。

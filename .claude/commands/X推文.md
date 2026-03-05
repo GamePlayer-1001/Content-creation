@@ -28,19 +28,15 @@
 
 ---
 
-## 第三步：确定调型
+## 第三步：英文创作
 
-六种核心调型：
+### 调型选择（六选一）
 - **Story**：第一人称经历，具体细节，casual tone
 - **How-to**：步骤式教学，术语自然嵌入
 - **Rant/Callout**：自嘲吐槽，数字驱动冲击
 - **Plot twist**：悬念设置 + 反转收尾
 - **Observation**：行业观察，builder视角
 - **Build in public**：开发进度更新，Day X格式
-
----
-
-## 第四步：英文创作
 
 ### 语气风格
 - 英文、简洁、builder视角
@@ -69,7 +65,7 @@
 
 ---
 
-## 第五步：三轮英文润色
+## 第四步：三轮英文润色（内部执行，不可跳过）
 
 ### 第一轮：降AI味 (De-AI)
 - 删除正式连接词：Furthermore/Moreover/Additionally/In conclusion
@@ -90,39 +86,37 @@
 - 碎片暴击："Shipped. At 2am. On a Sunday."
 - If you 钩子："If you're not using AI for content, you're doing it wrong"
 
----
-
-## 第六步：字符数检查（阻塞性）
-
-严格检查终稿字符数（含标签和空格）：
+### 字符数检查
+润色完成后严格检查终稿字符数（含标签和空格）：
 - <= 280字符：通过
 - > 280字符：必须裁剪，重新检查
 
 ---
 
-## 第七步：热门标签匹配
+## 第五步：质量门控
 
-使用 WebSearch 搜索：
-1. "Twitter X {topic in English} trending hashtags 2026"
-2. 收集候选标签池
-3. 筛选 3 个最终标签（高热度 + 相关度）
-4. 另外推荐 7 个备选标签记录在文件中
+四维评分（每项 1-10 分）：
+- Hook strength：前3词能否抓住注意力
+- Emotional tension：是否有情绪张力
+- Human feel：是否像真人写的（无翻译腔）
+- X algorithm fit：正面/建设性 + 互动引导
 
----
-
-## 第八步：质量门控
-
-四维评分：
-- Hook strength：X/10
-- Emotional tension：X/10
-- Human feel（无翻译腔）：X/10
-- X algorithm fit（正面/建设性 + 互动引导）：X/10
-
-门控：>= 9 分通过，< 9 分回第四步优化，最多 5 轮。
+门控：>= 9 分通过，< 9 分回第三步重新优化，最多循环 5 轮。
 
 ---
 
-## 第九步：保存
+## 第六步：合规检查
+
+按 compliance.yaml 规则执行：
+- 内容真实性检查
+- 敏感话题检测
+- 确保正面/建设性语调（X 2026 算法用 Grok 情绪分析）
+
+不通过 → 修改后重新检查
+
+---
+
+## 第七步：保存
 
 保存到 `D:/Software/内容生成输出/output/X/{日期}-{主题关键词}.md`
 
@@ -136,14 +130,10 @@ date: "YYYY-MM-DD"
 source_draft: "母稿路径（如有）"
 char_count: XXX
 quality_score: X.X
+compliance: "pass"
 ---
 
 {终稿英文推文全文，含3个标签}
-
-字符数：XXX/280
-
-推荐标签池（10个）：
-#tag1 #tag2 #tag3 #tag4 #tag5 #tag6 #tag7 #tag8 #tag9 #tag10
 
 ---
 终稿分析：
@@ -156,20 +146,7 @@ X algorithm fit：X/10
 
 ---
 
-## 第十步：后处理
-
-### 封面图生成（可选）
-
-如果推文适合配图，执行：
-```bash
-cd "D:/Software/内容生成输出" && node tools/cover/generate-cover.mjs --title "{推文主题}" --type narrative --output "D:/Software/内容生成输出/output/封面/X-{日期}-{主题}.png" --keywords "{keywords}"
-```
-
-X 算法偏好：带图推文互动率是纯文字的2-3倍。
-
----
-
-## 第十一步：输出
+## 第八步：输出
 
 ### 输出规则（严格遵守）
 
@@ -201,7 +178,7 @@ X 算法偏好：带图推文互动率是纯文字的2-3倍。
 1. 280字符是死线，不是建议
 2. 用英文思维创作，禁止翻译腔
 3. 三轮润色不可跳过
-4. 正面/建设性语调优先（X 2026 算法用 Grok 情绪分析）
+4. 正面/建设性语调优先
 5. 每条必须有互动引导
 6. 禁止中英混杂
 
