@@ -10,26 +10,33 @@
 // ============================================================
 const ROUTES = {
   '#/':            () => DashboardView.render(),
-  '#/workshop':    () => WorkshopView.render(),
-  '#/distribute':  () => DistributeView.render(),
+  '#/search':      () => SearchView.render(),
+  '#/pipeline':    () => PipelineView.render(),
   '#/content':     () => ContentView.render(),
   '#/config':      () => ConfigView.render(),
   '#/compliance':  () => ComplianceView.render(),
   '#/rewrite':     () => RewriteView.render(),
-  '#/trending':    () => TrendingView.render(),
-  '#/schedule':    () => ScheduleView.render(),
   '#/review':      () => ReviewView.render(),
 };
+
+// 旧路由重定向
+const REDIRECTS = ['#/workshop', '#/distribute', '#/schedule', '#/trending'];
 
 // ============================================================
 //  路由切换
 // ============================================================
 function navigate() {
-  const hash = location.hash || '#/';
-  const render = ROUTES[hash];
+  let hash = location.hash || '#/';
+
+  // 旧路由重定向到首页
+  if (REDIRECTS.includes(hash)) {
+    location.hash = '#/';
+    return;
+  }
 
   renderNav();
 
+  const render = ROUTES[hash];
   if (render) {
     render();
   } else {
