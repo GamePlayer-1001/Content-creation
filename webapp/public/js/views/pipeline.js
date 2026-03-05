@@ -33,14 +33,14 @@ const PipelineView = {
   ],
 
   STYLES: [
-    { key: 'contrarian', name: '反对大众观点', desc: '挑战主流认知，引发争议讨论' },
-    { key: 'fresh', name: '提出新观点', desc: '全新角度解读，提供独到见解' },
-    { key: 'debunk', name: '反对旧观点提新', desc: '先破后立，论证更有说服力' },
-    { key: 'extend', name: '剖析引申新价值', desc: '深挖已有观点的新维度' },
-    { key: 'contrast', name: '反差冲突对比', desc: '强烈对比制造认知冲击' },
-    { key: 'review', name: '对比评测', desc: '客观横评，数据说话' },
+    { key: 'contrarian', name: '反对大众观点', desc: '大家都说XX对，但其实...' },
+    { key: 'fresh', name: '提出新观点', desc: '没人这么想过，但如果...' },
+    { key: 'debunk', name: '反对旧观点提新', desc: '传统做法是XX，更好的是...' },
+    { key: 'extend', name: '剖析引申新价值', desc: '大家都知道XX，但很少人意识到...' },
+    { key: 'contrast', name: '反差冲突对比', desc: '你以为是A，其实是B' },
+    { key: 'review', name: '对比评测', desc: '多维度横评，数据说话' },
     { key: 'deconstruct', name: '深度拆解', desc: '逐层剖析底层逻辑' },
-    { key: 'predict', name: '趋势预判', desc: '预测未来走向，抢占先机' },
+    { key: 'predict', name: '趋势预判', desc: '信号→趋势→预测' },
   ],
 
   PLATFORMS: [

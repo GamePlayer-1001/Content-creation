@@ -1,5 +1,7 @@
 # ============================================================
-#  创作者人设 + 写作风格DNA + 思维模板
+#  创作者人设 + 写作风格DNA + 病毒方法论 + 质量体系
+#  融合 CAT5_Factory v5.0 精华：viral-writer / cold-editor /
+#  advanced-quality-gate / ai-detector 方法论
 #  [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
 # ============================================================
 
@@ -14,7 +16,151 @@ persona:
     - "分享过程和踩坑，不只是结果"
     - "宁可粗糙也不要精致得像广告"
 
-# ---------- 三轮润色引擎 ----------
+# ---------- 8种创作方向（吸收原 thinking_modes） ----------
+# 前端 pipeline.js STYLES 与此一一对应，单一信号源
+creation_directions:
+
+  contrarian:
+    name: "反对大众观点"
+    thinking_core: "大家都说XX对，但其实..."
+    prompt: "以挑战主流认知的角度来写。大胆质疑大众普遍接受的观点，用事实和逻辑反驳常见误区，引发读者重新思考。语气犀利但有理有据。"
+    use_case: "制造争议和讨论，引发评论"
+
+  fresh:
+    name: "提出新观点"
+    thinking_core: "没人这么想过，但如果..."
+    prompt: "从全新的、前所未有的角度解读话题。避免重复已有讨论，提出独到见解和创新性思考框架，让读者有'原来还能这样看'的感觉。"
+    use_case: "分享独特见解，引发收藏"
+
+  debunk:
+    name: "反对旧观点提出新观点"
+    thinking_core: "传统做法是XX，更好的方式是..."
+    prompt: "先破后立：先指出现有主流观点的漏洞和局限性，用数据或案例论证其不足，然后提出新观点作为替代方案。逻辑链条要清晰有力。"
+    use_case: "教程类内容，展示专业度"
+
+  extend:
+    name: "剖析旧观点引申新价值"
+    thinking_core: "大家都知道XX，但很少人意识到..."
+    prompt: "深入剖析已有观点的底层逻辑，挖掘出被忽视的新维度和隐藏价值。不是否定原有观点，而是在其基础上发现新的可能性和应用场景。"
+    use_case: "深度分析，引发分享"
+
+  contrast:
+    name: "反差冲突对比"
+    thinking_core: "你以为是A，其实是B"
+    prompt: "用强烈的对比和反差来制造认知冲击。将看似矛盾的事物放在一起比较，揭示隐藏的联系或讽刺的现实。善用'你以为是A，其实是B'的叙事结构。"
+    use_case: "制造认知冲击，引发传播"
+
+  review:
+    name: "对比评测"
+    thinking_core: "多维度横评，数据说话"
+    prompt: "以客观评测者的视角，从多个维度（成本、效果、易用性、适用场景等）横向对比。用具体数据和真实使用体验说话，给出有理有据的推荐结论。"
+    use_case: "工具类/产品类内容，引发收藏"
+
+  deconstruct:
+    name: "深度拆解"
+    thinking_core: "逐层剖析底层逻辑"
+    prompt: "像庖丁解牛一样，逐层剖析话题的底层逻辑、运作机制、关键节点。从表象到本质，从现象到规律，让读者获得系统性的认知升级。"
+    use_case: "知识类内容，引发收藏和分享"
+
+  predict:
+    name: "趋势预判"
+    thinking_core: "信号→趋势→预测"
+    prompt: "基于当前信号和历史规律，预测领域的未来走向。分析关键趋势、拐点信号和可能的演化路径。语气要自信但留有余地，让读者觉得有前瞻性。"
+    use_case: "趋势类内容，引发讨论"
+
+# ---------- 病毒方法论（from CAT5_Factory viral-writer） ----------
+viral_methodology:
+
+  # 核心公式
+  formula: "Virality = Novelty × Resonance"
+  novelty: "反直觉洞察——原本以为是A，其实是B"
+  resonance: "情绪钩子——制造好奇缺口，触发读者痛点"
+
+  # 三种钩子类型
+  hook_types:
+    half_told_story:
+      name: "半讲故事"
+      description: "开场即悬念，讲到一半不说了"
+      example: "他删掉了所有代码。三个月后..."
+    unanswered_question:
+      name: "无答案问题"
+      description: "制造好奇缺口，读者必须往下看"
+      example: "为什么最成功的创业者都在假装失败？"
+    counter_intuitive_fact:
+      name: "反直觉事实"
+      description: "挑战认知，一句话制造信息差"
+      example: "AI 省的不是钱，是专家。"
+
+  # 高信噪比原则
+  signal_to_noise:
+    rule: "任何不产生新信息的句子，必须删除"
+    details:
+      - "删除所有副词、被动语态和无意义过渡句"
+      - "每段必须有新信息"
+      - "权威来自于高密度"
+
+  # Burstiness 节奏规则
+  burstiness_rules:
+    short_sentence_ratio: "25-35%"       # ≤10字的句子占比
+    max_consecutive_long: 5              # 最多连续5个长句(>20字)
+    emotional_peaks: ">=2/千字"           # 情绪爆点密度
+    paragraph_rhythm: "长段落后必须跟短段落"
+
+    good_example: |
+      AI 不是在改变生活。它在重写规则。
+
+      想想看：你上一次手写导航路线是什么时候？
+      那个世界，已经不存在了。
+
+      但问题来了——谁在写这些新规则？
+
+    bad_example: |
+      人工智能正在改变我们的生活方式。它能够帮助我们提高工作效率。
+      同时它也带来了一些挑战。我们需要认真思考如何应对这些挑战。
+
+# ---------- 中文黑名单（零容忍，融合 CAT5_Factory 完整列表） ----------
+blacklist:
+
+  translator_ese_openings:
+    description: "翻译腔开头"
+    words: ["随着", "在当今", "近年来", "伴随着", "在这个时代"]
+    alternative: "直接讲故事/数据/事件"
+
+  empty_transitions:
+    description: "空洞过渡"
+    words: ["不可否认", "众所周知", "毋庸置疑", "显而易见"]
+    alternative: "删除，用证据说话"
+
+  ai_filler:
+    description: "AI废话"
+    words: ["值得注意的是", "起到重要作用", "具有重要意义", "需要指出的是", "不仅如此"]
+    alternative: "删除或具体化"
+
+  fake_objectivity:
+    description: "假客观"
+    words: ["有人认为", "据说", "或许"]
+    alternative: "引用来源或直接表态"
+
+  summary_cliches:
+    description: "总结套话"
+    words: ["综上所述", "总而言之", "概括来说", "归根结底", "总之", "综上"]
+    alternative: "删除，用金句/CTA"
+
+  over_modification:
+    description: "过度修饰（from CAT5_Factory ai-detector）"
+    words: ["深深地", "静静地", "温柔地", "轻轻地", "默默地", "缓缓地", "悄悄地", "慢慢地", "渐渐地"]
+    alternative: "删除副词，用动作描写替代"
+
+  pompous_words:
+    description: "假大空词汇（from CAT5_Factory ai-detector）"
+    words: ["绽放", "涅槃", "启迪", "沉淀", "升华", "洗礼", "蜕变", "觉醒", "顿悟"]
+    alternative: "用具体场景替代抽象概念"
+
+  # 原 delete_words 保留兼容
+  legacy_delete_words: ["首先", "其次", "最后", "此外", "另外"]
+
+# ---------- 三轮润色引擎（供平台适配层使用，母稿不调用） ----------
+# 注意：此配置由多平台生成/洗稿 Skill 消费，母稿创作不执行此引擎
 polish_engine:
 
   # 第一轮：降AI味
@@ -106,8 +252,28 @@ polish_engine:
       - "放在情绪爆发点"
       - "不要连续两句倒装"
 
-# ---------- 质量门控 ----------
+# ---------- 质量门控（母稿专用） ----------
 quality_gate:
+  description: "母稿质量门控——聚焦内容深度和传播力，不评估口语化程度"
+  dimensions:
+    - name: "钩子强度"
+      weight: 1
+      description: "前3句能否制造好奇缺口？是否使用了三种钩子之一？"
+    - name: "洞察密度"
+      weight: 1
+      description: "每段是否有新信息？是否有反直觉洞察？删掉任何一段是否有损失？"
+    - name: "传播基因"
+      weight: 1
+      description: "是否有让人想分享的点？有无可截图金句(≤20字)？转发动机是什么？"
+    - name: "论证深度"
+      weight: 1
+      description: "有无具体细节(时间/地点/数据/案例)？论证是否有证据链？"
+  pass_score: 8
+  max_iterations: 3
+
+# ---------- 平台质量门控（多平台生成时使用） ----------
+platform_quality_gate:
+  description: "平台内容质量门控——评估口语化和传播适配度"
   dimensions:
     - name: "钩子强度"
       weight: 1
@@ -124,32 +290,61 @@ quality_gate:
   pass_score: 9
   max_iterations: 5
 
-# ---------- 思维模板（参考 mind2post）----------
-thinking_modes:
+# ---------- 对抗性审查（from CAT5_Factory cold-editor） ----------
+adversarial_review:
+  description: "冷酷主编——用毒舌读者视角攻击初稿"
+  identity: "没有情面可讲，只有标准。不写作，只审判。"
+  three_questions:
+    - question: "为什么我要继续看？"
+      target: "钩子是否在前3句创造了好奇缺口"
+    - question: "这个观点我早就知道了"
+      target: "是否有真正的反直觉洞察，还是在重复常识"
+    - question: "看完了所以呢？"
+      target: "是否有让人想分享/收藏的理由，金句在哪"
+  severity_levels:
+    fatal: "钩子无力 / 核心观点是常识 / 无传播点 → 打回"
+    optimization: "措辞可改进 / 结构微调 → 通过"
+  max_iterations: 2
 
-  counterargument:
-    name: "反驳型"
-    description: "挑战主流观点，揭示其漏洞"
-    prompt_hint: "大家都说XX是对的，但实际上..."
-    use_case: "适合制造争议和讨论，引发评论"
+# ---------- 传播潜力评估（from CAT5_Factory advanced-quality-gate Track4） ----------
+viral_potential:
+  resonance_points:
+    description: "共鸣点检测"
+    checks:
+      - "是否触及读者痛点"
+      - "是否有'你有没有过...'类代入感表达"
+      - "是否描绘读者的心声"
+  sharing_motivation:
+    description: "转发动机检测"
+    types:
+      - "社交货币：分享显得我很XXX"
+      - "情绪宣泄：说出我想说的"
+      - "实用价值：对别人有用"
+      - "身份认同：这就是我"
+  quotable_lines:
+    description: "金句质量"
+    standard: "简短有力(≤20字)、有观点有态度、非常见鸡汤"
 
-  novel_perspective:
-    name: "新视角型"
-    description: "提出原创观点或方法"
-    prompt_hint: "没人这么想过，但如果我们换个角度..."
-    use_case: "适合分享独特见解，引发收藏"
-
-  thesis_shift:
-    name: "论点转换型"
-    description: "推翻旧观点，提出新主张"
-    prompt_hint: "传统做法是XX，但更好的方式是..."
-    use_case: "适合教程类内容，展示专业度"
-
-  value_extraction:
-    name: "价值提取型"
-    description: "从旧概念中挖掘新认知"
-    prompt_hint: "大家都知道XX，但很少人意识到..."
-    use_case: "适合深度分析，引发分享"
+# ---------- AI检测维度（from CAT5_Factory ai-detector，供洗稿/质检参考） ----------
+ai_detection_dimensions:
+  dim1_vocabulary:
+    name: "AI高频词汇"
+    weight: 30
+    categories: ["过度修饰", "假大空词汇", "翻译腔/书面语"]
+  dim2_patterns:
+    name: "套路句式"
+    weight: 25
+    categories: ["时间类套路", "选择类套路", "条件类套路", "因果类套路"]
+  dim3_authenticity:
+    name: "真实感"
+    weight: 30
+    categories: ["具体细节占比", "口语化程度", "真实瑕疵"]
+    note: "完美无瑕 = 0分(高危!)，有瑕疵反而得分高"
+  dim4_symmetry:
+    name: "排比对仗"
+    weight: 15
+    categories: ["排比句检测", "结构完美度"]
+    note: "过于工整的结构 = AI特征"
 
 # ---------- 标题元素池 ----------
 title_elements:
@@ -183,7 +378,7 @@ interaction_design:
     - "没有互动引导 = 0评论 = 算法判定无互动价值 = 不推荐"
     - "优先设计能引发评论的钩子（提问/求助/争议话题）"
 
-# ---------- AI检测规避方法论 (from CAT5_Brain V1→V2) ----------
+# ---------- AI检测规避方法论 (from CAT5_Brain + CAT5_Factory) ----------
 anti_detection:
   strategies:
     - "打破对仗句式（避免A,B;A,B的平行结构）"
@@ -197,7 +392,17 @@ anti_detection:
   target_detectors: ["腾讯混元", "GPTZero", "ZeroGPT"]
   target_score: "<= 30% AI检测率"
 
-# ---------- 内容元数据规范 (from CAT5_Brain YAML headers) ----------
+# ---------- 代码块保护（from CAT5_Factory，技术文章必读） ----------
+code_protection:
+  description: "技术类文章中的代码块绝对不可修改"
+  scope:
+    - "三反引号代码块内全部内容"
+    - "单反引号行内代码"
+    - "代码注释（即使包含黑名单词汇也不改）"
+    - "技术术语（函数名、变量名、文件名）"
+  process: "识别代码块 → 标记为占位符 → 只对非代码区域应用规则 → 还原代码块"
+
+# ---------- 内容元数据规范 ----------
 metadata_spec:
   required: ["title", "type", "date", "platform", "version"]
-  optional: ["thinking_mode", "ai_detection_score", "style", "tags"]
+  optional: ["creation_direction", "ai_detection_score", "style", "tags"]
