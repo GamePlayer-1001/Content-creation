@@ -38,7 +38,7 @@
   format: "短文本"
   example: "「发现一个AI工具，10分钟自动生成一周的社媒内容 😂」"
 
-# ---------- A组：长图文同步 ----------
+# ---------- A组：长图文 ----------
 
 公众号:
   group: "A"
@@ -65,6 +65,24 @@
   taboo: "避免标题党"
   inherits: "公众号"
   title_style: "加数字钩子"
+
+知乎:
+  group: "A"
+  tone: "专业、深度、有理有据"
+  taboo: "避免绝对化表达，不用'首先其次最后'"
+  length: "1500-3000字"
+  frequency: "2-3篇/周"
+  format: "深度长文/专栏/回答"
+  must_have:
+    - "亲身经历至少1段"
+    - "具体数据/案例支撑"
+    - "不完美表达（增加真实感）"
+  title_formula:
+    - "深度分析型：[领域]的[数量]个真相，[结果]"
+    - "反常识型：[普遍认知]可能是错的"
+    - "经验分享型：我在[领域]工作[时间]，总结出这些经验"
+  recommended_styles: ["A", "C", "G"]
+  example: "「我做了一年AI自动化，这5个坑你一定会踩」"
 
 # ---------- B组：技术社区 ----------
 
@@ -98,10 +116,45 @@ GitHub:
     周四: "内容发布（每2周1次）"
     周五: "关系维护（Star repo + 提PR）"
 
-# ---------- D组：国际化 ----------
+# ---------- D组：国际长文 ----------
+
+Medium:
+  group: "D"
+  tone: "英文、深度、个人视角+专业洞察"
+  taboo: "不要翻译腔英文，不要 'In today's rapidly evolving...'"
+  length: "1500-3000 words (6-12 min read)"
+  frequency: "1-2篇/周"
+  format: "英文长文"
+  must_have:
+    - "Subtitle（副标题）"
+    - "Featured Image"
+    - "5个Tags（第一个最重要）"
+  title_formula:
+    - "How I [achieved result] in [timeframe]"
+    - "Why [common belief] is Wrong"
+    - "I [did something] for [time]. Here's What Happened."
+  recommended_styles: ["A", "C", "J"]
+  example: "\"How I Built an AI Content Pipeline in 30 Days — and What Broke Along the Way\""
+
+Quora:
+  group: "D"
+  tone: "英文、专业、直接回答+经验支撑"
+  taboo: "不要绕弯子，不要CTA"
+  length: "500-2000 words"
+  frequency: "2-3回答/周"
+  format: "英文问答"
+  answer_structure:
+    - "Short answer: [直接结论]"
+    - "Let me explain why..."
+    - "分点说明 + 案例"
+    - "简短总结"
+  recommended_styles: ["C", "E", "J"]
+  example: "\"Short answer: Yes, but not how most people think. Let me explain...\""
+
+# ---------- E组：国际社交 ----------
 
 X:
-  group: "D"
+  group: "E"
   tone: "英文、简洁、builder视角"
   taboo: "不要中式英语"
   length: "280字符（含标签）"
@@ -113,9 +166,28 @@ X:
     - "每天回复3-5条相关推文"
     - "每周至少1次Quote Tweet行业热门推文"
     - "回复不是广告，留有价值的见解"
+  recommended_styles: ["C", "E", "H"]
   example: "\"Built an automation pipeline for content creation. Day X update.\""
 
-# ---------- E组：私域 ----------
+Reddit:
+  group: "E"
+  tone: "英文、真实、社区感、可讨论"
+  taboo: "零营销味，像社区成员不是品牌方"
+  length: "200-1500 words（灵活）"
+  frequency: "1-2帖/周 + 互动"
+  format: "英文帖子/评论"
+  culture:
+    - "真实性第一，Reddit讨厌虚假"
+    - "承认不足，邀请补充"
+    - "遵守subreddit规则"
+  title_formula:
+    - "I [did something] and [result]. AMA"
+    - "Just discovered [tool]. Mind = blown."
+    - "What's the best [thing] for [purpose]?"
+  recommended_styles: ["A", "H", "I"]
+  example: "\"I built an AI content pipeline. Here's what actually worked (and what didn't).\""
+
+# ---------- F组：私域 ----------
 
 朋友圈:
   group: "E"

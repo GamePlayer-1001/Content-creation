@@ -60,13 +60,23 @@ const CREATION_STYLES = {
 //  平台映射 (Skill → 输出目录)
 // ============================================================
 const PLATFORMS = [
+  // A组：长图文
   { skill: '公众号', dir: '公众号', group: 'A' },
-  { skill: '小红书', dir: '小红书', group: 'C' },
-  { skill: '即刻',   dir: '即刻',   group: 'C' },
-  { skill: 'X推文',  dir: 'X',      group: 'D' },
+  { skill: '知乎',   dir: '知乎',   group: 'A' },
+  // B组：技术社区
   { skill: 'linuxdo', dir: 'linuxdo', group: 'B' },
   { skill: 'GitHub', dir: 'GitHub', group: 'B' },
-  { skill: '朋友圈', dir: '朋友圈', group: 'E' },
+  // C组：社交平台
+  { skill: '小红书', dir: '小红书', group: 'C' },
+  { skill: '即刻',   dir: '即刻',   group: 'C' },
+  // D组：国际长文
+  { skill: 'Medium', dir: 'Medium', group: 'D' },
+  { skill: 'Quora',  dir: 'Quora',  group: 'D' },
+  // E组：国际社交
+  { skill: 'X推文',  dir: 'X',      group: 'E' },
+  { skill: 'Reddit', dir: 'Reddit', group: 'E' },
+  // F组：私域
+  { skill: '朋友圈', dir: '朋友圈', group: 'F' },
 ];
 
 // ============================================================
