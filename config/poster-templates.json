@@ -1,0 +1,38 @@
+{
+  "_description": "海报生成提示词模板 (from CAT5_Factory generate_poster.cjs)",
+  "_protocol": "变更时更新此头部，然后检查 CLAUDE.md",
+
+  "text_placements": [
+    "road sign", "neon sign", "t-shirt print", "book cover",
+    "laptop screen", "wall graffiti", "banner", "billboard",
+    "coffee cup", "notebook page", "whiteboard"
+  ],
+
+  "styles": {
+    "cyberpunk": "cyberpunk neon city, dark tones, glowing accents",
+    "minimal": "minimalist professional, clean white space, modern typography",
+    "warm": "warm narrative, soft lighting, cozy atmosphere",
+    "vibrant": "vibrant energetic, bold colors, dynamic composition",
+    "elegant": "elegant luxury, gold accents, sophisticated",
+    "academic": "scientific academic, clean layout, data visualization feel",
+    "bold": "bold disruptive, high contrast, striking composition",
+    "organic": "natural organic, earth tones, handcrafted feel"
+  },
+
+  "prompt_template": "The text \"{text}\" must be clearly visible and legible on a {placement}. Rendered with high clarity, sharp edges, perfect spelling. Style: {style}, 8K resolution, sharp focus on text elements.",
+
+  "negative_prompt": "NO AI blue (#4169E1), NO electric blue, NO neon purple (#8A2BE2), NO blurry text, NO misspelled text, NO illegible text, NO watermarks",
+
+  "aspect_ratios": {
+    "cover": "3:4",
+    "banner": "16:9",
+    "square": "1:1",
+    "poster": "2:3",
+    "story": "9:16"
+  },
+
+  "usage_example": {
+    "prompt": "The text \"AI不是在改变生活，它在重写规则\" must be clearly visible and legible on a neon sign. Rendered with high clarity, sharp edges, perfect spelling. Style: cyberpunk neon city, dark tones, glowing accents, 8K resolution, sharp focus on text elements.",
+    "negative": "NO AI blue, NO electric blue, NO neon purple, NO blurry text"
+  }
+}

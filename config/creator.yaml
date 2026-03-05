@@ -271,9 +271,11 @@ quality_gate:
   pass_score: 8
   max_iterations: 3
 
-# ---------- 平台质量门控（多平台生成时使用） ----------
+# ---------- 平台质量门控（多平台生成时使用，融合四轨审核） ----------
 platform_quality_gate:
-  description: "平台内容质量门控——评估口语化和传播适配度"
+  description: "平台内容质量门控——四维评分 + 四轨审核双保险"
+
+  # 四维评分（快速评估，每项1-10，平均>=9通过）
   dimensions:
     - name: "钩子强度"
       weight: 1
@@ -289,6 +291,48 @@ platform_quality_gate:
       description: "看完是否想分享/收藏"
   pass_score: 9
   max_iterations: 5
+
+  # 四轨审核（深度检测，总分100，>=70通过）
+  four_track_audit:
+    description: "from CAT5_Factory advanced-quality-gate v4.0"
+    track1_seo:
+      name: "SEO审核"
+      weight: 20
+      pass_line: 14
+      checks:
+        - "关键词密度 1-2%"
+        - "LSI覆盖率 >= 70%"
+        - "关键词位置：标题+首段+结尾"
+        - "内链数量合适"
+    track2_ai_detection:
+      name: "AI痕迹检测"
+      weight: 30
+      pass_line: 21
+      checks:
+        - "AI高频词汇扫描"
+        - "套路句式识别"
+        - "真实感评估"
+        - "排比对仗检查"
+      note: "参考 ai_detection_dimensions 四维度"
+    track3_burstiness:
+      name: "爆发度检测"
+      weight: 25
+      pass_line: 17
+      checks:
+        - "短句比例 25-35%"
+        - "最长连续长句 <= 5句"
+        - "情绪爆点 >= 2个/千字"
+        - "被动语态 < 15%"
+        - "段落节奏有变化"
+    track4_viral:
+      name: "传播潜力"
+      weight: 25
+      pass_line: 17
+      checks:
+        - "共鸣点数量 >= 2个"
+        - "转发动机强度（社交货币/情绪宣泄/实用价值/身份认同）"
+        - "金句质量（简短有力 <= 20字）"
+        - "话题性（能否引发讨论）"
 
 # ---------- 对抗性审查（from CAT5_Factory cold-editor） ----------
 adversarial_review:

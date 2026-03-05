@@ -1,37 +1,41 @@
 # 内容生成输出 — 全平台内容推广工具集
 Claude Code Skills + YAML Config + 统一工具链
 
-> L1 项目宪法 | 9平台内容流水线 | 母稿驱动 + 配置化赛道 | 三项目融合
+> L1 项目宪法 | 13平台内容流水线 | 母稿驱动 + 配置化赛道 | 四项目融合
 
 ## 架构概览
 
-一篇母稿 → 9个平台衍生内容。双层质量体系：
+一篇母稿 → 13个平台衍生内容。双层质量体系：
 - **母稿层**：双路径输入 → 角度发散(4维评分) → 原创编撰(病毒公式) → 对抗性审查(Cold Editor) → 质量门控(>=8分) → 合规检查
 - **平台层**：三轮润色 → 质量门控(>=9分) → 合规检查 → 后处理
 
 母稿是干净的高质量内容原料，不做口语化/降AI味处理。三轮润色下沉到平台适配层。
-三个独立子项目(CAT5_Brain/CAT5_Factory/Auto-Redbook)已融合完毕，CAT5_Factory v5.0 病毒方法论已吸收。
+四项目融合完毕(CAT5_Brain/CAT5_Factory/Auto-Redbook/玄学赛道)，CAT5_Factory v5.0 全量吸收（病毒方法论+10种洗稿风格+4新平台+四轨审核+海报提示词）。
 
 ## 目录结构
 
 ```
 内容生成输出/
 ├── .claude/
-│   ├── commands/           # Skills 入口（17个 /命令）
+│   ├── commands/           # Skills 入口（21个 /命令）
 │   │   ├── 母稿.md         # 核心创作引擎（9步：输入→方向→角度→编撰→审查→修订→门控→合规→输出）
-│   │   ├── 小红书.md       # 小红书图文 + 卡片 + 封面
+│   │   ├── 小红书.md       # C组：小红书图文 + 卡片 + 封面
 │   │   ├── 公众号.md       # A组：公众号/百家号/头条
-│   │   ├── 即刻.md         # 即刻短文本（100-300字）
-│   │   ├── X推文.md        # 英文推文（280字符）
-│   │   ├── linuxdo.md      # 技术社区帖（零营销感）
-│   │   ├── GitHub.md       # Discussion/PR/Issue 草稿
-│   │   ├── 朋友圈.md       # 私域内容
+│   │   ├── 即刻.md         # C组：即刻短文本（100-300字）
+│   │   ├── 知乎.md         # A组：知乎深度长文（1500-3000字）
+│   │   ├── X推文.md        # E组：英文推文（280字符）
+│   │   ├── Medium.md       # D组：英文长文（1500-3000 words）
+│   │   ├── Quora.md        # D组：英文问答（500-2000 words）
+│   │   ├── Reddit.md       # E组：英文社区帖（灵活长度）
+│   │   ├── linuxdo.md      # B组：技术社区帖（零营销感）
+│   │   ├── GitHub.md       # B组：Discussion/PR/Issue 草稿
+│   │   ├── 朋友圈.md       # F组：私域内容
 │   │   ├── 今日任务.md     # 根据Day N生成待办清单
 │   │   ├── 周复盘.md       # 周复盘报告
 │   │   ├── 合规检查.md     # 内容合规审查
 │   │   ├── 卡片渲染.md     # MD → 小红书卡片PNG
 │   │   ├── 全平台分发.md   # 一键从母稿衍生全平台
-│   │   ├── 洗稿.md         # 5种风格改写 + 降AI检测
+│   │   ├── 洗稿.md         # 10种风格改写(A-J) + 降AI检测
 │   │   ├── 热点抓取.md     # 小红书/RSS热点采集
 │   │   ├── 自动发布.md     # Playwright自动化发布
 │   │   └── 图标封面.md     # Lucide Icons封面生成
@@ -39,7 +43,7 @@ Claude Code Skills + YAML Config + 统一工具链
 │
 ├── config/                 # 可配置层（换赛道只改这里）
 │   ├── product.yaml        # 产品/品牌/赛道/选题池
-│   ├── platforms.yaml      # 9平台语气风格规则 + 配图命名
+│   ├── platforms.yaml      # 13平台语气风格规则(6组) + 配图命名
 │   ├── schedule.yaml       # 60天排期 + 日类型 + 发布时段
 │   ├── compliance.yaml     # 合规规则库（敏感词/红线）
 │   ├── creator.yaml        # 人设 + 风格DNA + 病毒方法论 + 8种创作方向 + 双层质量体系
@@ -49,6 +53,7 @@ Claude Code Skills + YAML Config + 统一工具链
 │   ├── promotion.json      # 推广策略（4种风格权重）
 │   ├── selectors.json      # 小红书CSS选择器（自动化发布）
 │   ├── image-prompts.json  # 图片 prompt 历史存储
+│   ├── poster-templates.json # 海报提示词模板（11种文字放置×8视觉风格）
 │   ├── .env                # 环境变量 (GOOGLE_AI_KEY 等)
 │   └── .env.example        # 环境变量模板
 │
@@ -90,7 +95,7 @@ Claude Code Skills + YAML Config + 统一工具链
 │   └── wechat-images/      # 微信截图UI资源
 │
 ├── output/                 # 所有生成内容
-│   ├── 母稿/ 小红书/ 公众号/ 即刻/ X/ linuxdo/ GitHub/ 朋友圈/
+│   ├── 母稿/ 小红书/ 公众号/ 即刻/ 知乎/ X/ Medium/ Quora/ Reddit/ linuxdo/ GitHub/ 朋友圈/
 │   ├── 图片/               # AI 生成图片 (按平台子目录)
 │   ├── 封面/ 卡片/ 复盘/
 │   ├── drafts/             # 草稿队列
@@ -161,7 +166,7 @@ Claude Code Skills + YAML Config + 统一工具链
 | 内容管理 | `#/content` | 多平台 Tab 浏览 + CRUD |
 | 配置管理 | `#/config` | YAML/JSON 编辑 |
 | 合规检查 | `#/compliance` | 6维合规扫描 |
-| 洗稿 | `#/rewrite` | 5种风格改写 + 降AI检测 |
+| 洗稿 | `#/rewrite` | 10种风格改写(A-J) + 降AI检测 |
 | 周复盘 | `#/review` | 产出统计 + AI 周复盘报告 |
 
 ### 内容流水线 6 步
@@ -188,7 +193,7 @@ Claude Code Skills + YAML Config + 统一工具链
 ```
 /今日任务           → 查看今天该做什么
 /母稿 AI工具效率    → 创作核心长文
-/全平台分发 output/母稿/xxx.md  → 一键9平台
+/全平台分发 output/母稿/xxx.md  → 一键13平台
 ```
 
 ### 单平台创作
@@ -196,7 +201,11 @@ Claude Code Skills + YAML Config + 统一工具链
 /小红书 output/母稿/xxx.md   → 小红书图文+卡片+封面
 /公众号 output/母稿/xxx.md   → 公众号+百家号+头条
 /即刻 output/母稿/xxx.md     → 即刻短文
+/知乎 output/母稿/xxx.md     → 知乎深度长文
 /X推文 output/母稿/xxx.md    → 英文推文
+/Medium output/母稿/xxx.md   → 英文长文
+/Quora 问题内容              → 英文问答
+/Reddit output/母稿/xxx.md   → 英文社区帖
 /linuxdo 技术选型踩坑        → 技术社区帖
 /GitHub Discussion: xxx      → GitHub草稿
 /朋友圈 周三                 → 朋友圈文案
@@ -204,7 +213,7 @@ Claude Code Skills + YAML Config + 统一工具链
 
 ### 工具命令
 ```
-/洗稿 output/母稿/xxx.md --style A  → 5种风格改写
+/洗稿 output/母稿/xxx.md --style A  → 10种风格改写(A-J)
 /合规检查 output/小红书/xxx.md       → 合规审查
 /卡片渲染 xxx.md --theme retro       → 卡片PNG
 /周复盘                              → 周复盘报告
@@ -227,7 +236,7 @@ Claude Code Skills + YAML Config + 统一工具链
 1. 降AI味：删除书面连接词 + 替换书面表达 + 打破逻辑链
 2. 加人类废话(10-15%)：语气词 + 口头废话 + 情绪爆发
 3. 加倒装句(3-5个)：先蹦重点再补主语
-平台质量门控：四维评分(钩子强度/互动设计/人味指数/趣味度) >= 9分通过
+平台质量门控：四维评分(钩子强度/互动设计/人味指数/趣味度) >= 9分 + 四轨审核(SEO20%+AI痕迹30%+爆发度25%+传播潜力25%) >= 70分
 
 ### 病毒方法论（from CAT5_Factory v5.0）
 - **公式**: Virality = Novelty × Resonance
@@ -238,12 +247,16 @@ Claude Code Skills + YAML Config + 统一工具链
 ### 反AI检测策略
 8项操作：打破对仗 → 口语碎碎念 → 删总结句 → 场景替代 → 术语口语化 → 思考过程句 → 随意化 → 故事展开
 
-### 平台分组
-- A组(长图文同步): 公众号 → 百家号/今日头条
+### 洗稿10种风格(A-J)
+A=个人故事型 / B=对话场景型 / C=观点论述型 / D=情感共鸣型 / E=干货清单型 / F=视频口播型 / G=技术深度型 / H=争议讨论型 / I=轻松娱乐型 / J=专业权威型
+
+### 平台分组（6组13平台）
+- A组(长图文): 公众号 → 百家号/今日头条 / 知乎
 - B组(技术社区): linuxdo / GitHub
 - C组(社交平台): 小红书 / 即刻
-- D组(国际化): X/Twitter
-- E组(私域): 朋友圈
+- D组(国际长文): Medium / Quora
+- E组(国际社交): X/Twitter / Reddit
+- F组(私域): 朋友圈
 
 ## 工具路径
 
@@ -271,6 +284,6 @@ cd "D:/Software/内容生成输出" && node tools/screenshot/generate-wechat-scr
 |--------|------|----------|
 | CAT5_Brain | 已清除 | 洗稿模板、技术文章模板 → templates/ |
 | Auto-Redbook-Skills | 已清除 | 存档文档 → docs/auto-redbook/ |
-| CAT5_Factory v5.0 | 已吸收 | 病毒方法论 + Burstiness + 中文黑名单 + 对抗性审查 + 双层质量体系 → creator.yaml + 母稿.md |
+| CAT5_Factory v5.0 | 已删除 | 病毒方法论 + 10种洗稿风格(A-J) + 4新平台(知乎/Medium/Reddit/Quora) + 四轨审核 + 海报提示词 → creator.yaml + 洗稿.md + platforms.yaml + poster-templates.json |
 
 [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md

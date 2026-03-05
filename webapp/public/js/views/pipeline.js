@@ -44,13 +44,17 @@ const PipelineView = {
   ],
 
   PLATFORMS: [
-    { skill: '公众号', dir: '公众号' },
-    { skill: '小红书', dir: '小红书' },
-    { skill: '即刻', dir: '即刻' },
-    { skill: 'X推文', dir: 'X' },
-    { skill: 'linuxdo', dir: 'linuxdo' },
-    { skill: 'GitHub', dir: 'GitHub' },
-    { skill: '朋友圈', dir: '朋友圈' },
+    { skill: '公众号', dir: '公众号', group: 'A' },
+    { skill: '知乎', dir: '知乎', group: 'A' },
+    { skill: 'linuxdo', dir: 'linuxdo', group: 'B' },
+    { skill: 'GitHub', dir: 'GitHub', group: 'B' },
+    { skill: '小红书', dir: '小红书', group: 'C' },
+    { skill: '即刻', dir: '即刻', group: 'C' },
+    { skill: 'Medium', dir: 'Medium', group: 'D' },
+    { skill: 'Quora', dir: 'Quora', group: 'D' },
+    { skill: 'X推文', dir: 'X', group: 'E' },
+    { skill: 'Reddit', dir: 'Reddit', group: 'E' },
+    { skill: '朋友圈', dir: '朋友圈', group: 'F' },
   ],
 
   // ============================================================
