@@ -12,29 +12,28 @@ const DashboardView = {
 
     try {
       const data = await API.get('/dashboard');
-      const { dayN, date, weekday, dayType, phase, tasks, stats, todayFiles } = data;
+      const { date, weekday, stats, todayFiles, todayCount, imageEnabled } = data;
 
-      // 头部状态卡片
       let html = `<h2>仪表盘</h2>`;
-      html += `<div class="card-grid">`;
-      html += `
+
+      // 头部状态
+      html += `<div class="card-grid">
         <div class="card">
-          <div class="card-header">推广日</div>
-          <div class="card-value">Day ${dayN}</div>
-          <div class="card-sub">${date} ${weekday}</div>
+          <div class="card-header">日期</div>
+          <div class="card-value" style="font-size:20px">${date}</div>
+          <div class="card-sub">星期${weekday}</div>
         </div>
         <div class="card">
-          <div class="card-header">阶段</div>
-          <div class="card-value">P${phase.phase}</div>
-          <div class="card-sub">${phase.label}</div>
+          <div class="card-header">今日产出</div>
+          <div class="card-value">${todayCount || 0}</div>
+          <div class="card-sub">篇内容</div>
         </div>
         <div class="card">
-          <div class="card-header">日类型</div>
-          <div class="card-value">${dayType.label}</div>
-          <div class="card-sub">预计 ${dayType.hours}</div>
+          <div class="card-header">图片引擎</div>
+          <div class="card-value" style="font-size:16px">${imageEnabled ? 'Nano Banana Pro' : '未配置'}</div>
+          <div class="card-sub">${imageEnabled ? '就绪' : '需配置 GOOGLE_AI_KEY'}</div>
         </div>
-      `;
-      html += `</div>`;
+      </div>`;
 
       // 产出统计
       html += `<h3>产出统计</h3>`;
@@ -47,7 +46,6 @@ const DashboardView = {
       html += `</div>`;
 
       // 今日已完成
-      const todayCount = Object.values(todayFiles).flat().length;
       if (todayCount > 0) {
         html += `<h3>今日已产出 (${todayCount})</h3>`;
         html += `<div class="stats-row">`;
@@ -59,43 +57,16 @@ const DashboardView = {
         html += `</div>`;
       }
 
-      // 今日任务
-      html += `<h3>今日任务</h3>`;
-      html += `<ul class="task-list">`;
-      for (const t of tasks) {
-        const skillBtn = t.skill
-          ? `<span class="task-skill" onclick="location.hash='#/workshop'">${t.skill}</span>`
-          : '';
-        html += `
-          <li class="task-item">
-            <span class="task-time">${t.time}</span>
-            <span class="task-name">${t.task}</span>
-            ${skillBtn}
-          </li>
-        `;
-      }
-      html += `</ul>`;
-
       // 快捷操作
       html += `
         <h3 style="margin-top:24px">快捷操作</h3>
         <div class="quick-actions">
-          <button class="btn btn-primary" onclick="location.hash='#/workshop'">开始创作</button>
-          <button class="btn" onclick="location.hash='#/distribute'">全平台分发</button>
+          <button class="btn btn-primary" onclick="location.hash='#/pipeline'">内容流水线</button>
+          <button class="btn" onclick="location.hash='#/search'">热帖搜索</button>
           <button class="btn" onclick="location.hash='#/compliance'">合规检查</button>
-          <button class="btn" onclick="location.hash='#/schedule'">查看排期</button>
+          <button class="btn" onclick="location.hash='#/content'">内容管理</button>
         </div>
       `;
-
-      // 阶段提醒
-      if (phase.focus) {
-        html += `
-          <div class="card" style="margin-top:24px;border-style:dashed">
-            <div class="card-header">阶段提醒</div>
-            <div style="font-size:13px">${phase.focus}</div>
-          </div>
-        `;
-      }
 
       app.innerHTML = html;
     } catch (e) {

@@ -12,12 +12,11 @@ function renderNav() {
   const items = [
     { section: '概览' },
     { hash: '#/',          label: '仪表盘' },
-    { hash: '#/schedule',  label: '排期管理' },
 
     { section: '创作' },
-    { hash: '#/workshop',   label: '创作工坊' },
-    { hash: '#/distribute', label: '全平台分发' },
-    { hash: '#/rewrite',    label: '洗稿' },
+    { hash: '#/search',    label: '热帖搜索' },
+    { hash: '#/pipeline',  label: '内容流水线' },
+    { hash: '#/rewrite',   label: '洗稿' },
 
     { section: '管理' },
     { hash: '#/content',    label: '内容管理' },
@@ -25,7 +24,6 @@ function renderNav() {
     { hash: '#/config',     label: '配置管理' },
 
     { section: '工具' },
-    { hash: '#/trending',   label: '热点抓取' },
     { hash: '#/review',     label: '周复盘' },
   ];
 

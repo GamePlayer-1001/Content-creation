@@ -5,7 +5,7 @@
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 
-require('dotenv').config();
+require('dotenv').config({ path: require('path').join(__dirname, '..', 'config', '.env') });
 const express = require('express');
 const path = require('path');
 
@@ -21,12 +21,14 @@ const TEMPLATES_DIR = path.join(PROJECT_ROOT, 'templates');
 // ============================================================
 //  初始化服务
 // ============================================================
-const ConfigManager  = require('./services/config-manager');
-const ScheduleEngine = require('./services/schedule-engine');
-const OutputManager  = require('./services/output-manager');
+const ConfigManager    = require('./services/config-manager');
+const ScheduleEngine   = require('./services/schedule-engine');
+const OutputManager    = require('./services/output-manager');
 const AIAdapter        = require('./services/ai-adapter');
 const SkillLoader      = require('./services/skill-loader');
 const ComplianceEngine = require('./services/compliance-engine');
+const ImageGenerator   = require('./services/image-generator');
+const PromptStore      = require('./services/prompt-store');
 
 const configManager    = new ConfigManager(CONFIG_DIR);
 const scheduleEngine   = new ScheduleEngine(configManager);
@@ -34,6 +36,16 @@ const outputManager    = new OutputManager(OUTPUT_DIR);
 const aiAdapter        = new AIAdapter();
 const skillLoader      = new SkillLoader(COMMANDS_DIR, configManager, TEMPLATES_DIR);
 const complianceEngine = new ComplianceEngine(configManager);
+const promptStore      = new PromptStore(CONFIG_DIR);
+
+// 图片生成: 仅在配置了 GOOGLE_AI_KEY 时启用
+const imageGenerator = process.env.GOOGLE_AI_KEY
+  ? new ImageGenerator(process.env.GOOGLE_AI_KEY, OUTPUT_DIR)
+  : null;
+
+if (!imageGenerator) {
+  console.warn('[WARN] GOOGLE_AI_KEY 未配置, 图片生成功能不可用');
+}
 
 // 挂载到 app.locals 供路由访问
 const app = express();
@@ -48,6 +60,8 @@ app.locals.outputManager    = outputManager;
 app.locals.aiAdapter        = aiAdapter;
 app.locals.skillLoader      = skillLoader;
 app.locals.complianceEngine = complianceEngine;
+app.locals.imageGenerator   = imageGenerator;
+app.locals.promptStore      = promptStore;
 
 // ============================================================
 //  中间件
@@ -62,13 +76,12 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/api', require('./routes/dashboard'));
 app.use('/api', require('./routes/content'));
 app.use('/api', require('./routes/config'));
-app.use('/api', require('./routes/schedule'));
 app.use('/api', require('./routes/compliance'));
 app.use('/api', require('./routes/creation'));
-app.use('/api', require('./routes/distribution'));
 app.use('/api', require('./routes/rewrite'));
-app.use('/api', require('./routes/trending'));
 app.use('/api', require('./routes/review'));
+app.use('/api/pipeline', require('./routes/pipeline'));
+app.use('/api/image', require('./routes/image'));
 
 // ============================================================
 //  SPA 回退 — 所有非 API 路由返回 index.html
