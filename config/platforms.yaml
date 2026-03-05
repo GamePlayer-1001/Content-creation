@@ -193,6 +193,7 @@ Reddit:
   group: "E"
   tone: "真实、个人化、不像广告"
   taboo: "3条里最多1条直接推广"
+  length: "100-500字（轻量100-200，有料200-500）"
   frequency: "工作日2条 + 周六1条"
   format: "短文+配图"
   weekly_templates:
