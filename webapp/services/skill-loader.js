@@ -47,9 +47,10 @@ class SkillLoader {
     // 1. 替换 $ARGUMENTS
     let prompt = template.replace(/\$ARGUMENTS/g, args.topic || args.input || '');
 
-    // 2. 如果有母稿内容，附加到末尾
+    // 2. 如果有内容，附加到末尾（标签可配置：母稿/平台内容等）
     if (args.draftContent) {
-      prompt += `\n\n---\n以下是母稿原文：\n\n${args.draftContent}`;
+      const label = args.contentLabel || '母稿原文';
+      prompt += `\n\n---\n以下是${label}：\n\n${args.draftContent}`;
     }
 
     // 3. 提取并注入配置文件内容

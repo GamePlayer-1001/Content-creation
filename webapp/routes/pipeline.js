@@ -241,11 +241,12 @@ router.post('/optimize', async (req, res) => {
       console.log(`  ${_ts()}  [流水线]   合规检查: 得分=${compliance.score}  命中=${compliance.hits.length}项`);
       _send(res, { type: 'compliance_result', platform: item.platform, score: compliance.score, hits: compliance.hits.length });
 
-      // 调用洗稿去 AI 味 (使用口语重写版 style E)
+      // 调用去AI优化（保持原文风格不变，不做风格改写）
       try {
-        const prompt = skillLoader.buildPrompt('洗稿', {
-          topic: '--style E',
+        const prompt = skillLoader.buildPrompt('优化去AI', {
+          topic: item.platform,
           draftContent: item.content,
+          contentLabel: '待优化的平台内容',
         });
 
         let optimized = '';
