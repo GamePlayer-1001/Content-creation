@@ -525,6 +525,13 @@ h3 {
 }
 .prompt-item .prompt-del:hover { color: var(--fg); }
 
+/* ==================== Style Preset Buttons ==================== */
+.style-preset-btn { transition: all .15s; }
+.style-preset-btn:hover {
+  background: var(--fg);
+  color: var(--bg);
+}
+
 /* ==================== Search Page ==================== */
 .search-bar {
   display: flex;

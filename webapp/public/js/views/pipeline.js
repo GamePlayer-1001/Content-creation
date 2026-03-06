@@ -20,6 +20,8 @@ const PipelineView = {
     platformsOptimize: [],
     platformResults: [],
     images: [],
+    imageExtractions: {},
+    imageStylePrompts: {},
     finalResults: [],
   },
 
@@ -587,34 +589,84 @@ const PipelineView = {
   },
 
   // ============================================================
-  //  Step 4: 图片生成
+  //  Step 4: 图片生成 (智能提炼 + 双框 + 风格模板 + 后端翻译)
   // ============================================================
   async _renderImage() {
     const el = document.getElementById('pipeline-content');
     const finalContents = this.state.platformResults;
 
-    // 加载历史 prompts
+    // 并行加载: 历史 prompts + 平台配置
     let historyPrompts = [];
-    try { historyPrompts = await API.get('/image/prompts'); } catch {}
+    let platformConfig = {};
+    try {
+      const [hp, pc] = await Promise.all([
+        API.get('/image/prompts').catch(() => []),
+        API.get('/config/platforms.yaml').catch(() => ({ parsed: {} })),
+      ]);
+      historyPrompts = hp || [];
+      platformConfig = pc.parsed || {};
+    } catch {}
 
     let html = `<h3>图片生成</h3>
       <p style="font-size:13px;color:var(--muted);margin-bottom:16px">
-        为每个平台的帖子生成配图 (Nano Banana Pro)
+        AI 智能提炼文章主题 + 风格模板 → 后端翻译 → 生成配图 (Nano Banana Pro)
       </p>
     `;
 
-    // 每个平台的 prompt 输入
+    // --- 全局操作栏 ---
+    html += `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+        <button class="btn btn-primary" id="pl-extract-all">智能提炼全部平台</button>
+        <span id="extract-status" style="font-size:12px;color:var(--muted)"></span>
+      </div>
+    `;
+
+    // --- 每个平台的卡片 ---
     finalContents.forEach((item, i) => {
+      const pCfg = platformConfig[item.platform] || {};
+      const imageStyle = pCfg.image_style || {};
+      const presets = imageStyle.presets || [];
+      const defaultStyle = imageStyle.default || '为以下内容生成配图，美观精致，色调自然，避免AI蓝AI紫：';
+
+      // 恢复之前的值
+      const savedExtraction = this.state.imageExtractions[item.platform] || '';
+      const savedStyle = this.state.imageStylePrompts[item.platform] || defaultStyle;
+
       html += `
         <div class="card" style="margin-bottom:12px">
           <div class="card-header">${item.platform}</div>
-          <div class="form-group prompt-history">
-            <textarea class="form-textarea" id="img-prompt-${i}"
-              style="min-height:80px"
-              placeholder="输入图片描述 prompt..."
-              data-platform="${item.platform}"></textarea>
-            ${historyPrompts.length > 0 ? `
-              <button class="btn btn-sm" onclick="PipelineView._toggleHistory(${i})" style="margin-top:4px">
+
+          <!-- 文章提炼 (画什么) -->
+          <div class="form-group">
+            <label style="font-size:12px;color:var(--muted);margin-bottom:4px;display:block">文章提炼 (画什么)</label>
+            <textarea class="form-textarea" id="img-extract-${i}"
+              style="min-height:60px"
+              placeholder="点击「智能提炼」自动填充，或手动输入核心视觉主题..."
+              data-platform="${item.platform}">${savedExtraction}</textarea>
+          </div>
+
+          <!-- 风格提示词 (怎么画) -->
+          <div class="form-group">
+            <label style="font-size:12px;color:var(--muted);margin-bottom:4px;display:block">风格提示词 (怎么画)</label>
+            ${presets.length > 0 ? `
+              <div style="margin-bottom:6px">
+                ${presets.map(p => `
+                  <button class="btn btn-sm style-preset-btn"
+                    data-idx="${i}" data-prompt="${p.prompt.replace(/"/g, '&quot;')}"
+                    style="margin-right:4px;margin-bottom:4px">${p.name}</button>
+                `).join('')}
+              </div>
+            ` : ''}
+            <textarea class="form-textarea" id="img-style-${i}"
+              style="min-height:50px"
+              placeholder="风格描述..."
+              data-platform="${item.platform}">${savedStyle}</textarea>
+          </div>
+
+          <!-- 历史 Prompt -->
+          ${historyPrompts.length > 0 ? `
+            <div class="form-group prompt-history">
+              <button class="btn btn-sm" onclick="PipelineView._toggleHistory(${i})" style="margin-bottom:4px">
                 历史 Prompt
               </button>
               <div class="prompt-dropdown" id="prompt-dd-${i}">
@@ -623,8 +675,10 @@ const PipelineView = {
                     <span class="prompt-text">${p.text}</span>
                     <span class="prompt-del" data-id="${p.id}">&times;</span>
                   </div>`).join('')}
-              </div>` : ''}
-          </div>
+              </div>
+            </div>` : ''}
+
+          <!-- 操作区 -->
           <div class="form-group" style="margin-bottom:0">
             <select class="form-select" id="img-ratio-${i}" style="width:auto;display:inline-block">
               <option value="1:1">1:1 正方</option>
@@ -661,19 +715,33 @@ const PipelineView = {
 
     el.innerHTML = html;
 
-    // 事件绑定
+    // ---- 事件绑定 ----
+
+    // 智能提炼
+    document.getElementById('pl-extract-all').onclick = () => this._extractContent();
+
+    // 风格预设按钮 → 填入提示词框
+    document.querySelectorAll('.style-preset-btn').forEach(btn => {
+      btn.onclick = () => {
+        const idx = btn.dataset.idx;
+        document.getElementById(`img-style-${idx}`).value = btn.dataset.prompt;
+      };
+    });
+
+    // 导航
     document.getElementById('pl-back5').onclick = () => { this.state.step = 2; this.render(); };
     document.getElementById('pl-next5').onclick = () => { this.state.step = 4; this.render(); };
     document.getElementById('pl-skip-images').onclick = () => { this.state.step = 4; this.render(); };
 
-    // 保存提示词按钮
+    // 保存提示词
     finalContents.forEach((item, i) => {
       const saveBtn = document.getElementById(`img-save-prompt-${i}`);
       if (saveBtn) {
         saveBtn.onclick = async () => {
-          const promptEl = document.getElementById(`img-prompt-${i}`);
-          const text = promptEl?.value?.trim();
-          if (!text) { showToast('请先输入提示词', 'error'); return; }
+          const style = document.getElementById(`img-style-${i}`)?.value?.trim() || '';
+          const extract = document.getElementById(`img-extract-${i}`)?.value?.trim() || '';
+          const text = (style + '\n' + extract).trim();
+          if (!text) { showToast('请先填写内容', 'error'); return; }
           try {
             await API.post('/image/prompts', { text, platform: item.platform });
             showToast('提示词已保存');
@@ -708,10 +776,45 @@ const PipelineView = {
         }
         const idx = item.dataset.idx;
         const text = item.dataset.text;
-        document.getElementById(`img-prompt-${idx}`).value = text;
+        // 历史 prompt 填入提炼框
+        document.getElementById(`img-extract-${idx}`).value = text;
         document.getElementById(`prompt-dd-${idx}`).classList.remove('show');
       };
     });
+  },
+
+  // --- 智能提炼: 调用 AI 批量提取视觉主题 ---
+  async _extractContent() {
+    const statusEl = document.getElementById('extract-status');
+    const btn = document.getElementById('pl-extract-all');
+    const platforms = this.state.platformResults.map(r => r.platform);
+
+    btn.disabled = true;
+    statusEl.textContent = '正在提炼...';
+
+    try {
+      const data = await API.post('/pipeline/extract', {
+        draftContent: this.state.draftContent,
+        platforms,
+        engine: this.state.engine,
+      });
+
+      // 填充到每个平台的提炼框
+      this.state.platformResults.forEach((item, i) => {
+        const text = data.extractions[item.platform] || '';
+        const textarea = document.getElementById(`img-extract-${i}`);
+        if (textarea) textarea.value = text;
+        this.state.imageExtractions[item.platform] = text;
+      });
+
+      statusEl.textContent = '提炼完成';
+      showToast('智能提炼完成，可手动调整');
+    } catch (e) {
+      statusEl.textContent = '提炼失败: ' + e.message;
+      showToast('提炼失败: ' + e.message, 'error');
+    }
+
+    btn.disabled = false;
   },
 
   _toggleHistory(idx) {
@@ -719,28 +822,38 @@ const PipelineView = {
     if (dd) dd.classList.toggle('show');
   },
 
+  // --- 生成单张图片: 双框拼接 → 后端翻译 → Gemini ---
   async _generateImage(idx, platform) {
-    const promptEl = document.getElementById(`img-prompt-${idx}`);
+    const extractEl = document.getElementById(`img-extract-${idx}`);
+    const styleEl = document.getElementById(`img-style-${idx}`);
     const ratioEl = document.getElementById(`img-ratio-${idx}`);
     const sizeEl = document.getElementById(`img-size-${idx}`);
     const previewEl = document.getElementById(`img-preview-${idx}`);
 
-    const prompt = promptEl.value.trim();
-    if (!prompt) {
+    const extraction = extractEl?.value?.trim() || '';
+    const stylePrompt = styleEl?.value?.trim() || '';
+
+    if (!extraction && !stylePrompt) {
       showToast(`请输入 ${platform} 的图片描述`, 'error');
       return;
     }
 
-    previewEl.innerHTML = `<div class="image-loading">生成中...</div>`;
+    // 保存到 state (步骤切换时恢复)
+    this.state.imageExtractions[platform] = extraction;
+    this.state.imageStylePrompts[platform] = stylePrompt;
+
+    previewEl.innerHTML = `<div class="image-loading">翻译 + 生成中...</div>`;
 
     try {
       const result = await API.post('/image/generate', {
-        prompt,
+        extraction,
+        stylePrompt,
         platform,
         topic: this.state.input.slice(0, 20),
         index: idx,
         aspectRatio: ratioEl.value,
         imageSize: sizeEl.value,
+        engine: this.state.engine,
       });
 
       previewEl.innerHTML = `
