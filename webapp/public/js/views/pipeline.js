@@ -19,9 +19,11 @@ const PipelineView = {
     platforms: [],
     platformsOptimize: [],
     platformResults: [],
-    images: [],
-    imageExtractions: {},
-    imageStylePrompts: {},
+    images: [],                    // [{ platform, imageType, path, filename }]
+    coverExtractions: {},          // { '小红书': { title, subtitle } }
+    illustrationExtractions: {},   // { '小红书': '视觉隐喻描述' }
+    coverStylePrompts: {},         // { '小红书': '风格...' }
+    illustrationStylePrompts: {},  // { '小红书': '风格...' }
     finalResults: [],
   },
 
@@ -589,7 +591,7 @@ const PipelineView = {
   },
 
   // ============================================================
-  //  Step 4: 图片生成 (智能提炼 + 双框 + 风格模板 + 后端翻译)
+  //  Step 4: 双轨图片生成 (封面带文字 + 配图视觉隐喻)
   // ============================================================
   async _renderImage() {
     const el = document.getElementById('pipeline-content');
@@ -607,9 +609,9 @@ const PipelineView = {
       platformConfig = pc.parsed || {};
     } catch {}
 
-    let html = `<h3>图片生成</h3>
+    let html = `<h3>图片生成 (双轨模式)</h3>
       <p style="font-size:13px;color:var(--muted);margin-bottom:16px">
-        AI 智能提炼文章主题 + 风格模板 → 后端翻译 → 生成配图 (Nano Banana Pro)
+        每平台 2 张图: <strong>封面</strong>(带文字海报) + <strong>配图</strong>(视觉隐喻) — 反AI荧光色已内置
       </p>
     `;
 
@@ -621,87 +623,119 @@ const PipelineView = {
       </div>
     `;
 
-    // --- 每个平台的卡片 ---
+    // --- 每个平台的双轨卡片 ---
     finalContents.forEach((item, i) => {
       const pCfg = platformConfig[item.platform] || {};
       const imageStyle = pCfg.image_style || {};
       const presets = imageStyle.presets || [];
-      const defaultStyle = imageStyle.default || '为以下内容生成配图，美观精致，色调自然，避免AI蓝AI紫：';
+      const defaultStyle = imageStyle.default || '';
 
-      // 恢复之前的值
-      const savedExtraction = this.state.imageExtractions[item.platform] || '';
-      const savedStyle = this.state.imageStylePrompts[item.platform] || defaultStyle;
+      // 恢复已有值
+      const savedCover = this.state.coverExtractions[item.platform] || {};
+      const savedIll = this.state.illustrationExtractions[item.platform] || '';
+      const savedCoverStyle = this.state.coverStylePrompts[item.platform] || '';
+      const savedIllStyle = this.state.illustrationStylePrompts[item.platform] || defaultStyle;
 
       html += `
-        <div class="card" style="margin-bottom:12px">
-          <div class="card-header">${item.platform}</div>
-
-          <!-- 文章提炼 (画什么) -->
-          <div class="form-group">
-            <label style="font-size:12px;color:var(--muted);margin-bottom:4px;display:block">文章提炼 (画什么)</label>
-            <textarea class="form-textarea" id="img-extract-${i}"
-              style="min-height:60px"
-              placeholder="点击「智能提炼」自动填充，或手动输入核心视觉主题..."
-              data-platform="${item.platform}">${savedExtraction}</textarea>
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-header" style="display:flex;justify-content:space-between;align-items:center">
+            <span>${item.platform}</span>
+            <div style="display:flex;gap:6px;align-items:center">
+              <select class="form-select" id="img-ratio-${i}" style="width:auto;font-size:12px;padding:2px 6px">
+                <option value="1:1">1:1</option>
+                <option value="3:4" ${['小红书', '即刻'].includes(item.platform) ? 'selected' : ''}>3:4</option>
+                <option value="4:3">4:3</option>
+                <option value="16:9" ${['公众号', 'Medium'].includes(item.platform) ? 'selected' : ''}>16:9</option>
+                <option value="9:16">9:16</option>
+              </select>
+              <select class="form-select" id="img-size-${i}" style="width:auto;font-size:12px;padding:2px 6px">
+                <option value="1K">1K</option>
+                <option value="2K">2K</option>
+                <option value="4K">4K</option>
+              </select>
+            </div>
           </div>
 
-          <!-- 风格提示词 (怎么画) -->
-          <div class="form-group">
-            <label style="font-size:12px;color:var(--muted);margin-bottom:4px;display:block">风格提示词 (怎么画)</label>
-            ${presets.length > 0 ? `
-              <div style="margin-bottom:6px">
-                ${presets.map(p => `
-                  <button class="btn btn-sm style-preset-btn"
-                    data-idx="${i}" data-prompt="${p.prompt.replace(/"/g, '&quot;')}"
-                    style="margin-right:4px;margin-bottom:4px">${p.name}</button>
-                `).join('')}
+          <div class="dual-track-grid">
+            <!-- 左栏: 封面 (带文字海报) -->
+            <div class="dual-track-panel">
+              <div class="dual-track-label">封面 (带文字)</div>
+              <div class="form-group">
+                <label style="font-size:11px;color:var(--muted)">标题金句</label>
+                <input class="form-input" id="img-cover-title-${i}"
+                  placeholder="≤20字, 渲染在图上"
+                  value="${(savedCover.title || '').replace(/"/g, '&quot;')}" />
               </div>
-            ` : ''}
-            <textarea class="form-textarea" id="img-style-${i}"
-              style="min-height:50px"
-              placeholder="风格描述..."
-              data-platform="${item.platform}">${savedStyle}</textarea>
-          </div>
-
-          <!-- 历史 Prompt -->
-          ${historyPrompts.length > 0 ? `
-            <div class="form-group prompt-history">
-              <button class="btn btn-sm" onclick="PipelineView._toggleHistory(${i})" style="margin-bottom:4px">
-                历史 Prompt
-              </button>
-              <div class="prompt-dropdown" id="prompt-dd-${i}">
-                ${historyPrompts.map(p => `
-                  <div class="prompt-item" data-idx="${i}" data-text="${p.text.replace(/"/g, '&quot;')}">
-                    <span class="prompt-text">${p.text}</span>
-                    <span class="prompt-del" data-id="${p.id}">&times;</span>
-                  </div>`).join('')}
+              <div class="form-group">
+                <label style="font-size:11px;color:var(--muted)">副标题/观点 (可选)</label>
+                <input class="form-input" id="img-cover-subtitle-${i}"
+                  placeholder="核心观点一句话"
+                  value="${(savedCover.subtitle || '').replace(/"/g, '&quot;')}" />
               </div>
-            </div>` : ''}
+              <div class="form-group">
+                <label style="font-size:11px;color:var(--muted)">封面风格 (留空随机)</label>
+                <textarea class="form-textarea" id="img-cover-style-${i}"
+                  style="min-height:36px"
+                  placeholder="如: cyberpunk neon city / minimal clean...">${savedCoverStyle}</textarea>
+              </div>
+              <button class="btn btn-sm" id="img-gen-cover-${i}">生成封面</button>
+              <div id="img-preview-cover-${i}" style="margin-top:8px"></div>
+            </div>
 
-          <!-- 操作区 -->
-          <div class="form-group" style="margin-bottom:0">
-            <select class="form-select" id="img-ratio-${i}" style="width:auto;display:inline-block">
-              <option value="1:1">1:1 正方</option>
-              <option value="4:3">4:3 横屏</option>
-              <option value="16:9">16:9 宽屏</option>
-              <option value="9:16">9:16 竖屏</option>
-            </select>
-            <select class="form-select" id="img-size-${i}" style="width:auto;display:inline-block;margin-left:6px">
-              <option value="1K">1K 标准</option>
-              <option value="2K">2K 高清</option>
-              <option value="4K">4K 超清</option>
-            </select>
-            <button class="btn btn-sm" id="img-gen-${i}" data-idx="${i}">生成</button>
-            <button class="btn btn-sm" id="img-save-prompt-${i}" data-idx="${i}" data-platform="${item.platform}">保存提示词</button>
+            <!-- 右栏: 配图 (视觉隐喻, 无文字) -->
+            <div class="dual-track-panel">
+              <div class="dual-track-label">配图 (视觉隐喻)</div>
+              <div class="form-group">
+                <label style="font-size:11px;color:var(--muted)">视觉隐喻描述 (画什么)</label>
+                <textarea class="form-textarea" id="img-ill-extract-${i}"
+                  style="min-height:60px"
+                  placeholder="用具象事物隐喻核心概念，不是泛泛氛围...">${savedIll}</textarea>
+              </div>
+              <div class="form-group">
+                <label style="font-size:11px;color:var(--muted)">风格提示词 (怎么画)</label>
+                ${presets.length > 0 ? `
+                  <div style="margin-bottom:4px">
+                    ${presets.map(p => `
+                      <button class="btn btn-sm style-preset-btn"
+                        data-idx="${i}"
+                        data-prompt="${p.prompt.replace(/"/g, '&quot;')}"
+                        style="margin-right:3px;margin-bottom:3px;font-size:11px">${p.name}</button>
+                    `).join('')}
+                  </div>
+                ` : ''}
+                <textarea class="form-textarea" id="img-ill-style-${i}"
+                  style="min-height:36px"
+                  placeholder="风格描述...">${savedIllStyle}</textarea>
+              </div>
+              <button class="btn btn-sm" id="img-gen-ill-${i}">生成配图</button>
+              <div id="img-preview-ill-${i}" style="margin-top:8px"></div>
+            </div>
           </div>
-          <div id="img-preview-${i}" style="margin-top:8px"></div>
         </div>
       `;
     });
 
+    // --- 历史 Prompt ---
+    if (historyPrompts.length > 0) {
+      html += `
+        <div class="form-group prompt-history" style="margin-bottom:16px">
+          <button class="btn btn-sm" id="pl-toggle-history">历史 Prompt</button>
+          <div class="prompt-dropdown" id="prompt-dd-global">
+            ${historyPrompts.map(p => `
+              <div class="prompt-item" data-text="${p.text.replace(/"/g, '&quot;')}">
+                <span class="prompt-text">${p.text}</span>
+                <span class="prompt-del" data-id="${p.id}">&times;</span>
+              </div>`).join('')}
+          </div>
+        </div>`;
+    }
+
+    // --- 全局按钮 ---
     html += `
       <div class="btn-group" style="margin-top:16px">
-        <button class="btn btn-primary" id="pl-gen-all-images">全部生成</button>
+        <button class="btn btn-primary" id="pl-gen-all-images">全部生成 (封面+配图)</button>
+        <button class="btn" id="pl-gen-all-covers">只生成封面</button>
+        <button class="btn" id="pl-gen-all-ills">只生成配图</button>
         <button class="btn" id="pl-skip-images">跳过图片</button>
       </div>
     `;
@@ -717,14 +751,14 @@ const PipelineView = {
 
     // ---- 事件绑定 ----
 
-    // 智能提炼
-    document.getElementById('pl-extract-all').onclick = () => this._extractContent();
+    // 智能提炼 (双轨)
+    document.getElementById('pl-extract-all').onclick = () => this._extractContentDual();
 
-    // 风格预设按钮 → 填入提示词框
+    // 风格预设 → 填入配图风格框
     document.querySelectorAll('.style-preset-btn').forEach(btn => {
       btn.onclick = () => {
         const idx = btn.dataset.idx;
-        document.getElementById(`img-style-${idx}`).value = btn.dataset.prompt;
+        document.getElementById(`img-ill-style-${idx}`).value = btn.dataset.prompt;
       };
     });
 
@@ -733,40 +767,40 @@ const PipelineView = {
     document.getElementById('pl-next5').onclick = () => { this.state.step = 4; this.render(); };
     document.getElementById('pl-skip-images').onclick = () => { this.state.step = 4; this.render(); };
 
-    // 保存提示词
+    // 单平台封面/配图生成
     finalContents.forEach((item, i) => {
-      const saveBtn = document.getElementById(`img-save-prompt-${i}`);
-      if (saveBtn) {
-        saveBtn.onclick = async () => {
-          const style = document.getElementById(`img-style-${i}`)?.value?.trim() || '';
-          const extract = document.getElementById(`img-extract-${i}`)?.value?.trim() || '';
-          const text = (style + '\n' + extract).trim();
-          if (!text) { showToast('请先填写内容', 'error'); return; }
-          try {
-            await API.post('/image/prompts', { text, platform: item.platform });
-            showToast('提示词已保存');
-          } catch (e) { showToast('保存失败: ' + e.message, 'error'); }
-        };
-      }
-    });
-
-    // 单个平台生成
-    finalContents.forEach((item, i) => {
-      const genBtn = document.getElementById(`img-gen-${i}`);
-      if (genBtn) {
-        genBtn.onclick = () => this._generateImage(i, item.platform);
-      }
+      document.getElementById(`img-gen-cover-${i}`).onclick =
+        () => this._generateImageDual(i, item.platform, 'cover');
+      document.getElementById(`img-gen-ill-${i}`).onclick =
+        () => this._generateImageDual(i, item.platform, 'illustration');
     });
 
     // 全部生成
     document.getElementById('pl-gen-all-images').onclick = async () => {
       for (let i = 0; i < finalContents.length; i++) {
-        await this._generateImage(i, finalContents[i].platform);
+        await this._generateImageDual(i, finalContents[i].platform, 'cover');
+        await this._generateImageDual(i, finalContents[i].platform, 'illustration');
       }
-      showToast('全部图片生成完成');
+      showToast('全部图片生成完成 (封面+配图)');
+    };
+    document.getElementById('pl-gen-all-covers').onclick = async () => {
+      for (let i = 0; i < finalContents.length; i++)
+        await this._generateImageDual(i, finalContents[i].platform, 'cover');
+      showToast('全部封面生成完成');
+    };
+    document.getElementById('pl-gen-all-ills').onclick = async () => {
+      for (let i = 0; i < finalContents.length; i++)
+        await this._generateImageDual(i, finalContents[i].platform, 'illustration');
+      showToast('全部配图生成完成');
     };
 
-    // Prompt 历史点击
+    // 历史 Prompt
+    const historyToggle = document.getElementById('pl-toggle-history');
+    if (historyToggle) {
+      historyToggle.onclick = () => {
+        document.getElementById('prompt-dd-global')?.classList.toggle('show');
+      };
+    }
     document.querySelectorAll('.prompt-item').forEach(item => {
       item.onclick = (e) => {
         if (e.target.classList.contains('prompt-del')) {
@@ -774,23 +808,19 @@ const PipelineView = {
           API.del(`/image/prompts/${id}`).then(() => this._renderImage());
           return;
         }
-        const idx = item.dataset.idx;
-        const text = item.dataset.text;
-        // 历史 prompt 填入提炼框
-        document.getElementById(`img-extract-${idx}`).value = text;
-        document.getElementById(`prompt-dd-${idx}`).classList.remove('show');
+        document.getElementById('prompt-dd-global')?.classList.remove('show');
       };
     });
   },
 
-  // --- 智能提炼: 调用 AI 批量提取视觉主题 ---
-  async _extractContent() {
+  // --- 双轨智能提炼: 封面标题 + 配图视觉隐喻 ---
+  async _extractContentDual() {
     const statusEl = document.getElementById('extract-status');
     const btn = document.getElementById('pl-extract-all');
     const platforms = this.state.platformResults.map(r => r.platform);
 
     btn.disabled = true;
-    statusEl.textContent = '正在提炼...';
+    statusEl.textContent = '正在双轨提炼...';
 
     try {
       const data = await API.post('/pipeline/extract', {
@@ -799,16 +829,29 @@ const PipelineView = {
         engine: this.state.engine,
       });
 
-      // 填充到每个平台的提炼框
+      // 填充双轨数据
       this.state.platformResults.forEach((item, i) => {
-        const text = data.extractions[item.platform] || '';
-        const textarea = document.getElementById(`img-extract-${i}`);
-        if (textarea) textarea.value = text;
-        this.state.imageExtractions[item.platform] = text;
+        const ext = data.extractions[item.platform];
+        if (!ext) return;
+
+        // 封面轨道
+        if (ext.cover) {
+          const titleEl = document.getElementById(`img-cover-title-${i}`);
+          const subtitleEl = document.getElementById(`img-cover-subtitle-${i}`);
+          if (titleEl) titleEl.value = ext.cover.title || '';
+          if (subtitleEl) subtitleEl.value = ext.cover.subtitle || '';
+          this.state.coverExtractions[item.platform] = ext.cover;
+        }
+
+        // 配图轨道
+        const illText = ext.illustration || '';
+        const illEl = document.getElementById(`img-ill-extract-${i}`);
+        if (illEl) illEl.value = illText;
+        this.state.illustrationExtractions[item.platform] = illText;
       });
 
-      statusEl.textContent = '提炼完成';
-      showToast('智能提炼完成，可手动调整');
+      statusEl.textContent = '双轨提炼完成';
+      showToast('智能提炼完成: 封面标题 + 配图隐喻');
     } catch (e) {
       statusEl.textContent = '提炼失败: ' + e.message;
       showToast('提炼失败: ' + e.message, 'error');
@@ -822,43 +865,64 @@ const PipelineView = {
     if (dd) dd.classList.toggle('show');
   },
 
-  // --- 生成单张图片: 双框拼接 → 后端翻译 → Gemini ---
-  async _generateImage(idx, platform) {
-    const extractEl = document.getElementById(`img-extract-${idx}`);
-    const styleEl = document.getElementById(`img-style-${idx}`);
+  // --- 双轨生成: cover(封面) / illustration(配图) ---
+  async _generateImageDual(idx, platform, imageType) {
+    const previewId = imageType === 'cover' ? `img-preview-cover-${idx}` : `img-preview-ill-${idx}`;
+    const previewEl = document.getElementById(previewId);
     const ratioEl = document.getElementById(`img-ratio-${idx}`);
     const sizeEl = document.getElementById(`img-size-${idx}`);
-    const previewEl = document.getElementById(`img-preview-${idx}`);
 
-    const extraction = extractEl?.value?.trim() || '';
-    const stylePrompt = styleEl?.value?.trim() || '';
+    const requestBody = {
+      platform,
+      topic: this.state.input.slice(0, 20),
+      index: idx,
+      aspectRatio: ratioEl.value,
+      imageSize: sizeEl.value,
+      engine: this.state.engine,
+      imageType,
+    };
 
-    if (!extraction && !stylePrompt) {
-      showToast(`请输入 ${platform} 的图片描述`, 'error');
-      return;
+    if (imageType === 'cover') {
+      // 封面: 标题 + 副标题 + 风格
+      const title = document.getElementById(`img-cover-title-${idx}`)?.value?.trim() || '';
+      const subtitle = document.getElementById(`img-cover-subtitle-${idx}`)?.value?.trim() || '';
+      const style = document.getElementById(`img-cover-style-${idx}`)?.value?.trim() || '';
+
+      if (!title) {
+        showToast(`${platform} 封面需要标题文字`, 'error');
+        return;
+      }
+
+      requestBody.coverTitle = title;
+      requestBody.coverSubtitle = subtitle;
+      requestBody.stylePrompt = style;
+      this.state.coverExtractions[platform] = { title, subtitle };
+      this.state.coverStylePrompts[platform] = style;
+    } else {
+      // 配图: 视觉隐喻 + 风格
+      const extraction = document.getElementById(`img-ill-extract-${idx}`)?.value?.trim() || '';
+      const style = document.getElementById(`img-ill-style-${idx}`)?.value?.trim() || '';
+
+      if (!extraction && !style) {
+        showToast(`${platform} 配图需要视觉描述`, 'error');
+        return;
+      }
+
+      requestBody.extraction = extraction;
+      requestBody.stylePrompt = style;
+      this.state.illustrationExtractions[platform] = extraction;
+      this.state.illustrationStylePrompts[platform] = style;
     }
 
-    // 保存到 state (步骤切换时恢复)
-    this.state.imageExtractions[platform] = extraction;
-    this.state.imageStylePrompts[platform] = stylePrompt;
-
-    previewEl.innerHTML = `<div class="image-loading">翻译 + 生成中...</div>`;
+    const typeLabel = imageType === 'cover' ? '封面' : '配图';
+    previewEl.innerHTML = `<div class="image-loading">${typeLabel}生成中...</div>`;
 
     try {
-      const result = await API.post('/image/generate', {
-        extraction,
-        stylePrompt,
-        platform,
-        topic: this.state.input.slice(0, 20),
-        index: idx,
-        aspectRatio: ratioEl.value,
-        imageSize: sizeEl.value,
-        engine: this.state.engine,
-      });
+      const result = await API.post('/image/generate', requestBody);
 
       previewEl.innerHTML = `
         <div class="image-card">
-          <img src="data:${result.mimeType};base64,${result.base64}" alt="${platform}" />
+          <img src="data:${result.mimeType};base64,${result.base64}" alt="${platform}-${imageType}" />
           <div class="image-info">
             <span>${result.filename}</span>
             <a href="data:${result.mimeType};base64,${result.base64}"
@@ -867,11 +931,15 @@ const PipelineView = {
         </div>
       `;
 
-      // 保存图片信息
-      this.state.images = this.state.images.filter(img => img.platform !== platform);
-      this.state.images.push({ platform, path: result.path, filename: result.filename });
+      // 按 platform + imageType 去重存储
+      this.state.images = this.state.images.filter(
+        img => !(img.platform === platform && img.imageType === imageType)
+      );
+      this.state.images.push({
+        platform, imageType, path: result.path, filename: result.filename,
+      });
     } catch (e) {
-      previewEl.innerHTML = `<div style="color:var(--muted);font-size:12px">生成失败: ${e.message}</div>`;
+      previewEl.innerHTML = `<div style="color:var(--muted);font-size:12px">${typeLabel}生成失败: ${e.message}</div>`;
     }
   },
 
@@ -917,7 +985,10 @@ const PipelineView = {
       this.state = {
         step: 0, input: '', style: '', engine: this.state.engine,
         draftContent: '', draftFile: '', platforms: [],
-        platformsOptimize: [], platformResults: [], images: [], finalResults: [],
+        platformsOptimize: [], platformResults: [], images: [],
+        coverExtractions: {}, illustrationExtractions: {},
+        coverStylePrompts: {}, illustrationStylePrompts: {},
+        finalResults: [],
       };
       this.render();
     };

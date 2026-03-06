@@ -283,13 +283,13 @@ router.post('/optimize', async (req, res) => {
 });
 
 // ============================================================
-//  Step 4: 智能内容提炼 (非流式, JSON 返回)
+//  Step 4: 双轨智能提炼 (封面文字 + 配图视觉隐喻)
 // ============================================================
 router.post('/extract', async (req, res) => {
   const { draftContent, platforms, engine = 'claude' } = req.body;
   const { aiAdapter } = req.app.locals;
 
-  console.log(`  ${_ts()}  [流水线] Step4 内容提炼  平台=${(platforms||[]).join(',')}  引擎=${engine}`);
+  console.log(`  ${_ts()}  [流水线] Step4 双轨提炼  平台=${(platforms||[]).join(',')}  引擎=${engine}`);
 
   if (!draftContent) {
     return res.status(400).json({ error: '缺少母稿内容' });
@@ -297,19 +297,41 @@ router.post('/extract', async (req, res) => {
 
   const targetPlatforms = platforms && platforms.length > 0 ? platforms : ['通用'];
 
-  try {
-    const prompt = `你是图片创作顾问。请从以下文章中，为每个平台提取最适合生成配图的核心视觉主题描述。
+  // 示例 JSON 结构 (引导 AI 返回格式)
+  const exampleJson = Object.fromEntries(targetPlatforms.map(p => [p, {
+    cover: { title: '标题金句', subtitle: '核心观点一句话' },
+    illustration: '精准视觉隐喻描述...',
+  }]));
 
+  try {
+    const prompt = `你是视觉创意总监，擅长将文字转化为精准的视觉隐喻。请从以下文章中，为每个平台提取两种图片描述：
+
+## 任务
+
+### 1. 封面 (cover) — 用于AI生成带文字的海报封面
+提取：
+- title: 文章标题或核心金句（≤20字中文 / ≤60字符英文，适合叠加在图上）
+- subtitle: 1句话核心观点（≤30字中文 / ≤100字符英文，作为副标题）
+
+### 2. 配图 (illustration) — 纯视觉隐喻，无文字
 要求：
-1. 每个平台的提炼内容应描述一个具体的视觉场景，适合AI图片生成
-2. 提炼内容用中文，100-200字
-3. 聚焦文章最有视觉表现力的关键信息
-4. 不同平台侧重不同角度（社交平台侧重吸引力，技术平台侧重专业感，国际平台用英文描述）
+- 必须是具体的视觉隐喻场景，不是泛泛的"氛围描述"
+- 用物理世界的具象事物来隐喻文章核心冲突/观点
+- 描述光线、材质、构图、色调（禁止蓝紫荧光色）
+- 100-150字中文描述
+- 国际平台（Medium/Quora/X/Reddit）用英文描述
+
+### 反面示例（太泛，禁止）：
+"一个关于AI和效率的科技感场景"
+"蓝色背景上的数字化图案"
+
+### 正面示例（精准视觉隐喻）：
+"一台老式打字机的键盘上长出了发光的蘑菇群落，金色的孢子飘散在温暖的侧光中，背景是堆叠的旧稿纸，暗示旧工具正在被新生命力接管"
 
 目标平台: ${targetPlatforms.join(', ')}
 
 请严格按以下JSON格式返回（不要有任何其他文字）:
-${JSON.stringify(Object.fromEntries(targetPlatforms.map(p => [p, '提炼内容...'])))}
+${JSON.stringify(exampleJson)}
 
 ---
 文章内容:
@@ -327,13 +349,18 @@ ${draftContent.slice(0, 3000)}`;
       }
     } catch (parseErr) {
       console.error(`  ${_ts()}  [流水线] ✗ JSON 解析失败, 回退为母稿摘要`);
-      targetPlatforms.forEach(p => { extractions[p] = draftContent.slice(0, 300); });
+      targetPlatforms.forEach(p => {
+        extractions[p] = {
+          cover: { title: draftContent.slice(0, 20), subtitle: draftContent.slice(20, 50) },
+          illustration: draftContent.slice(0, 300),
+        };
+      });
     }
 
-    console.log(`  ${_ts()}  [流水线] ✓ 内容提炼完成  ${Object.keys(extractions).length} 个平台`);
+    console.log(`  ${_ts()}  [流水线] ✓ 双轨提炼完成  ${Object.keys(extractions).length} 个平台`);
     res.json({ extractions });
   } catch (e) {
-    console.error(`  ${_ts()}  [流水线] ✗ 内容提炼失败: ${e.message}`);
+    console.error(`  ${_ts()}  [流水线] ✗ 双轨提炼失败: ${e.message}`);
     res.status(500).json({ error: e.message });
   }
 });
@@ -361,7 +388,8 @@ router.post('/assemble', async (req, res) => {
       if (relatedImages.length > 0) {
         clean += '\n\n---\n配图:\n';
         relatedImages.forEach((img, idx) => {
-          clean += `${idx + 1}. ${img.path}\n`;
+          const typeLabel = img.imageType === 'cover' ? '封面' : '配图';
+          clean += `${idx + 1}. [${typeLabel}] ${img.path}\n`;
         });
       }
 

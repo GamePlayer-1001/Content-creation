@@ -485,6 +485,29 @@ h3 {
   font-size: 12px;
 }
 
+/* ==================== 双轨图片生成 (封面+配图) ==================== */
+.dual-track-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 768px) {
+  .dual-track-grid { grid-template-columns: 1fr; }
+}
+.dual-track-panel {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px;
+}
+.dual-track-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+
 /* ==================== Prompt History ==================== */
 .prompt-history {
   position: relative;
