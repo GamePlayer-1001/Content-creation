@@ -5,10 +5,20 @@
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 
+// ── 安全错误提取: 响应非 JSON 时不炸 ──
+async function _extractError(res) {
+  try {
+    const data = await res.json();
+    return data.error || res.statusText;
+  } catch {
+    return `${res.status} ${res.statusText}`;
+  }
+}
+
 const API = {
   async get(path) {
     const res = await fetch(`/api${path}`);
-    if (!res.ok) throw new Error((await res.json()).error || res.statusText);
+    if (!res.ok) throw new Error(await _extractError(res));
     return res.json();
   },
 
@@ -18,7 +28,7 @@ const API = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
-    if (!res.ok) throw new Error((await res.json()).error || res.statusText);
+    if (!res.ok) throw new Error(await _extractError(res));
     return res.json();
   },
 
@@ -28,13 +38,13 @@ const API = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
-    if (!res.ok) throw new Error((await res.json()).error || res.statusText);
+    if (!res.ok) throw new Error(await _extractError(res));
     return res.json();
   },
 
   async del(path) {
     const res = await fetch(`/api${path}`, { method: 'DELETE' });
-    if (!res.ok) throw new Error((await res.json()).error || res.statusText);
+    if (!res.ok) throw new Error(await _extractError(res));
     return res.json();
   },
 

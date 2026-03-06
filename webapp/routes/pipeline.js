@@ -1,6 +1,6 @@
 /**
  * [INPUT]: 依赖 aiAdapter + skillLoader + outputManager + complianceEngine
- * [OUTPUT]: POST /api/pipeline/draft, /api/pipeline/platforms, /api/pipeline/optimize, /api/pipeline/assemble
+ * [OUTPUT]: POST /api/pipeline/draft, /api/pipeline/platforms, /api/pipeline/optimize, /api/pipeline/extract, /api/pipeline/assemble
  * [POS]: routes/ 的内容流水线 API, 5步向导核心后端 (optimize 合并入 platforms 步骤)
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
