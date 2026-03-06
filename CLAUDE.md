@@ -121,7 +121,7 @@ Claude Code Skills + YAML Config + 统一工具链
 │   │   └── prompt-store.js      # 图片 prompt 历史管理
 │   ├── routes/             # API 路由层 (8个路由)
 │   │   ├── dashboard.js    # GET /api/dashboard
-│   │   ├── pipeline.js     # POST /api/pipeline/* (6步流水线)
+│   │   ├── pipeline.js     # POST /api/pipeline/* (5步流水线)
 │   │   ├── image.js        # POST /api/image/* (图片生成)
 │   │   ├── creation.js     # POST /api/create (单次创作)
 │   │   ├── content.js      # CRUD /api/content/*
@@ -140,7 +140,7 @@ Claude Code Skills + YAML Config + 统一工具链
 │           └── views/          # 8个页面视图
 │               ├── dashboard.js   # 仪表盘
 │               ├── search.js      # 热帖搜索 (占位)
-│               ├── pipeline.js    # 内容流水线 (6步向导)
+│               ├── pipeline.js    # 内容流水线 (5步向导)
 │               ├── content.js     # 内容管理
 │               ├── config.js      # 配置管理
 │               ├── compliance.js  # 合规检查
@@ -163,21 +163,20 @@ Claude Code Skills + YAML Config + 统一工具链
 |------|------|------|
 | 仪表盘 | `#/` | 产出统计 + 今日产出 + 快捷操作 |
 | 热帖搜索 | `#/search` | 跨平台关键词搜索热帖 (占位, 搜索引擎接入中) |
-| 内容流水线 | `#/pipeline` | **核心** — 6步向导式创作 |
+| 内容流水线 | `#/pipeline` | **核心** — 5步向导式创作 |
 | 内容管理 | `#/content` | 多平台 Tab 浏览 + CRUD |
 | 配置管理 | `#/config` | YAML/JSON 编辑 |
 | 合规检查 | `#/compliance` | 6维合规扫描 |
 | 洗稿 | `#/rewrite` | 10种风格改写(A-J) + 降AI检测 |
 | 周复盘 | `#/review` | 产出统计 + AI 周复盘报告 |
 
-### 内容流水线 6 步
+### 内容流水线 5 步
 
 1. **输入素材** — 关键词/想法/长文本/热帖
 2. **生成母稿** — 8种创作方向 + AI引擎选择 → SSE 流式生成
-3. **多平台生成** — 选择平台 → 逐平台衍生
-4. **优化去AI** — 合规检查 + 去AI优化（保持原风格，不做风格改写）
-5. **图片生成** — Nano Banana Pro API + prompt 历史复用
-6. **最终输出** — 去markdown + 文件链接 + Obsidian 打开
+3. **多平台生成 + 优化去AI** — 选择平台 → 逐平台衍生 → 可选一键去AI优化（合规检查 + 保持原风格）
+4. **图片生成** — Nano Banana Pro API + prompt 历史复用
+5. **最终输出** — 去markdown + 文件链接 + Obsidian 打开
 
 ### 8 种创作方向
 

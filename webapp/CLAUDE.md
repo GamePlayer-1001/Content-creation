@@ -23,7 +23,7 @@ webapp/
 │
 ├── routes/                # API 路由层（Express Router）
 │   ├── dashboard.js       # GET /api/dashboard (产出统计)
-│   ├── pipeline.js        # POST /api/pipeline/* (6步流水线: draft/platforms/optimize/assemble)
+│   ├── pipeline.js        # POST /api/pipeline/* (5步流水线: draft/platforms/optimize/assemble)
 │   ├── image.js           # POST /api/image/generate + CRUD /api/image/prompts
 │   ├── creation.js        # POST /api/create (单次 SSE 创作, 兼容旧模式)
 │   ├── rewrite.js         # POST /api/rewrite (SSE 洗稿)
@@ -48,7 +48,7 @@ webapp/
         └── views/         # 8 个页面视图
             ├── dashboard.js   # 仪表盘: 产出统计 + 快捷操作
             ├── search.js      # 热帖搜索: 跨平台搜索 (占位)
-            ├── pipeline.js    # 内容流水线: 6步向导 (核心页面)
+            ├── pipeline.js    # 内容流水线: 5步向导 (核心页面)
             ├── content.js     # 内容管理: 平台Tab + 预览
             ├── config.js      # 配置管理: YAML/JSON编辑
             ├── compliance.js  # 合规检查: 6维扫描 + 高亮
@@ -58,16 +58,15 @@ webapp/
 
 ## 内容流水线 (pipeline.js)
 
-6步向导式创作，覆盖从素材到最终图文输出的完整链路：
+5步向导式创作，覆盖从素材到最终图文输出的完整链路：
 
 | Step | 端点 | 功能 |
 |------|------|------|
 | 1. 输入素材 | - | 关键词/想法/长文本/热帖 |
 | 2. 生成母稿 | `POST /api/pipeline/draft` | 8种创作方向 × 3种AI引擎 |
-| 3. 多平台生成 | `POST /api/pipeline/platforms` | 7平台逐个SSE流式 |
-| 4. 优化去AI | `POST /api/pipeline/optimize` | 合规检查 + 洗稿 |
-| 5. 图片生成 | `POST /api/image/generate` | Nano Banana Pro |
-| 6. 最终输出 | `POST /api/pipeline/assemble` | 去markdown + Obsidian URI |
+| 3. 多平台生成 + 优化去AI | `POST /api/pipeline/platforms` + `POST /api/pipeline/optimize` | 逐平台衍生 + 可选去AI优化 |
+| 4. 图片生成 | `POST /api/image/generate` | Nano Banana Pro |
+| 5. 最终输出 | `POST /api/pipeline/assemble` | 去markdown + Obsidian URI |
 
 ## AI 服务层
 

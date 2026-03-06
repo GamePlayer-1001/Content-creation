@@ -1,7 +1,7 @@
 /**
  * [INPUT]: 依赖 aiAdapter + skillLoader + outputManager + complianceEngine
  * [OUTPUT]: POST /api/pipeline/draft, /api/pipeline/platforms, /api/pipeline/optimize, /api/pipeline/assemble
- * [POS]: routes/ 的内容流水线 API, 6步向导核心后端
+ * [POS]: routes/ 的内容流水线 API, 5步向导核心后端 (optimize 合并入 platforms 步骤)
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 
@@ -212,14 +212,14 @@ router.post('/platforms', async (req, res) => {
 });
 
 // ============================================================
-//  Step 4: 自循环优化 (SSE)
+//  Step 3b: 自循环优化 (SSE) — 合并入 Step 3 前端调用
 // ============================================================
 router.post('/optimize', async (req, res) => {
   const { contents, engine = 'claude' } = req.body;
   // contents: [{ platform, content, file }]
   const { aiAdapter, skillLoader, outputManager, complianceEngine } = req.app.locals;
 
-  console.log(`  ${_ts()}  [流水线] Step4 优化去AI  待优化=${(contents||[]).length}篇  引擎=${engine}`);
+  console.log(`  ${_ts()}  [流水线] Step3b 优化去AI  待优化=${(contents||[]).length}篇  引擎=${engine}`);
 
   _sseHeaders(res);
 
@@ -273,7 +273,7 @@ router.post('/optimize', async (req, res) => {
       }
     }
 
-    console.log(`  ${_ts()}  [流水线] Step4 完成`);
+    console.log(`  ${_ts()}  [流水线] Step3b 优化完成`);
     _send(res, { type: 'done', results });
   } catch (e) {
     console.error(`  ${_ts()}  [流水线] ✗ 优化整体失败: ${e.message}`);
@@ -283,7 +283,7 @@ router.post('/optimize', async (req, res) => {
 });
 
 // ============================================================
-//  Step 6: 组装最终文件
+//  Step 5: 组装最终文件
 // ============================================================
 router.post('/assemble', async (req, res) => {
   const { contents, images } = req.body;
@@ -292,7 +292,7 @@ router.post('/assemble', async (req, res) => {
   const { outputManager } = req.app.locals;
   const projectRoot = req.app.locals.projectRoot;
 
-  console.log(`  ${_ts()}  [流水线] Step6 组装最终文件  内容=${(contents||[]).length}篇  图片=${(images||[]).length}张`);
+  console.log(`  ${_ts()}  [流水线] Step5 组装最终文件  内容=${(contents||[]).length}篇  图片=${(images||[]).length}张`);
 
   try {
     const results = [];
@@ -328,7 +328,7 @@ router.post('/assemble', async (req, res) => {
       });
     }
 
-    console.log(`  ${_ts()}  [流水线] ✓ Step6 组装完成  文件=${results.map(r => r.file).join(', ')}`);
+    console.log(`  ${_ts()}  [流水线] ✓ Step5 组装完成  文件=${results.map(r => r.file).join(', ')}`);
     res.json({ results });
   } catch (e) {
     console.error(`  ${_ts()}  [流水线] ✗ 组装失败: ${e.message}`);
