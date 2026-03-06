@@ -632,6 +632,11 @@ const PipelineView = {
               <option value="16:9">16:9 宽屏</option>
               <option value="9:16">9:16 竖屏</option>
             </select>
+            <select class="form-select" id="img-size-${i}" style="width:auto;display:inline-block;margin-left:6px">
+              <option value="1K">1K 标准</option>
+              <option value="2K">2K 高清</option>
+              <option value="4K">4K 超清</option>
+            </select>
             <button class="btn btn-sm" id="img-gen-${i}" data-idx="${i}">生成</button>
             <button class="btn btn-sm" id="img-save-prompt-${i}" data-idx="${i}" data-platform="${item.platform}">保存提示词</button>
           </div>
@@ -717,6 +722,7 @@ const PipelineView = {
   async _generateImage(idx, platform) {
     const promptEl = document.getElementById(`img-prompt-${idx}`);
     const ratioEl = document.getElementById(`img-ratio-${idx}`);
+    const sizeEl = document.getElementById(`img-size-${idx}`);
     const previewEl = document.getElementById(`img-preview-${idx}`);
 
     const prompt = promptEl.value.trim();
@@ -734,6 +740,7 @@ const PipelineView = {
         topic: this.state.input.slice(0, 20),
         index: idx,
         aspectRatio: ratioEl.value,
+        imageSize: sizeEl.value,
       });
 
       previewEl.innerHTML = `
