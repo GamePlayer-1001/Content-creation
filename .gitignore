@@ -11,6 +11,9 @@ __pycache__/
 *.egg-info/
 package-lock.json
 
+# --- 敏感文件（Cookies / 凭证）---
+config/xhs_cookies.json
+
 # --- 子项目已清除，以下条目保留防止误添加 ---
 Auto-Redbook-Skills/
 内容/
