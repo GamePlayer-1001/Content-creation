@@ -17,6 +17,7 @@ const PipelineView = {
     draftContent: '',
     draftFile: '',
     platforms: [],
+    platformsOptimize: [],
     platformResults: [],
     images: [],
     finalResults: [],
@@ -282,7 +283,7 @@ const PipelineView = {
   },
 
   // ============================================================
-  //  Step 3: 多平台生成 + 优化去AI（合并）
+  //  Step 3: 多平台生成 + 勾选式优化去AI
   // ============================================================
   _renderPlatforms() {
     const el = document.getElementById('pipeline-content');
@@ -300,30 +301,31 @@ const PipelineView = {
     });
     html += `</div>`;
 
+    html += `<div class="btn-group"><button class="btn" id="pl-select-all">全选</button></div>`;
+
+    // 优化去AI 勾选区
     html += `
-      <div class="btn-group">
-        <button class="btn" id="pl-select-all">全选</button>
+      <div style="margin-top:16px">
+        <label class="form-label">优化去AI (可选 — 勾选的平台生成后自动优化)</label>
+        <div id="pl-optimize-picks" class="platform-grid" style="margin-top:4px"></div>
+        <div class="btn-group" style="margin-top:4px">
+          <button class="btn btn-sm" id="pl-opt-all">全选优化</button>
+          <button class="btn btn-sm" id="pl-opt-none">全不优化</button>
+        </div>
+      </div>
+    `;
+
+    // 操作按钮
+    html += `
+      <div class="btn-group" style="margin-top:16px">
         <button class="btn btn-primary" id="pl-gen-platforms">开始生成</button>
         <button class="btn" id="pl-stop-platforms" style="display:none">停止</button>
       </div>
     `;
 
-    // 平台结果
+    // 结果区
     html += `<div id="pl-platform-results"></div>`;
-
-    // 优化去AI 区域（生成完成后显示）
-    html += `
-      <div id="pl-optimize-section" style="display:${this.state.platformResults.length > 0 ? 'block' : 'none'}">
-        <h3 style="margin-top:20px">优化去AI (可选)</h3>
-        <p style="font-size:13px;color:var(--muted);margin-bottom:12px">
-          合规检查 + 去AI味优化，保持原风格不变。优化结果直接覆盖上方内容。
-        </p>
-        <div class="btn-group">
-          <button class="btn btn-primary" id="pl-optimize">开始优化</button>
-        </div>
-        <div id="pl-optimize-stream"></div>
-      </div>
-    `;
+    html += `<div id="pl-optimize-stream"></div>`;
 
     html += `
       <div class="pipeline-nav">
@@ -341,7 +343,10 @@ const PipelineView = {
       this._showPlatformResults();
     }
 
-    // 事件绑定
+    // 初始化优化勾选列表
+    this._updateOptimizeChecks();
+
+    // --- 平台选择事件 ---
     document.querySelectorAll('.platform-check').forEach(label => {
       label.onclick = (e) => {
         e.preventDefault();
@@ -356,6 +361,7 @@ const PipelineView = {
           label.classList.add('checked');
           label.querySelector('input').checked = true;
         }
+        this._updateOptimizeChecks();
       };
     });
 
@@ -365,19 +371,22 @@ const PipelineView = {
         l.classList.add('checked');
         l.querySelector('input').checked = true;
       });
+      this._updateOptimizeChecks();
     };
 
-    document.getElementById('pl-back3').onclick = () => {
-      this.state.step = 1;
-      this.render();
+    document.getElementById('pl-opt-all').onclick = () => {
+      this.state.platformsOptimize = [...this.state.platforms];
+      this._updateOptimizeChecks();
+    };
+    document.getElementById('pl-opt-none').onclick = () => {
+      this.state.platformsOptimize = [];
+      this._updateOptimizeChecks();
     };
 
-    document.getElementById('pl-next3').onclick = () => {
-      this.state.step = 3;
-      this.render();
-    };
+    document.getElementById('pl-back3').onclick = () => { this.state.step = 1; this.render(); };
+    document.getElementById('pl-next3').onclick = () => { this.state.step = 3; this.render(); };
 
-    // --- 多平台生成 ---
+    // --- 一键生成（生成 + 自动优化勾选平台）---
     document.getElementById('pl-gen-platforms').onclick = async () => {
       if (this.state.platforms.length === 0) {
         showToast('请至少选择一个平台', 'error');
@@ -387,15 +396,16 @@ const PipelineView = {
       const genBtn = document.getElementById('pl-gen-platforms');
       const stopBtn = document.getElementById('pl-stop-platforms');
       const resultsEl = document.getElementById('pl-platform-results');
+      const optStreamEl = document.getElementById('pl-optimize-stream');
 
       genBtn.style.display = 'none';
       stopBtn.style.display = 'inline-block';
       resultsEl.innerHTML = '<div class="loading">生成中...</div>';
-      document.getElementById('pl-optimize-section').style.display = 'none';
-
+      optStreamEl.innerHTML = '';
       this.state.platformResults = [];
 
       try {
+        // Phase 1: 多平台生成
         await API.stream('/pipeline/platforms', {
           draftContent: this.state.draftContent,
           platforms: this.state.platforms,
@@ -409,9 +419,9 @@ const PipelineView = {
           } else if (data.type === 'chunk' && data.platform) {
             const card = document.getElementById(`pr-${data.platform}`);
             if (card) {
-              const output = card.querySelector('.stream-output');
-              output.textContent += data.content;
-              output.scrollTop = output.scrollHeight;
+              const out = card.querySelector('.stream-output');
+              out.textContent += data.content;
+              out.scrollTop = out.scrollHeight;
             }
           } else if (data.type === 'platform_done') {
             const card = document.getElementById(`pr-${data.platform}`);
@@ -425,12 +435,23 @@ const PipelineView = {
               file: data.file || '',
               length: data.length,
             });
-          } else if (data.type === 'done') {
-            document.getElementById('pl-next3').disabled = false;
-            document.getElementById('pl-optimize-section').style.display = 'block';
-            this._showPlatformResults();
           }
         });
+
+        // Phase 2: 自动优化勾选的平台
+        const toOptimize = this.state.platformResults.filter(
+          r => this.state.platformsOptimize.includes(r.platform)
+        );
+
+        if (toOptimize.length > 0) {
+          resultsEl.innerHTML += '<div class="loading" style="margin-top:12px">优化去AI中...</div>';
+          await this._runOptimize(toOptimize, optStreamEl);
+        }
+
+        // Phase 3: 显示最终可编辑结果
+        document.getElementById('pl-next3').disabled = false;
+        this._showPlatformResults();
+        showToast(toOptimize.length > 0 ? '生成 + 优化完成' : '生成完成');
       } catch (e) {
         showToast(e.message, 'error');
       }
@@ -438,75 +459,98 @@ const PipelineView = {
       stopBtn.style.display = 'none';
       genBtn.style.display = 'inline-block';
     };
+  },
 
-    // --- 优化去AI ---
-    document.getElementById('pl-optimize').onclick = async () => {
-      const btn = document.getElementById('pl-optimize');
-      const streamEl = document.getElementById('pl-optimize-stream');
-      btn.disabled = true;
-      btn.textContent = '优化中...';
-      streamEl.innerHTML = '';
+  // --- 优化勾选列表动态更新 ---
+  _updateOptimizeChecks() {
+    const el = document.getElementById('pl-optimize-picks');
+    if (!el) return;
 
-      try {
-        const contents = this.state.platformResults.map(r => ({
-          platform: r.platform,
-          content: r.content,
-          file: r.file,
-        }));
+    // 清理已取消选择的平台
+    this.state.platformsOptimize = this.state.platformsOptimize.filter(
+      p => this.state.platforms.includes(p)
+    );
 
-        await API.stream('/pipeline/optimize', {
-          contents,
-          engine: this.state.engine,
-        }, (data) => {
-          if (data.type === 'optimize_start') {
-            streamEl.innerHTML += `<div class="card" id="opt-${data.platform}">
-              <div class="card-header">${data.platform} 优化中...</div>
-              <div class="stream-output streaming" style="max-height:150px"></div>
-            </div>`;
-          } else if (data.type === 'compliance_result') {
-            const card = document.getElementById(`opt-${data.platform}`);
-            if (card) {
-              card.querySelector('.card-header').textContent =
-                `${data.platform} · 合规 ${data.score}分 · 去AI中...`;
-            }
-          } else if (data.type === 'chunk' && data.platform) {
-            const card = document.getElementById(`opt-${data.platform}`);
-            if (card) {
-              const output = card.querySelector('.stream-output');
-              output.textContent += data.content;
-              output.scrollTop = output.scrollHeight;
-            }
-          } else if (data.type === 'optimize_done') {
-            const card = document.getElementById(`opt-${data.platform}`);
-            if (card) {
-              card.querySelector('.card-header').textContent = `${data.platform} 优化完成 (${data.length}字)`;
-              card.querySelector('.stream-output').classList.remove('streaming');
-            }
-            // 直接覆盖 platformResults 中的对应条目
-            const pr = this.state.platformResults.find(p => p.platform === data.platform);
-            if (pr) {
-              pr.content = data.content || '';
-              pr.length = data.length;
-            }
-          } else if (data.type === 'done') {
-            btn.textContent = '再优化一轮';
-            btn.disabled = false;
-            streamEl.innerHTML = '';
-            // 刷新上方的可编辑结果
-            this._showPlatformResults();
-            showToast('优化完成，内容已更新');
-          }
-        });
-      } catch (e) {
-        showToast(e.message, 'error');
-        btn.textContent = '开始优化';
-        btn.disabled = false;
+    if (this.state.platforms.length === 0) {
+      el.innerHTML = '<span style="color:var(--muted);font-size:12px">请先选择平台</span>';
+      return;
+    }
+
+    let html = '';
+    this.state.platforms.forEach(p => {
+      const checked = this.state.platformsOptimize.includes(p) ? 'checked' : '';
+      html += `
+        <label class="platform-check opt-pick ${checked}" data-platform="${p}">
+          <input type="checkbox" ${checked ? 'checked' : ''} />
+          ${p}
+        </label>`;
+    });
+    el.innerHTML = html;
+
+    el.querySelectorAll('.opt-pick').forEach(label => {
+      label.onclick = (e) => {
+        e.preventDefault();
+        const p = label.dataset.platform;
+        const idx = this.state.platformsOptimize.indexOf(p);
+        if (idx >= 0) {
+          this.state.platformsOptimize.splice(idx, 1);
+          label.classList.remove('checked');
+          label.querySelector('input').checked = false;
+        } else {
+          this.state.platformsOptimize.push(p);
+          label.classList.add('checked');
+          label.querySelector('input').checked = true;
+        }
+      };
+    });
+  },
+
+  // --- 执行优化流 ---
+  async _runOptimize(toOptimize, streamEl) {
+    const contents = toOptimize.map(r => ({
+      platform: r.platform, content: r.content, file: r.file,
+    }));
+
+    await API.stream('/pipeline/optimize', {
+      contents, engine: this.state.engine,
+    }, (data) => {
+      if (data.type === 'optimize_start') {
+        streamEl.innerHTML += `<div class="card" id="opt-${data.platform}">
+          <div class="card-header">${data.platform} 优化中...</div>
+          <div class="stream-output streaming" style="max-height:150px"></div>
+        </div>`;
+      } else if (data.type === 'compliance_result') {
+        const card = document.getElementById(`opt-${data.platform}`);
+        if (card) {
+          card.querySelector('.card-header').textContent =
+            `${data.platform} · 合规 ${data.score}分 · 去AI中...`;
+        }
+      } else if (data.type === 'chunk' && data.platform) {
+        const card = document.getElementById(`opt-${data.platform}`);
+        if (card) {
+          const out = card.querySelector('.stream-output');
+          out.textContent += data.content;
+          out.scrollTop = out.scrollHeight;
+        }
+      } else if (data.type === 'optimize_done') {
+        const card = document.getElementById(`opt-${data.platform}`);
+        if (card) {
+          card.querySelector('.card-header').textContent = `${data.platform} 优化完成 (${data.length}字)`;
+          card.querySelector('.stream-output').classList.remove('streaming');
+        }
+        const pr = this.state.platformResults.find(p => p.platform === data.platform);
+        if (pr) {
+          pr.content = data.content || '';
+          pr.length = data.length;
+        }
       }
-    };
+    });
   },
 
   _showPlatformResults() {
     const el = document.getElementById('pl-platform-results');
+    const optEl = document.getElementById('pl-optimize-stream');
+    if (optEl) optEl.innerHTML = '';
     let html = '';
     this.state.platformResults.forEach((r, i) => {
       html += `
@@ -523,7 +567,6 @@ const PipelineView = {
     });
     el.innerHTML = html;
 
-    // 绑定保存事件
     el.querySelectorAll('.pr-save-btn').forEach(btn => {
       btn.onclick = async () => {
         const idx = parseInt(btn.dataset.idx);
@@ -754,7 +797,7 @@ const PipelineView = {
       this.state = {
         step: 0, input: '', style: '', engine: this.state.engine,
         draftContent: '', draftFile: '', platforms: [],
-        platformResults: [], images: [], finalResults: [],
+        platformsOptimize: [], platformResults: [], images: [], finalResults: [],
       };
       this.render();
     };
