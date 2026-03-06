@@ -1,7 +1,7 @@
 /**
  * [INPUT]: 依赖 API + StreamRenderer
  * [OUTPUT]: Views.pipeline 对象
- * [POS]: views/ 的内容流水线页面, 6步向导式创作核心
+ * [POS]: views/ 的内容流水线页面, 5步向导式创作核心
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 
@@ -18,7 +18,6 @@ const PipelineView = {
     draftFile: '',
     platforms: [],
     platformResults: [],
-    optimizedResults: [],
     images: [],
     finalResults: [],
   },
@@ -27,7 +26,6 @@ const PipelineView = {
     { label: '输入素材', key: 'input' },
     { label: '生成母稿', key: 'draft' },
     { label: '多平台生成', key: 'platforms' },
-    { label: '优化去AI', key: 'optimize' },
     { label: '图片生成', key: 'image' },
     { label: '最终输出', key: 'output' },
   ],
@@ -106,7 +104,6 @@ const PipelineView = {
       () => this._renderInput(),
       () => this._renderDraft(),
       () => this._renderPlatforms(),
-      () => this._renderOptimize(),
       () => this._renderImage(),
       () => this._renderOutput(),
     ];
@@ -285,7 +282,7 @@ const PipelineView = {
   },
 
   // ============================================================
-  //  Step 3: 多平台生成
+  //  Step 3: 多平台生成 + 优化去AI（合并）
   // ============================================================
   _renderPlatforms() {
     const el = document.getElementById('pipeline-content');
@@ -311,14 +308,28 @@ const PipelineView = {
       </div>
     `;
 
-    // 平台结果（折叠展示）
+    // 平台结果
     html += `<div id="pl-platform-results"></div>`;
+
+    // 优化去AI 区域（生成完成后显示）
+    html += `
+      <div id="pl-optimize-section" style="display:${this.state.platformResults.length > 0 ? 'block' : 'none'}">
+        <h3 style="margin-top:20px">优化去AI (可选)</h3>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:12px">
+          合规检查 + 去AI味优化，保持原风格不变。优化结果直接覆盖上方内容。
+        </p>
+        <div class="btn-group">
+          <button class="btn btn-primary" id="pl-optimize">开始优化</button>
+        </div>
+        <div id="pl-optimize-stream"></div>
+      </div>
+    `;
 
     html += `
       <div class="pipeline-nav">
         <button class="btn" id="pl-back3">上一步</button>
         <button class="btn btn-primary" id="pl-next3" ${this.state.platformResults.length === 0 ? 'disabled' : ''}>
-          下一步: 优化去AI
+          下一步: 图片生成
         </button>
       </div>
     `;
@@ -366,7 +377,7 @@ const PipelineView = {
       this.render();
     };
 
-    // 生成
+    // --- 多平台生成 ---
     document.getElementById('pl-gen-platforms').onclick = async () => {
       if (this.state.platforms.length === 0) {
         showToast('请至少选择一个平台', 'error');
@@ -380,6 +391,7 @@ const PipelineView = {
       genBtn.style.display = 'none';
       stopBtn.style.display = 'inline-block';
       resultsEl.innerHTML = '<div class="loading">生成中...</div>';
+      document.getElementById('pl-optimize-section').style.display = 'none';
 
       this.state.platformResults = [];
 
@@ -415,7 +427,7 @@ const PipelineView = {
             });
           } else if (data.type === 'done') {
             document.getElementById('pl-next3').disabled = false;
-            // 流式完成后，替换为可编辑 textarea
+            document.getElementById('pl-optimize-section').style.display = 'block';
             this._showPlatformResults();
           }
         });
@@ -425,6 +437,71 @@ const PipelineView = {
 
       stopBtn.style.display = 'none';
       genBtn.style.display = 'inline-block';
+    };
+
+    // --- 优化去AI ---
+    document.getElementById('pl-optimize').onclick = async () => {
+      const btn = document.getElementById('pl-optimize');
+      const streamEl = document.getElementById('pl-optimize-stream');
+      btn.disabled = true;
+      btn.textContent = '优化中...';
+      streamEl.innerHTML = '';
+
+      try {
+        const contents = this.state.platformResults.map(r => ({
+          platform: r.platform,
+          content: r.content,
+          file: r.file,
+        }));
+
+        await API.stream('/pipeline/optimize', {
+          contents,
+          engine: this.state.engine,
+        }, (data) => {
+          if (data.type === 'optimize_start') {
+            streamEl.innerHTML += `<div class="card" id="opt-${data.platform}">
+              <div class="card-header">${data.platform} 优化中...</div>
+              <div class="stream-output streaming" style="max-height:150px"></div>
+            </div>`;
+          } else if (data.type === 'compliance_result') {
+            const card = document.getElementById(`opt-${data.platform}`);
+            if (card) {
+              card.querySelector('.card-header').textContent =
+                `${data.platform} · 合规 ${data.score}分 · 去AI中...`;
+            }
+          } else if (data.type === 'chunk' && data.platform) {
+            const card = document.getElementById(`opt-${data.platform}`);
+            if (card) {
+              const output = card.querySelector('.stream-output');
+              output.textContent += data.content;
+              output.scrollTop = output.scrollHeight;
+            }
+          } else if (data.type === 'optimize_done') {
+            const card = document.getElementById(`opt-${data.platform}`);
+            if (card) {
+              card.querySelector('.card-header').textContent = `${data.platform} 优化完成 (${data.length}字)`;
+              card.querySelector('.stream-output').classList.remove('streaming');
+            }
+            // 直接覆盖 platformResults 中的对应条目
+            const pr = this.state.platformResults.find(p => p.platform === data.platform);
+            if (pr) {
+              pr.content = data.content || '';
+              pr.length = data.length;
+            }
+          } else if (data.type === 'done') {
+            btn.textContent = '再优化一轮';
+            btn.disabled = false;
+            streamEl.innerHTML = '';
+            // 刷新上方的可编辑结果
+            this._showPlatformResults();
+            showToast('优化完成，内容已更新');
+          }
+        });
+      } catch (e) {
+        showToast(e.message, 'error');
+        btn.textContent = '开始优化';
+        btn.disabled = false;
+      }
     };
   },
 
@@ -467,164 +544,11 @@ const PipelineView = {
   },
 
   // ============================================================
-  //  Step 4: 优化去AI
-  // ============================================================
-  _renderOptimize() {
-    const el = document.getElementById('pipeline-content');
-    const hasResults = this.state.platformResults.length > 0;
-
-    let html = `<h3>自循环审核优化</h3>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:16px">
-        自动合规检查 + 去AI味洗稿优化
-      </p>
-    `;
-
-    html += `
-      <div class="btn-group">
-        <button class="btn btn-primary" id="pl-optimize" ${!hasResults ? 'disabled' : ''}>
-          开始优化
-        </button>
-        <button class="btn" id="pl-skip-optimize">跳过此步</button>
-      </div>
-      <div id="pl-optimize-results"></div>
-      <div id="pl-optimized-list"></div>
-    `;
-
-    html += `
-      <div class="pipeline-nav">
-        <button class="btn" id="pl-back4">上一步</button>
-        <button class="btn btn-primary" id="pl-next4">下一步: 图片生成</button>
-      </div>
-    `;
-
-    el.innerHTML = html;
-
-    if (this.state.optimizedResults.length > 0) {
-      this._showOptimizedResults();
-    }
-
-    document.getElementById('pl-back4').onclick = () => { this.state.step = 2; this.render(); };
-    document.getElementById('pl-next4').onclick = () => { this.state.step = 4; this.render(); };
-    document.getElementById('pl-skip-optimize').onclick = () => {
-      this.state.optimizedResults = this.state.platformResults.map(r => ({ ...r }));
-      this.state.step = 4;
-      this.render();
-    };
-
-    document.getElementById('pl-optimize').onclick = async () => {
-      const btn = document.getElementById('pl-optimize');
-      const resultsEl = document.getElementById('pl-optimize-results');
-      btn.disabled = true;
-      btn.textContent = '优化中...';
-      resultsEl.innerHTML = '';
-
-      this.state.optimizedResults = [];
-
-      try {
-        const contents = this.state.platformResults.map(r => ({
-          platform: r.platform,
-          content: r.content,
-          file: r.file,
-        }));
-
-        await API.stream('/pipeline/optimize', {
-          contents,
-          engine: this.state.engine,
-        }, (data) => {
-          if (data.type === 'optimize_start') {
-            resultsEl.innerHTML += `<div class="card" id="opt-${data.platform}">
-              <div class="card-header">${data.platform} 优化中...</div>
-              <div class="stream-output streaming" style="max-height:150px"></div>
-            </div>`;
-          } else if (data.type === 'compliance_result') {
-            const card = document.getElementById(`opt-${data.platform}`);
-            if (card) {
-              card.querySelector('.card-header').textContent =
-                `${data.platform} · 合规 ${data.score}分 · 洗稿中...`;
-            }
-          } else if (data.type === 'chunk' && data.platform) {
-            const card = document.getElementById(`opt-${data.platform}`);
-            if (card) {
-              const output = card.querySelector('.stream-output');
-              output.textContent += data.content;
-              output.scrollTop = output.scrollHeight;
-            }
-          } else if (data.type === 'optimize_done') {
-            const card = document.getElementById(`opt-${data.platform}`);
-            if (card) {
-              card.querySelector('.card-header').textContent = `${data.platform} 优化完成 (${data.length}字)`;
-              card.querySelector('.stream-output').classList.remove('streaming');
-            }
-            this.state.optimizedResults.push({
-              platform: data.platform,
-              content: data.content || '',
-              length: data.length,
-            });
-          } else if (data.type === 'done') {
-            btn.textContent = '再优化一轮';
-            btn.disabled = false;
-            // 流式完成后，替换为可编辑 textarea
-            this._showOptimizedResults();
-          }
-        });
-      } catch (e) {
-        showToast(e.message, 'error');
-        btn.textContent = '开始优化';
-        btn.disabled = false;
-      }
-    };
-  },
-
-  _showOptimizedResults() {
-    const el = document.getElementById('pl-optimized-list');
-    if (!el) return;
-    let html = '<h3 style="margin-top:16px">优化结果</h3>';
-    this.state.optimizedResults.forEach((r, i) => {
-      html += `<div class="collapsible">
-        <div class="collapsible-header" onclick="this.parentElement.classList.toggle('open')">
-          ${r.platform} (${r.length || 0}字)
-          <span class="arrow">&#9654;</span>
-        </div>
-        <div class="collapsible-body">
-          <textarea class="form-textarea" id="opt-edit-${i}" style="min-height:200px">${r.content || ''}</textarea>
-          <button class="btn btn-sm opt-save-btn" data-idx="${i}" style="margin-top:8px">保存</button>
-        </div>
-      </div>`;
-    });
-    el.innerHTML = html;
-
-    // 绑定保存事件（优化结果覆盖原平台文件）
-    el.querySelectorAll('.opt-save-btn').forEach(btn => {
-      btn.onclick = async () => {
-        const idx = parseInt(btn.dataset.idx);
-        const r = this.state.optimizedResults[idx];
-        const textarea = document.getElementById(`opt-edit-${idx}`);
-        if (!textarea) return;
-        // 优化结果用对应平台文件路径保存
-        const pr = this.state.platformResults.find(p => p.platform === r.platform);
-        const file = r.file || (pr && pr.file);
-        if (!file) { showToast('无文件路径，无法保存', 'error'); return; }
-        const parts = file.split('/');
-        if (parts.length !== 2) return;
-        try {
-          await API.put(`/content/${parts[0]}/${parts[1]}`, { content: textarea.value });
-          r.content = textarea.value;
-          r.length = textarea.value.length;
-          btn.closest('.collapsible').querySelector('.collapsible-header').childNodes[0].textContent = `${r.platform} (${r.length}字) `;
-          showToast(`${r.platform} 已保存`);
-        } catch (e) { showToast('保存失败: ' + e.message, 'error'); }
-      };
-    });
-  },
-
-  // ============================================================
-  //  Step 5: 图片生成
+  //  Step 4: 图片生成
   // ============================================================
   async _renderImage() {
     const el = document.getElementById('pipeline-content');
-    const finalContents = this.state.optimizedResults.length > 0
-      ? this.state.optimizedResults
-      : this.state.platformResults;
+    const finalContents = this.state.platformResults;
 
     // 加载历史 prompts
     let historyPrompts = [];
@@ -690,9 +614,9 @@ const PipelineView = {
     el.innerHTML = html;
 
     // 事件绑定
-    document.getElementById('pl-back5').onclick = () => { this.state.step = 3; this.render(); };
-    document.getElementById('pl-next5').onclick = () => { this.state.step = 5; this.render(); };
-    document.getElementById('pl-skip-images').onclick = () => { this.state.step = 5; this.render(); };
+    document.getElementById('pl-back5').onclick = () => { this.state.step = 2; this.render(); };
+    document.getElementById('pl-next5').onclick = () => { this.state.step = 4; this.render(); };
+    document.getElementById('pl-skip-images').onclick = () => { this.state.step = 4; this.render(); };
 
     // 保存提示词按钮
     finalContents.forEach((item, i) => {
@@ -789,13 +713,11 @@ const PipelineView = {
   },
 
   // ============================================================
-  //  Step 6: 最终输出
+  //  Step 5: 最终输出
   // ============================================================
   async _renderOutput() {
     const el = document.getElementById('pipeline-content');
-    const finalContents = this.state.optimizedResults.length > 0
-      ? this.state.optimizedResults
-      : this.state.platformResults;
+    const finalContents = this.state.platformResults;
 
     let html = `<h3>最终输出</h3>
       <p style="font-size:13px;color:var(--muted);margin-bottom:16px">
@@ -827,12 +749,12 @@ const PipelineView = {
       this._showFinalLinks();
     }
 
-    document.getElementById('pl-back6').onclick = () => { this.state.step = 4; this.render(); };
+    document.getElementById('pl-back6').onclick = () => { this.state.step = 3; this.render(); };
     document.getElementById('pl-restart').onclick = () => {
       this.state = {
         step: 0, input: '', style: '', engine: this.state.engine,
         draftContent: '', draftFile: '', platforms: [],
-        platformResults: [], optimizedResults: [], images: [], finalResults: [],
+        platformResults: [], images: [], finalResults: [],
       };
       this.render();
     };
