@@ -283,6 +283,62 @@ router.post('/optimize', async (req, res) => {
 });
 
 // ============================================================
+//  Step 4: 智能内容提炼 (非流式, JSON 返回)
+// ============================================================
+router.post('/extract', async (req, res) => {
+  const { draftContent, platforms, engine = 'claude' } = req.body;
+  const { aiAdapter } = req.app.locals;
+
+  console.log(`  ${_ts()}  [流水线] Step4 内容提炼  平台=${(platforms||[]).join(',')}  引擎=${engine}`);
+
+  if (!draftContent) {
+    return res.status(400).json({ error: '缺少母稿内容' });
+  }
+
+  const targetPlatforms = platforms && platforms.length > 0 ? platforms : ['通用'];
+
+  try {
+    const prompt = `你是图片创作顾问。请从以下文章中，为每个平台提取最适合生成配图的核心视觉主题描述。
+
+要求：
+1. 每个平台的提炼内容应描述一个具体的视觉场景，适合AI图片生成
+2. 提炼内容用中文，100-200字
+3. 聚焦文章最有视觉表现力的关键信息
+4. 不同平台侧重不同角度（社交平台侧重吸引力，技术平台侧重专业感，国际平台用英文描述）
+
+目标平台: ${targetPlatforms.join(', ')}
+
+请严格按以下JSON格式返回（不要有任何其他文字）:
+${JSON.stringify(Object.fromEntries(targetPlatforms.map(p => [p, '提炼内容...'])))}
+
+---
+文章内容:
+
+${draftContent.slice(0, 3000)}`;
+
+    const raw = await aiAdapter.generate(prompt, engine);
+
+    // 容错解析: 提取 JSON 部分
+    let extractions = {};
+    try {
+      const jsonMatch = raw.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        extractions = JSON.parse(jsonMatch[0]);
+      }
+    } catch (parseErr) {
+      console.error(`  ${_ts()}  [流水线] ✗ JSON 解析失败, 回退为母稿摘要`);
+      targetPlatforms.forEach(p => { extractions[p] = draftContent.slice(0, 300); });
+    }
+
+    console.log(`  ${_ts()}  [流水线] ✓ 内容提炼完成  ${Object.keys(extractions).length} 个平台`);
+    res.json({ extractions });
+  } catch (e) {
+    console.error(`  ${_ts()}  [流水线] ✗ 内容提炼失败: ${e.message}`);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ============================================================
 //  Step 5: 组装最终文件
 // ============================================================
 router.post('/assemble', async (req, res) => {

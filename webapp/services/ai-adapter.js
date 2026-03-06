@@ -1,6 +1,6 @@
 /**
  * [INPUT]: 依赖 child_process (Claude CLI), https/http (API 调用)
- * [OUTPUT]: 对外提供 AIAdapter 类 (stream 方法, 统一三引擎)
+ * [OUTPUT]: 对外提供 AIAdapter 类 (stream + generate 方法, 统一三引擎)
  * [POS]: services/ 的 AI 通信核心, 被所有需要 AI 生成的路由消费
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
@@ -63,6 +63,15 @@ class AIAdapter {
 
     const sec = ((Date.now() - start) / 1000).toFixed(1);
     console.log(`  ${_ts()}  [AI] 生成完成  输出=${totalChars}字  耗时=${sec}s  引擎=${engine}`);
+  }
+
+  // --- 一次性生成 (非流式, 收集 stream 全部输出) ---
+  async generate(prompt, engine = 'claude') {
+    let result = '';
+    for await (const chunk of this.stream(prompt, engine)) {
+      result += chunk;
+    }
+    return result;
   }
 
   // --- Claude CLI: 本地已认证，stdin 管道传入 Prompt ---

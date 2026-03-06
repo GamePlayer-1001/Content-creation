@@ -28,6 +28,17 @@
     - "第4段：引导互动"
     - "末尾：一句话介绍+搜索引导"
   example: "「我用AI工具一天做完了别人一周的工作」"
+  image_style:
+    default: "为以下内容生成配图，美观精致，漫画风格，生动活泼，色调温暖明亮，避免AI蓝AI紫，输出图片中文字为中文，中文字体要正确："
+    presets:
+      - name: "漫画风"
+        prompt: "为以下内容生成配图，美观精致，漫画风格，生动活泼，色调温暖明亮，避免AI蓝AI紫，输出图片中文字为中文，中文字体要正确："
+      - name: "极简风"
+        prompt: "为以下内容生成配图，极简主义，留白大方，线条简洁，色调素雅，避免AI蓝AI紫："
+      - name: "摄影风"
+        prompt: "为以下内容生成配图，高质量摄影风格，光影细腻，构图考究，色调自然真实："
+      - name: "信息图"
+        prompt: "为以下内容生成信息图，逻辑严密阐述清晰，一目了然，让初中生也能看懂，配色明快，中文字体正确："
 
 即刻:
   group: "C"
@@ -37,6 +48,13 @@
   frequency: "5-10条/周"
   format: "短文本/中文本"
   example: "「发现一个AI工具，10分钟自动生成一周的社媒内容 😂」"
+  image_style:
+    default: "为以下内容生成配图，简洁明快，插画风格，色彩鲜明，适合社交媒体，避免AI蓝AI紫："
+    presets:
+      - name: "插画风"
+        prompt: "为以下内容生成配图，简洁明快，插画风格，色彩鲜明，适合社交媒体，避免AI蓝AI紫："
+      - name: "漫画风"
+        prompt: "为以下内容生成配图，漫画风格，生动活泼，色调温暖，中文字体正确："
 
 # ---------- A组：长图文 ----------
 
@@ -51,6 +69,15 @@
     - "百家号"
     - "今日头条"
   example: "「我做了一个自动化内容流水线，这是第X天发生的事」"
+  image_style:
+    default: "为以下内容生成配图，专业大气，商务风格，配色沉稳，适合长文配图，中文字体正确："
+    presets:
+      - name: "商务风"
+        prompt: "为以下内容生成配图，专业大气，商务风格，配色沉稳，适合长文配图，中文字体正确："
+      - name: "信息图"
+        prompt: "为以下内容生成信息图，结构清晰，数据可视化，配色专业，中文字体正确："
+      - name: "故事风"
+        prompt: "为以下内容生成配图，叙事感强，温暖色调，有人物场景，中文字体正确："
 
 百家号:
   group: "A"
@@ -83,6 +110,15 @@
     - "经验分享型：我在[领域]工作[时间]，总结出这些经验"
   recommended_styles: ["A", "C", "G"]
   example: "「我做了一年AI自动化，这5个坑你一定会踩」"
+  image_style:
+    default: "为以下内容生成配图，专业深度，信息图风格，结构化排版，深色系，中文字体正确："
+    presets:
+      - name: "信息图"
+        prompt: "为以下内容生成配图，专业深度，信息图风格，结构化排版，深色系，中文字体正确："
+      - name: "数据图"
+        prompt: "为以下内容生成数据可视化配图，图表清晰，配色沉稳专业，中文字体正确："
+      - name: "思维导图"
+        prompt: "为以下内容生成思维导图风格配图，层次分明，逻辑清晰，配色简洁，中文字体正确："
 
 # ---------- B组：技术社区 ----------
 
@@ -102,6 +138,13 @@ linuxdo:
     - "第4段：当前状态和下一步计划"
     - "末尾：欢迎交流（不是'欢迎使用'）"
   example: "「最近在做一个自动化内容管道，聊聊技术选型和踩的坑」"
+  image_style:
+    default: "为以下内容生成技术架构图风格配图，极简线条，深色背景，代码感，英文标注："
+    presets:
+      - name: "架构图"
+        prompt: "为以下内容生成技术架构图风格配图，极简线条，深色背景，代码感，英文标注："
+      - name: "流程图"
+        prompt: "为以下内容生成流程图风格配图，步骤清晰，箭头连接，配色简洁："
 
 GitHub:
   group: "B"
@@ -135,6 +178,15 @@ Medium:
     - "I [did something] for [time]. Here's What Happened."
   recommended_styles: ["A", "C", "J"]
   example: "\"How I Built an AI Content Pipeline in 30 Days — and What Broke Along the Way\""
+  image_style:
+    default: "Generate a professional editorial illustration for the following content, clean composition, warm muted tones, minimalist style, large whitespace:"
+    presets:
+      - name: "Editorial"
+        prompt: "Generate a professional editorial illustration for the following content, clean composition, warm muted tones, minimalist style, large whitespace:"
+      - name: "Abstract"
+        prompt: "Generate an abstract conceptual illustration for the following content, bold geometric shapes, modern color palette, artistic:"
+      - name: "Technical"
+        prompt: "Generate a technical diagram illustration for the following content, clean lines, structured layout, professional color scheme:"
 
 Quora:
   group: "D"
@@ -150,6 +202,13 @@ Quora:
     - "简短总结"
   recommended_styles: ["C", "E", "J"]
   example: "\"Short answer: Yes, but not how most people think. Let me explain...\""
+  image_style:
+    default: "Generate a clear informative illustration for the following content, professional style, structured layout, easy to understand:"
+    presets:
+      - name: "Informative"
+        prompt: "Generate a clear informative illustration for the following content, professional style, structured layout, easy to understand:"
+      - name: "Conceptual"
+        prompt: "Generate a conceptual illustration for the following content, metaphorical imagery, thought-provoking, clean design:"
 
 # ---------- E组：国际社交 ----------
 
@@ -168,6 +227,13 @@ X:
     - "回复不是广告，留有价值的见解"
   recommended_styles: ["C", "E", "H"]
   example: "\"Built an automation pipeline for content creation. Day X update.\""
+  image_style:
+    default: "Generate a bold eye-catching graphic for the following content, high contrast, single focal point, modern design, social media optimized:"
+    presets:
+      - name: "Bold"
+        prompt: "Generate a bold eye-catching graphic for the following content, high contrast, single focal point, modern design, social media optimized:"
+      - name: "Minimal"
+        prompt: "Generate a minimal clean graphic for the following content, simple composition, muted tones, elegant:"
 
 Reddit:
   group: "E"
@@ -186,6 +252,13 @@ Reddit:
     - "What's the best [thing] for [purpose]?"
   recommended_styles: ["A", "H", "I"]
   example: "\"I built an AI content pipeline. Here's what actually worked (and what didn't).\""
+  image_style:
+    default: "Generate a casual authentic illustration for the following content, community feel, relatable, warm tones, not corporate:"
+    presets:
+      - name: "Casual"
+        prompt: "Generate a casual authentic illustration for the following content, community feel, relatable, warm tones, not corporate:"
+      - name: "Meme-style"
+        prompt: "Generate a meme-style illustration for the following content, humorous, relatable, internet culture aesthetic:"
 
 # ---------- F组：私域 ----------
 
@@ -203,6 +276,13 @@ Reddit:
     周四: "开发者视角/技术思考"
     周五: "互动型/小测试"
     周六: "轻松日常"
+  image_style:
+    default: "为以下内容生成配图，真实生活感，手机随手拍风格，自然光，温暖色调，不像广告："
+    presets:
+      - name: "生活感"
+        prompt: "为以下内容生成配图，真实生活感，手机随手拍风格，自然光，温暖色调，不像广告："
+      - name: "文艺风"
+        prompt: "为以下内容生成配图，文艺清新，杂志排版感，留白优雅，中文字体正确："
 
 # ============================================================
 #  配图命名规范 (from CAT5_Brain)
