@@ -183,12 +183,13 @@ const PipelineView = {
       <div class="stream-output" id="pl-draft-output" style="display:none"></div>
     `;
 
-    // 如果已有母稿内容，显示编辑区
+    // 如果已有母稿内容，显示编辑区 + 保存按钮
     if (this.state.draftContent) {
       html += `
         <div class="form-group" style="margin-top:16px">
           <label class="form-label">母稿内容 (可编辑)</label>
           <textarea class="form-textarea" id="pl-draft-edit" style="min-height:300px">${this.state.draftContent}</textarea>
+          <button class="btn btn-sm" id="pl-save-draft" style="margin-top:8px">保存到文件</button>
         </div>
       `;
     }
@@ -230,6 +231,22 @@ const PipelineView = {
       this.state.step = 2;
       this.render();
     };
+
+    // 保存母稿到文件
+    const saveDraftBtn = document.getElementById('pl-save-draft');
+    if (saveDraftBtn) {
+      saveDraftBtn.onclick = async () => {
+        const editEl = document.getElementById('pl-draft-edit');
+        if (!editEl || !this.state.draftFile) return;
+        const parts = this.state.draftFile.split('/');
+        if (parts.length !== 2) return;
+        try {
+          await API.put(`/content/${parts[0]}/${parts[1]}`, { content: editEl.value });
+          this.state.draftContent = editEl.value;
+          showToast('母稿已保存');
+        } catch (e) { showToast('保存失败: ' + e.message, 'error'); }
+      };
+    }
 
     // 生成母稿
     let renderer = null;
@@ -412,18 +429,39 @@ const PipelineView = {
   _showPlatformResults() {
     const el = document.getElementById('pl-platform-results');
     let html = '';
-    this.state.platformResults.forEach(r => {
-      const preview = (r.content || '').slice(0, 200) + (r.content?.length > 200 ? '...' : '');
+    this.state.platformResults.forEach((r, i) => {
       html += `
         <div class="collapsible">
           <div class="collapsible-header" onclick="this.parentElement.classList.toggle('open')">
             ${r.platform} (${r.length || 0}字)
             <span class="arrow">&#9654;</span>
           </div>
-          <div class="collapsible-body" style="white-space:pre-wrap">${preview}</div>
+          <div class="collapsible-body">
+            <textarea class="form-textarea" id="pr-edit-${i}" style="min-height:200px">${r.content || ''}</textarea>
+            <button class="btn btn-sm pr-save-btn" data-idx="${i}" style="margin-top:8px">保存</button>
+          </div>
         </div>`;
     });
     el.innerHTML = html;
+
+    // 绑定保存事件
+    el.querySelectorAll('.pr-save-btn').forEach(btn => {
+      btn.onclick = async () => {
+        const idx = parseInt(btn.dataset.idx);
+        const r = this.state.platformResults[idx];
+        const textarea = document.getElementById(`pr-edit-${idx}`);
+        if (!textarea || !r.file) return;
+        const parts = r.file.split('/');
+        if (parts.length !== 2) return;
+        try {
+          await API.put(`/content/${parts[0]}/${parts[1]}`, { content: textarea.value });
+          r.content = textarea.value;
+          r.length = textarea.value.length;
+          btn.closest('.collapsible').querySelector('.collapsible-header').childNodes[0].textContent = `${r.platform} (${r.length}字) `;
+          showToast(`${r.platform} 已保存`);
+        } catch (e) { showToast('保存失败: ' + e.message, 'error'); }
+      };
+    });
   },
 
   // ============================================================
@@ -540,16 +578,42 @@ const PipelineView = {
     const el = document.getElementById('pl-optimized-list');
     if (!el) return;
     let html = '<h3 style="margin-top:16px">优化结果</h3>';
-    this.state.optimizedResults.forEach(r => {
+    this.state.optimizedResults.forEach((r, i) => {
       html += `<div class="collapsible">
         <div class="collapsible-header" onclick="this.parentElement.classList.toggle('open')">
           ${r.platform} (${r.length || 0}字)
           <span class="arrow">&#9654;</span>
         </div>
-        <div class="collapsible-body" style="white-space:pre-wrap">${(r.content || '').slice(0, 300)}...</div>
+        <div class="collapsible-body">
+          <textarea class="form-textarea" id="opt-edit-${i}" style="min-height:200px">${r.content || ''}</textarea>
+          <button class="btn btn-sm opt-save-btn" data-idx="${i}" style="margin-top:8px">保存</button>
+        </div>
       </div>`;
     });
     el.innerHTML = html;
+
+    // 绑定保存事件（优化结果覆盖原平台文件）
+    el.querySelectorAll('.opt-save-btn').forEach(btn => {
+      btn.onclick = async () => {
+        const idx = parseInt(btn.dataset.idx);
+        const r = this.state.optimizedResults[idx];
+        const textarea = document.getElementById(`opt-edit-${idx}`);
+        if (!textarea) return;
+        // 优化结果用对应平台文件路径保存
+        const pr = this.state.platformResults.find(p => p.platform === r.platform);
+        const file = r.file || (pr && pr.file);
+        if (!file) { showToast('无文件路径，无法保存', 'error'); return; }
+        const parts = file.split('/');
+        if (parts.length !== 2) return;
+        try {
+          await API.put(`/content/${parts[0]}/${parts[1]}`, { content: textarea.value });
+          r.content = textarea.value;
+          r.length = textarea.value.length;
+          btn.closest('.collapsible').querySelector('.collapsible-header').childNodes[0].textContent = `${r.platform} (${r.length}字) `;
+          showToast(`${r.platform} 已保存`);
+        } catch (e) { showToast('保存失败: ' + e.message, 'error'); }
+      };
+    });
   },
 
   // ============================================================
@@ -601,6 +665,7 @@ const PipelineView = {
               <option value="9:16">9:16 竖屏</option>
             </select>
             <button class="btn btn-sm" id="img-gen-${i}" data-idx="${i}">生成</button>
+            <button class="btn btn-sm" id="img-save-prompt-${i}" data-idx="${i}" data-platform="${item.platform}">保存提示词</button>
           </div>
           <div id="img-preview-${i}" style="margin-top:8px"></div>
         </div>
@@ -627,6 +692,22 @@ const PipelineView = {
     document.getElementById('pl-back5').onclick = () => { this.state.step = 3; this.render(); };
     document.getElementById('pl-next5').onclick = () => { this.state.step = 5; this.render(); };
     document.getElementById('pl-skip-images').onclick = () => { this.state.step = 5; this.render(); };
+
+    // 保存提示词按钮
+    finalContents.forEach((item, i) => {
+      const saveBtn = document.getElementById(`img-save-prompt-${i}`);
+      if (saveBtn) {
+        saveBtn.onclick = async () => {
+          const promptEl = document.getElementById(`img-prompt-${i}`);
+          const text = promptEl?.value?.trim();
+          if (!text) { showToast('请先输入提示词', 'error'); return; }
+          try {
+            await API.post('/image/prompts', { text, platform: item.platform });
+            showToast('提示词已保存');
+          } catch (e) { showToast('保存失败: ' + e.message, 'error'); }
+        };
+      }
+    });
 
     // 单个平台生成
     finalContents.forEach((item, i) => {
