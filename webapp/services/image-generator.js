@@ -22,13 +22,16 @@ class ImageGenerator {
   //  核心生成: prompt → base64 图片
   // ============================================================
   async generate(prompt, options = {}) {
-    const { aspectRatio = '1:1' } = options;
+    const { aspectRatio = '1:1', imageSize = '1K' } = options;
+
+    const imageConfig = { aspectRatio };
+    if (imageSize && imageSize !== '1K') imageConfig.imageSize = imageSize;
 
     const body = JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: {
         responseModalities: ['IMAGE'],
-        imageConfig: { aspectRatio },
+        imageConfig,
       },
     });
 

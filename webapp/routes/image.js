@@ -11,12 +11,12 @@ const router = require('express').Router();
 //  生成图片
 // ============================================================
 router.post('/generate', async (req, res) => {
-  const { prompt, platform = '', topic = '', index = 0, aspectRatio = '1:1' } = req.body;
+  const { prompt, platform = '', topic = '', index = 0, aspectRatio = '1:1', imageSize = '1K' } = req.body;
   const { imageGenerator, promptStore } = req.app.locals;
 
   const ts = () => new Date().toLocaleTimeString('zh-CN', { hour12: false });
   const promptPreview = (prompt || '').replace(/\s+/g, ' ').slice(0, 60);
-  console.log(`  ${ts()}  [图片] 生成请求  platform=${platform||'general'}  ratio=${aspectRatio}  prompt="${promptPreview}..."`);
+  console.log(`  ${ts()}  [图片] 生成请求  platform=${platform||'general'}  ratio=${aspectRatio}  size=${imageSize}  prompt="${promptPreview}..."`);
 
   if (!imageGenerator) {
     console.log(`  ${ts()}  [图片] ✗ 服务未配置 (缺少 GOOGLE_AI_KEY)`);
@@ -33,22 +33,26 @@ router.post('/generate', async (req, res) => {
     promptStore.save(prompt, platform);
 
     // 生成并保存图片
+    const opts = { aspectRatio, imageSize };
     console.log(`  ${ts()}  [图片] 调用 Nano Banana Pro API...`);
     const start = Date.now();
     const result = await imageGenerator.generateAndSave(
-      prompt, platform || 'general', topic, index, { aspectRatio }
+      prompt, platform || 'general', topic, index, opts
     );
 
-    // 同时返回 base64 供前端预览
-    const imageData = await imageGenerator.generate(prompt, { aspectRatio });
+    // 读取已保存的文件作为 base64 返回 (避免重复调用 API)
+    const fs = require('fs');
+    const imgBuf = fs.readFileSync(result.fullPath);
+    const base64 = imgBuf.toString('base64');
+    const ext = result.filename.endsWith('.png') ? 'image/png' : 'image/jpeg';
 
     const sec = ((Date.now() - start) / 1000).toFixed(1);
-    console.log(`  ${ts()}  [图片] ✓ 生成完成  耗时=${sec}s  文件=${result.path || '(base64)'}`);
+    console.log(`  ${ts()}  [图片] ✓ 生成完成  耗时=${sec}s  size=${imageSize}  文件=${result.path}`);
 
     res.json({
       ...result,
-      base64: imageData.base64,
-      mimeType: imageData.mimeType,
+      base64,
+      mimeType: ext,
     });
   } catch (e) {
     console.error(`  ${ts()}  [图片] ✗ 生成失败: ${e.message}`);
