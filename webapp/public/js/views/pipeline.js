@@ -415,6 +415,8 @@ const PipelineView = {
             });
           } else if (data.type === 'done') {
             document.getElementById('pl-next3').disabled = false;
+            // 流式完成后，替换为可编辑 textarea
+            this._showPlatformResults();
           }
         });
       } catch (e) {
@@ -485,11 +487,8 @@ const PipelineView = {
         <button class="btn" id="pl-skip-optimize">跳过此步</button>
       </div>
       <div id="pl-optimize-results"></div>
+      <div id="pl-optimized-list"></div>
     `;
-
-    if (this.state.optimizedResults.length > 0) {
-      html += `<div id="pl-optimized-list"></div>`;
-    }
 
     html += `
       <div class="pipeline-nav">
@@ -564,6 +563,8 @@ const PipelineView = {
           } else if (data.type === 'done') {
             btn.textContent = '再优化一轮';
             btn.disabled = false;
+            // 流式完成后，替换为可编辑 textarea
+            this._showOptimizedResults();
           }
         });
       } catch (e) {
