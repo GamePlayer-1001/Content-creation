@@ -12,6 +12,7 @@ const path = require('path');
 //  配置文件路径模式 — 用于从 Skill 模板中提取引用
 // ============================================================
 const CONFIG_PATTERNS = [
+  // --- YAML/JSON 配置 ---
   { regex: /config\/product\.yaml/g, file: 'product.yaml' },
   { regex: /config\/platforms\.yaml/g, file: 'platforms.yaml' },
   { regex: /config\/creator\.yaml/g, file: 'creator.yaml' },
@@ -21,6 +22,11 @@ const CONFIG_PATTERNS = [
   { regex: /config\/icons\.json/g, file: 'icons.json' },
   { regex: /config\/topics\.json/g, file: 'topics.json' },
   { regex: /config\/promotion\.json/g, file: 'promotion.json' },
+  // --- rules/ Markdown 规则（AI 消费）---
+  { regex: /config\/rules\/persona\.md/g, file: 'rules/persona.md' },
+  { regex: /config\/rules\/writing-rules\.md/g, file: 'rules/writing-rules.md' },
+  { regex: /config\/rules\/quality\.md/g, file: 'rules/quality.md' },
+  { regex: /config\/rules\/tropes\.md/g, file: 'rules/tropes.md' },
 ];
 
 class SkillLoader {
@@ -96,8 +102,9 @@ class SkillLoader {
     for (const file of needed) {
       try {
         const content = this.configManager.readRaw(file);
-        // 截断过长的配置（避免 Prompt 爆炸）
-        const trimmed = content.length > 5000 ? content.slice(0, 5000) + '\n...(已截断)' : content;
+        // 截断过长的配置（rules/*.md 较大，提高限制以保持规则完整性）
+        const limit = file.startsWith('rules/') ? 20000 : 5000;
+        const trimmed = content.length > limit ? content.slice(0, limit) + '\n...(已截断)' : content;
         result.push({ file, content: trimmed });
       } catch {}
     }

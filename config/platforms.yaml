@@ -7,6 +7,8 @@
 
 小红书:
   group: "C"
+  polish_intensity: "max"
+  trope_emphasis: ["word_choice", "sentence_structure", "tone", "formatting"]
   tone: "轻松、好奇、有冲击力"
   taboo: "不要长篇大论"
   length: "500-800字 + 3-6图"
@@ -42,6 +44,8 @@
 
 即刻:
   group: "C"
+  polish_intensity: "max"
+  trope_emphasis: ["word_choice", "tone"]
   tone: "观点鲜明、真实随性、朋友间聊天"
   taboo: "不要太正式"
   length: "200-1000字（无硬性上限，话题有深度可以写长）"
@@ -60,6 +64,8 @@
 
 公众号:
   group: "A"
+  polish_intensity: "medium"
+  trope_emphasis: ["sentence_structure", "tone", "composition"]
   tone: "专业但亲切，讲故事，深度分析"
   taboo: "不要太学术，不要浅尝辄止"
   length: "1500-2500字"
@@ -95,6 +101,8 @@
 
 知乎:
   group: "A"
+  polish_intensity: "medium"
+  trope_emphasis: ["sentence_structure", "tone", "composition"]
   tone: "专业、深度、有理有据"
   taboo: "避免绝对化表达，不用'首先其次最后'"
   length: "1500-3000字"
@@ -124,6 +132,8 @@
 
 linuxdo:
   group: "B"
+  polish_intensity: "strong"
+  trope_emphasis: ["word_choice", "tone"]
   tone: "技术向、真诚、开发者第一人称"
   taboo: "绝对禁止营销感。不说'快来体验'，说'分享我的实现思路'"
   length: "800-1500字"
@@ -148,6 +158,8 @@ linuxdo:
 
 GitHub:
   group: "B"
+  polish_intensity: "light"
+  trope_emphasis: ["tone"]
   tone: "技术文档风格，严谨"
   taboo: "不推销，只分享技术"
   frequency: "按周节奏"
@@ -163,6 +175,8 @@ GitHub:
 
 Medium:
   group: "D"
+  polish_intensity: "light"
+  trope_emphasis: ["sentence_structure", "tone", "composition"]
   tone: "英文、深度、个人视角+专业洞察"
   taboo: "不要翻译腔英文，不要 'In today's rapidly evolving...'"
   length: "1500-3000 words (6-12 min read)"
@@ -190,6 +204,8 @@ Medium:
 
 Quora:
   group: "D"
+  polish_intensity: "light"
+  trope_emphasis: ["sentence_structure", "tone"]
   tone: "英文、专业、直接回答+经验支撑"
   taboo: "不要绕弯子，不要CTA"
   length: "500-2000 words"
@@ -214,6 +230,8 @@ Quora:
 
 X:
   group: "E"
+  polish_intensity: "strong"
+  trope_emphasis: ["word_choice", "tone"]
   tone: "英文、简洁、builder视角"
   taboo: "不要中式英语"
   length: "280字符（含标签）"
@@ -237,6 +255,8 @@ X:
 
 Reddit:
   group: "E"
+  polish_intensity: "medium"
+  trope_emphasis: ["word_choice", "tone"]
   tone: "英文、真实、社区感、可讨论"
   taboo: "零营销味，像社区成员不是品牌方"
   length: "200-1500 words（灵活）"
@@ -263,7 +283,9 @@ Reddit:
 # ---------- F组：私域 ----------
 
 朋友圈:
-  group: "E"
+  group: "F"
+  polish_intensity: "light"
+  trope_emphasis: ["tone"]
   tone: "真实、个人化、不像广告"
   taboo: "3条里最多1条直接推广"
   length: "100-500字（轻量100-200，有料200-500）"

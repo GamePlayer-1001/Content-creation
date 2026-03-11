@@ -72,9 +72,10 @@ class ConfigManager {
     fs.writeFileSync(filePath, content, 'utf-8');
   }
 
-  // --- 安全路径解析 ---
+  // --- 安全路径解析（支持 rules/ 子目录）---
   _resolve(name) {
-    const filePath = path.join(this.configDir, path.basename(name));
+    const normalized = path.normalize(name).replace(/\.\./g, '');
+    const filePath = path.join(this.configDir, normalized);
     if (!filePath.startsWith(this.configDir)) {
       throw new Error('路径越界');
     }
