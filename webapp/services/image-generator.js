@@ -9,6 +9,9 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 
+// 连接复用: 并发时减少 TCP 握手开销
+const keepAliveAgent = new https.Agent({ keepAlive: true, maxSockets: 6 });
+
 class ImageGenerator {
   constructor(apiKey, outputDir) {
     this.apiKey = apiKey;
@@ -86,6 +89,7 @@ class ImageGenerator {
         port: 443,
         path: `${this.basePath}?key=${this.apiKey}`,
         method: 'POST',
+        agent: keepAliveAgent,
         headers: {
           'Content-Type': 'application/json',
           'Content-Length': Buffer.byteLength(body),

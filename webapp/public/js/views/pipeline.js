@@ -5,6 +5,32 @@
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 
+// ============================================================
+//  动态并发信号量 — 2并发起步, 4张完成后升至4并发
+// ============================================================
+function createDynamicLimiter(initial, max, rampAfter) {
+  let running = 0, completed = 0, concurrency = initial;
+  const queue = [];
+
+  function drain() {
+    if (completed >= rampAfter) concurrency = max;
+    while (running < concurrency && queue.length) {
+      running++;
+      const { fn, resolve, reject } = queue.shift();
+      fn().then(resolve, reject).finally(() => {
+        running--;
+        completed++;
+        drain();
+      });
+    }
+  }
+
+  return (fn) => new Promise((resolve, reject) => {
+    queue.push({ fn, resolve, reject });
+    drain();
+  });
+}
+
 const PipelineView = {
   // ============================================================
   //  状态管理
@@ -775,23 +801,33 @@ const PipelineView = {
         () => this._generateImageDual(i, item.platform, 'illustration');
     });
 
-    // 全部生成
+    // 全部生成 (动态并发: 2→4)
     document.getElementById('pl-gen-all-images').onclick = async () => {
-      for (let i = 0; i < finalContents.length; i++) {
-        await this._generateImageDual(i, finalContents[i].platform, 'cover');
-        await this._generateImageDual(i, finalContents[i].platform, 'illustration');
-      }
-      showToast('全部图片生成完成 (封面+配图)');
+      const limiter = createDynamicLimiter(2, 4, 4);
+      const results = await Promise.allSettled(
+        finalContents.flatMap((item, i) => [
+          limiter(() => this._generateImageDual(i, item.platform, 'cover')),
+          limiter(() => this._generateImageDual(i, item.platform, 'illustration')),
+        ])
+      );
+      const failed = results.filter(r => r.status === 'rejected').length;
+      showToast(failed ? `图片生成完成, ${failed}张失败` : '全部图片生成完成 (封面+配图)');
     };
     document.getElementById('pl-gen-all-covers').onclick = async () => {
-      for (let i = 0; i < finalContents.length; i++)
-        await this._generateImageDual(i, finalContents[i].platform, 'cover');
-      showToast('全部封面生成完成');
+      const limiter = createDynamicLimiter(2, 4, 4);
+      const results = await Promise.allSettled(
+        finalContents.map((item, i) => limiter(() => this._generateImageDual(i, item.platform, 'cover')))
+      );
+      const failed = results.filter(r => r.status === 'rejected').length;
+      showToast(failed ? `封面生成完成, ${failed}张失败` : '全部封面生成完成');
     };
     document.getElementById('pl-gen-all-ills').onclick = async () => {
-      for (let i = 0; i < finalContents.length; i++)
-        await this._generateImageDual(i, finalContents[i].platform, 'illustration');
-      showToast('全部配图生成完成');
+      const limiter = createDynamicLimiter(2, 4, 4);
+      const results = await Promise.allSettled(
+        finalContents.map((item, i) => limiter(() => this._generateImageDual(i, item.platform, 'illustration')))
+      );
+      const failed = results.filter(r => r.status === 'rejected').length;
+      showToast(failed ? `配图生成完成, ${failed}张失败` : '全部配图生成完成');
     };
 
     // 历史 Prompt
