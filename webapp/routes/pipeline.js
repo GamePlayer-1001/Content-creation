@@ -10,6 +10,32 @@ const fs = require('fs');
 const path = require('path');
 
 // ============================================================
+//  动态并发信号量 — 2并发起步, 4任务完成后升至4并发
+// ============================================================
+function createDynamicLimiter(initial, max, rampAfter) {
+  let running = 0, completed = 0, concurrency = initial;
+  const queue = [];
+
+  function drain() {
+    if (completed >= rampAfter) concurrency = max;
+    while (running < concurrency && queue.length) {
+      running++;
+      const { fn, resolve, reject } = queue.shift();
+      fn().then(resolve, reject).finally(() => {
+        running--;
+        completed++;
+        drain();
+      });
+    }
+  }
+
+  return (fn) => new Promise((resolve, reject) => {
+    queue.push({ fn, resolve, reject });
+    drain();
+  });
+}
+
+// ============================================================
 //  8 种创作方向（融合原 thinking_modes，与 creator.yaml 对齐）
 //  每种方向 = 创作角度 + 思维框架，单一信号源
 // ============================================================
@@ -169,15 +195,14 @@ router.post('/platforms', async (req, res) => {
       ? PLATFORMS.filter(p => platforms.includes(p.skill))
       : PLATFORMS;
 
-    _send(res, { type: 'status', message: `开始生成 ${targetPlatforms.length} 个平台...`, total: targetPlatforms.length });
+    _send(res, { type: 'status', message: `开始生成 ${targetPlatforms.length} 个平台 (并发2→4)...`, total: targetPlatforms.length });
 
-    const results = [];
-    for (let i = 0; i < targetPlatforms.length; i++) {
-      const p = targetPlatforms[i];
-      console.log(`  ${_ts()}  [流水线] → 平台 ${i+1}/${targetPlatforms.length}: ${p.skill}`);
-      _send(res, { type: 'platform_start', platform: p.skill, index: i });
+    const limiter = createDynamicLimiter(2, 4, 4);
+    const settled = await Promise.allSettled(
+      targetPlatforms.map((p, i) => limiter(async () => {
+        console.log(`  ${_ts()}  [流水线] → 平台 ${i+1}/${targetPlatforms.length}: ${p.skill}`);
+        _send(res, { type: 'platform_start', platform: p.skill, index: i });
 
-      try {
         const prompt = skillLoader.buildPrompt(p.skill, { topic: '', draftContent });
 
         let fullContent = '';
@@ -193,13 +218,17 @@ router.post('/platforms', async (req, res) => {
 
         console.log(`  ${_ts()}  [流水线] ✓ ${p.skill} 完成  输出=${fullContent.length}字  文件=${p.dir}/${filename}`);
         _send(res, { type: 'platform_done', platform: p.skill, file: `${p.dir}/${filename}`, length: fullContent.length, content: fullContent });
-        results.push({ platform: p.skill, dir: p.dir, file: `${p.dir}/${filename}`, content: fullContent, length: fullContent.length });
-      } catch (e) {
-        console.error(`  ${_ts()}  [流水线] ✗ ${p.skill} 失败: ${e.message}`);
-        _send(res, { type: 'platform_error', platform: p.skill, message: e.message });
-        results.push({ platform: p.skill, error: e.message });
-      }
-    }
+        return { platform: p.skill, dir: p.dir, file: `${p.dir}/${filename}`, content: fullContent, length: fullContent.length };
+      }))
+    );
+
+    const results = settled.map((r, i) => {
+      if (r.status === 'fulfilled') return r.value;
+      const p = targetPlatforms[i];
+      console.error(`  ${_ts()}  [流水线] ✗ ${p.skill} 失败: ${r.reason?.message}`);
+      _send(res, { type: 'platform_error', platform: p.skill, message: r.reason?.message });
+      return { platform: p.skill, error: r.reason?.message };
+    });
 
     const ok = results.filter(r => !r.error).length;
     console.log(`  ${_ts()}  [流水线] Step3 完成  成功=${ok}/${targetPlatforms.length}`);
@@ -230,19 +259,18 @@ router.post('/optimize', async (req, res) => {
       return res.end();
     }
 
-    const results = [];
-    for (let i = 0; i < contents.length; i++) {
-      const item = contents[i];
-      console.log(`  ${_ts()}  [流水线] → 优化 ${i+1}/${contents.length}: ${item.platform}  原文=${item.content?.length || 0}字`);
-      _send(res, { type: 'optimize_start', platform: item.platform, index: i });
+    const limiter = createDynamicLimiter(2, 4, 4);
+    const settled = await Promise.allSettled(
+      contents.map((item, i) => limiter(async () => {
+        console.log(`  ${_ts()}  [流水线] → 优化 ${i+1}/${contents.length}: ${item.platform}  原文=${item.content?.length || 0}字`);
+        _send(res, { type: 'optimize_start', platform: item.platform, index: i });
 
-      // 合规检查
-      const compliance = complianceEngine.check(item.content);
-      console.log(`  ${_ts()}  [流水线]   合规检查: 得分=${compliance.score}  命中=${compliance.hits.length}项`);
-      _send(res, { type: 'compliance_result', platform: item.platform, score: compliance.score, hits: compliance.hits.length });
+        // 合规检查
+        const compliance = complianceEngine.check(item.content);
+        console.log(`  ${_ts()}  [流水线]   合规检查: 得分=${compliance.score}  命中=${compliance.hits.length}项`);
+        _send(res, { type: 'compliance_result', platform: item.platform, score: compliance.score, hits: compliance.hits.length });
 
-      // 调用去AI优化（保持原文风格不变，不做风格改写）
-      try {
+        // 调用去AI优化
         const prompt = skillLoader.buildPrompt('优化去AI', {
           topic: item.platform,
           draftContent: item.content,
@@ -265,13 +293,17 @@ router.post('/optimize', async (req, res) => {
 
         console.log(`  ${_ts()}  [流水线] ✓ ${item.platform} 优化完成  输出=${optimized.length}字`);
         _send(res, { type: 'optimize_done', platform: item.platform, length: optimized.length, content: optimized });
-        results.push({ platform: item.platform, content: optimized, length: optimized.length, complianceScore: compliance.score });
-      } catch (e) {
-        console.error(`  ${_ts()}  [流水线] ✗ ${item.platform} 优化失败: ${e.message}`);
-        _send(res, { type: 'optimize_error', platform: item.platform, message: e.message });
-        results.push({ platform: item.platform, error: e.message });
-      }
-    }
+        return { platform: item.platform, content: optimized, length: optimized.length, complianceScore: compliance.score };
+      }))
+    );
+
+    const results = settled.map((r, i) => {
+      if (r.status === 'fulfilled') return r.value;
+      const item = contents[i];
+      console.error(`  ${_ts()}  [流水线] ✗ ${item.platform} 优化失败: ${r.reason?.message}`);
+      _send(res, { type: 'optimize_error', platform: item.platform, message: r.reason?.message });
+      return { platform: item.platform, error: r.reason?.message };
+    });
 
     console.log(`  ${_ts()}  [流水线] Step3b 优化完成`);
     _send(res, { type: 'done', results });
