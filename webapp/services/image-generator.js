@@ -65,7 +65,7 @@ class ImageGenerator {
     fs.mkdirSync(dir, { recursive: true });
 
     const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    const safeTopic = (topic || 'image').replace(/[<>:"/\\|?*]/g, '_').slice(0, 20);
+    const safeTopic = (topic || 'image').replace(/[<>:"/\\|?*\s\x00-\x1f]/g, '_').slice(0, 20);
     const ext = result.mimeType.includes('png') ? 'png' : 'jpg';
     const filename = `${today}-${safeTopic}-${platform}-${index}.${ext}`;
 
