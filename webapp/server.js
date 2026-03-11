@@ -97,6 +97,7 @@ app.use(requestLogger);
 app.use(express.json({ limit: '5mb' }));
 app.use(express.text({ limit: '5mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/output', express.static(OUTPUT_DIR));
 
 // ============================================================
 //  路由挂载

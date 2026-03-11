@@ -12,8 +12,12 @@ const path = require('path');
 //  平台目录映射
 // ============================================================
 const PLATFORMS = [
-  '母稿', '小红书', '公众号', '即刻', 'X', 'linuxdo', 'GitHub', '朋友圈',
-  '封面', '卡片', '复盘', 'drafts', 'queue',
+  // 内容平台 (A-F 六组)
+  '母稿', '小红书', '公众号', '即刻', '知乎',
+  'X', 'Medium', 'Quora', 'Reddit',
+  'linuxdo', 'GitHub', '朋友圈',
+  // 资源 & 缓冲
+  '图片', '封面', '卡片', '复盘', 'drafts', 'queue',
 ];
 
 class OutputManager {
