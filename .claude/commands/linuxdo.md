@@ -4,13 +4,24 @@
 
 ---
 
+## 平台身份
+- 平台键: linuxdo
+- 语言: 中文
+- 润色力度: strong（技术术语保持专业，非技术全面口语化）
+- trope侧重: word_choice, tone（技术社区极度敏感）
+
+---
+
 ## 第一步：加载配置
 
 读取以下配置文件：
-1. `D:/Software/内容生成输出/config/platforms.yaml` — linuxdo 板块：tone/taboo/length/format/cold_start/contribution_ratio/body_structure
-2. `D:/Software/内容生成输出/config/creator.yaml` — 人设
-3. `D:/Software/内容生成输出/config/product.yaml` — 产品信息
-4. `D:/Software/内容生成输出/config/schedule.yaml` — 检查当前Day N，前2周只互动不发帖
+1. `config/platforms.yaml` — linuxdo 板块：tone/taboo/length/format/cold_start/contribution_ratio/body_structure
+2. `config/rules/persona.md` — 人设
+3. `config/rules/writing-rules.md` — 黑名单 + 润色引擎 → platform_tuning.linuxdo
+4. `config/rules/tropes.md` — AI写作模式扫描
+5. `config/rules/quality.md` — 平台质量门控
+6. `config/product.yaml` — 产品信息
+7. `config/schedule.yaml` — 检查当前Day N，前2周只互动不发帖
 
 ---
 
@@ -79,20 +90,22 @@
 
 ---
 
-## 第五步：三轮润色（内部执行，不可跳过）
+## 第五步：Trope 扫描 + 三轮润色（内部执行，不可跳过）
 
-linuxdo 润色力度轻：
+### Trope 模式扫描
+对照 `config/rules/tropes.md` 扫描 word_choice、tone 类模式：
+- 技术社区对AI极度敏感，重点：教师口吻(#20)、过度热情(#18)、假谦虚(#16)、列表式陈述(#13)
+- critical/high → 必须消除或改写
+- 代码块受 `config/rules/writing-rules.md` 代码块保护规则保护，不扫描
 
-### 第一轮：降AI味
-- 全力执行（技术社区对AI内容极度敏感）
-- 删除一切书面连接词
+### 三轮润色
+按 `config/rules/writing-rules.md` → platform_tuning.linuxdo（力度: strong）执行：
 
-### 第二轮：加人类废话（5-8%）
-- 比例低（技术社区偏好干货）
-- "说实话"、"我觉得吧"、"反正我是这么搞的"
+**第一轮：降AI味** — 全力执行（技术社区对AI内容极度敏感），技术术语保持专业
 
-### 第三轮：加倒装句（0-1个）
-- 技术帖不太适合倒装
+**第二轮：加人类废话（5-8%）** — 比例低但必须有："说实话"、"我觉得吧"、"反正我是这么搞的"
+
+**第三轮：加倒装句（0-1个）** — 技术帖不太适合倒装
 
 ---
 
