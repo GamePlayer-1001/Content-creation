@@ -4,13 +4,24 @@ Medium 属于 D组（国际长文），英文深度平台，读者期待个人�
 
 ---
 
+## 平台身份
+- 平台键: medium
+- 语言: English
+- 润色力度: light（英文长文，专业感优先）
+- trope侧重: sentence_structure, tone, composition
+
+---
+
 ## 第一步：加载配置
 
 读取以下配置文件：
-1. `D:/Software/内容生成输出/config/platforms.yaml` — Medium 板块
-2. `D:/Software/内容生成输出/config/creator.yaml` — 人设、润色引擎
-3. `D:/Software/内容生成输出/config/product.yaml` — 产品信息
-4. `D:/Software/内容生成输出/config/compliance.yaml` — 合规规则
+1. `config/platforms.yaml` — Medium 板块
+2. `config/rules/persona.md` — 人设
+3. `config/rules/writing-rules.md` — 英文黑名单 + 润色引擎 → platform_tuning.medium
+4. `config/rules/tropes.md` — AI写作模式扫描（英文检测模式）
+5. `config/rules/quality.md` — 平台质量门控
+6. `config/product.yaml` — 产品信息
+7. `config/compliance.yaml` — 合规规则
 
 ---
 
@@ -63,22 +74,21 @@ Medium 属于 D组（国际长文），英文深度平台，读者期待个人�
 
 ---
 
-## 第四步：轻度润色（内部执行）
+## 第四步：Trope 扫描 + 轻度润色（内部执行，不可跳过）
 
-Medium 润色力度轻，主要针对英文AI痕迹：
+### Trope 模式扫描
+对照 `config/rules/tropes.md` 扫描 sentence_structure、tone、composition 类模式（使用英文检测模式）：
+- Medium 重点：开头套路(#30 EN: "In today's rapidly evolving...")、万能总结(#29 EN: "In conclusion")、教师口吻(#20)
+- critical/high → 必须消除或改写
 
-### 第一轮：降AI味
-- 删除正式连接词：Furthermore/Moreover/Additionally/In conclusion
-- 避免过于工整的段落结构
-- 用缩写（don't/can't/it's）
+### 三轮润色
+按 `config/rules/writing-rules.md` → platform_tuning.medium（力度: light）执行：
 
-### 第二轮：加个人风格（5-8%）
-- 加入个人化表达和口语化过渡
-- "Honestly," / "Here's the thing—" / "I'll be real with you"
+**第一轮：降AI味** — 删除正式连接词(Furthermore/Moreover/Additionally/In conclusion) + 避免工整段落结构 + 用缩写(don't/can't/it's)
 
-### 第三轮：节奏调整
-- 长短句交替
-- 偶尔使用句子碎片制造节奏感
+**第二轮：加个人风格（5-8%）** — "Honestly," / "Here's the thing—" / "I'll be real with you"
+
+**第三轮：节奏调整** — 长短句交替 + 偶尔使用句子碎片制造节奏感
 
 ---
 

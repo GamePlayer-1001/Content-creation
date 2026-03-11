@@ -4,13 +4,24 @@ Reddit 属于 E组（国际社交），英文社区平台，读者对AI内容高
 
 ---
 
+## 平台身份
+- 平台键: reddit
+- 语言: English
+- 润色力度: medium（社区对AI高度敏感）
+- trope侧重: word_choice, tone
+
+---
+
 ## 第一步：加载配置
 
 读取以下配置文件：
-1. `D:/Software/内容生成输出/config/platforms.yaml` — Reddit 板块
-2. `D:/Software/内容生成输出/config/creator.yaml` — 人设、润色引擎
-3. `D:/Software/内容生成输出/config/product.yaml` — 产品信息
-4. `D:/Software/内容生成输出/config/compliance.yaml` — 合规规则
+1. `config/platforms.yaml` — Reddit 板块
+2. `config/rules/persona.md` — 人设
+3. `config/rules/writing-rules.md` — 英文黑名单 + 润色引擎 → platform_tuning.reddit
+4. `config/rules/tropes.md` — AI写作模式扫描（英文检测模式）
+5. `config/rules/quality.md` — 平台质量门控
+6. `config/product.yaml` — 产品信息
+7. `config/compliance.yaml` — 合规规则
 
 ---
 
@@ -63,23 +74,21 @@ Reddit 属于 E组（国际社交），英文社区平台，读者对AI内容高
 
 ---
 
-## 第四步：三轮润色（内部执行，不可跳过）
+## 第四步：Trope 扫描 + 三轮润色（内部执行，不可跳过）
 
-Reddit 对AI高度敏感，润色力度适中：
+### Trope 模式扫描
+对照 `config/rules/tropes.md` 扫描 word_choice、tone 类模式（使用英文检测模式）：
+- Reddit 对AI高度敏感，重点：过度热情(#18)、教师口吻(#20)、假对话感(#17)、列表式陈述(#13)
+- critical/high → 必须消除或改写
 
-### 第一轮：降AI味
-- 删除正式连接词
-- 打破工整的并列结构
-- 用缩写替换全称
+### 三轮润色
+按 `config/rules/writing-rules.md` → platform_tuning.reddit（力度: medium）执行：
 
-### 第二轮：加 Reddit 人味（8-12%）
-- 网络口语：honestly / ngl / lowkey / tbh
-- 自我质疑："idk if this is just me but..."
-- Reddit特有："Edit: typo" / "YMMV" / "imo"
+**第一轮：降AI味** — 删除正式连接词 + 打破工整并列结构 + 用缩写替换全称
 
-### 第三轮：加口语句式（1-2个）
-- 碎片句："Best decision ever."
-- 自嘲式："Yeah, I know. Don't judge."
+**第二轮：加 Reddit 人味（8-12%）** — 网络口语(honestly/ngl/lowkey/tbh) + 自我质疑("idk if this is just me but...") + Reddit特有("Edit: typo"/"YMMV"/"imo")
+
+**第三轮：加口语句式（1-2个）** — 碎片句("Best decision ever.") + 自嘲式("Yeah, I know. Don't judge.")
 
 ---
 

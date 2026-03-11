@@ -4,13 +4,24 @@ Quora 属于 D组（国际长文），英文问答平台，读者期待专业回
 
 ---
 
+## 平台身份
+- 平台键: quora
+- 语言: English
+- 润色力度: light（专业问答，清晰自然即可）
+- trope侧重: sentence_structure, tone
+
+---
+
 ## 第一步：加载配置
 
 读取以下配置文件：
-1. `D:/Software/内容生成输出/config/platforms.yaml` — Quora 板块
-2. `D:/Software/内容生成输出/config/creator.yaml` — 人设、润色引擎
-3. `D:/Software/内容生成输出/config/product.yaml` — 产品信息
-4. `D:/Software/内容生成输出/config/compliance.yaml` — 合规规则
+1. `config/platforms.yaml` — Quora 板块
+2. `config/rules/persona.md` — 人设
+3. `config/rules/writing-rules.md` — 英文黑名单 + 润色引擎 → platform_tuning.quora
+4. `config/rules/tropes.md` — AI写作模式扫描（英文检测模式）
+5. `config/rules/quality.md` — 平台质量门控
+6. `config/product.yaml` — 产品信息
+7. `config/compliance.yaml` — 合规规则
 
 ---
 
@@ -56,20 +67,21 @@ Quora 属于 D组（国际长文），英文问答平台，读者期待专业回
 
 ---
 
-## 第四步：轻度润色（内部执行）
+## 第四步：Trope 扫描 + 轻度润色（内部执行，不可跳过）
 
-Quora 润色力度轻：
+### Trope 模式扫描
+对照 `config/rules/tropes.md` 扫描 sentence_structure、tone 类模式（使用英文检测模式）：
+- Quora 重点：假权威引用(#3 EN: "Studies have shown...")、教师口吻(#20)、万能总结(#29)
+- Quora 中等敏感，critical/high → 必须消除或改写
 
-### 第一轮：降AI味
-- 删除模板化连接词
-- 避免过于工整的并列结构
+### 三轮润色
+按 `config/rules/writing-rules.md` → platform_tuning.quora（力度: light）执行：
 
-### 第二轮：加个人风格（5-8%）
-- "In my experience," / "What I've found is—" / "Honestly,"
-- 加入不确定表达："I might be wrong, but..."
+**第一轮：降AI味** — 删除模板化连接词 + 避免过于工整的并列结构
 
-### 第三轮：节奏调整
-- 长短句交替，避免每段相同长度
+**第二轮：加个人风格（5-8%）** — "In my experience," / "What I've found is—" / "I might be wrong, but..."
+
+**第三轮：节奏调整** — 长短句交替，避免每段相同长度
 
 ---
 

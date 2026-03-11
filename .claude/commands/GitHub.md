@@ -2,12 +2,24 @@
 
 ---
 
+## 平台身份
+- 平台键: github
+- 语言: English
+- 润色力度: light（技术文档风格，清晰即可）
+- trope侧重: tone
+
+---
+
 ## 第一步：加载配置
 
 读取以下配置文件：
-1. `D:/Software/内容生成输出/config/platforms.yaml` — GitHub 板块：tone/taboo/frequency/format/weekly_rhythm
-2. `D:/Software/内容生成输出/config/product.yaml` — 产品信息、GitHub username
-3. `D:/Software/内容生成输出/config/compliance.yaml` — 合规规则
+1. `config/platforms.yaml` — GitHub 板块：tone/taboo/frequency/format/weekly_rhythm
+2. `config/rules/persona.md` — 人设
+3. `config/rules/writing-rules.md` — 英文黑名单 + 代码块保护规则
+4. `config/rules/tropes.md` — AI写作模式扫描（英文检测模式）
+5. `config/rules/quality.md` — 平台质量门控
+6. `config/product.yaml` — 产品信息、GitHub username
+7. `config/compliance.yaml` — 合规规则
 
 ---
 
@@ -98,7 +110,17 @@ How was this tested?
 
 ---
 
-## 第五步：周节奏检查
+## 第五步：Trope 扫描（内部执行，不可跳过）
+
+对照 `config/rules/tropes.md` 扫描 tone 类模式（使用英文检测模式）：
+- GitHub 技术文档风格，重点检测：教师口吻(#20)、过度热情(#18)
+- 代码块受 `config/rules/writing-rules.md` 代码块保护规则保护，不扫描
+- GitHub 不做三轮润色（技术文档本身不需要口语化），仅扫描消除AI痕迹
+- critical/high → 必须改写
+
+---
+
+## 第六步：周节奏检查
 
 从 platforms.yaml GitHub weekly_rhythm 加载：
 - 周一：潜水阅读
@@ -111,7 +133,7 @@ How was this tested?
 
 ---
 
-## 第六步：质量门控
+## 第七步：质量门控
 
 三维评分（每项 1-10 分）：
 - 钩子强度：标题和开头是否清晰表达问题/分享的价值
@@ -122,7 +144,7 @@ How was this tested?
 
 ---
 
-## 第七步：合规检查
+## 第八步：合规检查
 
 按 compliance.yaml 规则执行：
 - 敏感话题检测
@@ -135,7 +157,7 @@ GitHub 虽是国外平台，但管理严格，违规可能封号。
 
 ---
 
-## 第八步：保存
+## 第九步：保存
 
 保存到 `D:/Software/内容生成输出/output/GitHub/{日期}-{主题关键词}.md`
 
@@ -158,7 +180,7 @@ compliance: "pass"
 
 ---
 
-## 第九步：输出
+## 第十步：输出
 
 ### 输出规则（严格遵守）
 

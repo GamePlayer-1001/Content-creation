@@ -4,12 +4,23 @@
 
 ---
 
+## 平台身份
+- 平台键: x_twitter
+- 语言: English
+- 润色力度: strong（推文极短，每词都要精确）
+- trope侧重: word_choice, tone
+
+---
+
 ## 第一步：加载配置
 
 读取以下配置文件：
-1. `D:/Software/内容生成输出/config/platforms.yaml` — X 板块：tone/length/format/tags_count/post_time/interaction
-2. `D:/Software/内容生成输出/config/creator.yaml` — 人设
-3. `D:/Software/内容生成输出/config/product.yaml` — 产品信息、英文名
+1. `config/platforms.yaml` — X 板块：tone/length/format/tags_count/post_time/interaction
+2. `config/rules/persona.md` — 人设
+3. `config/rules/writing-rules.md` — 英文黑名单 + 润色引擎 → platform_tuning.x_twitter
+4. `config/rules/tropes.md` — AI写作模式扫描（英文检测模式）
+5. `config/rules/quality.md` — 平台质量门控
+6. `config/product.yaml` — 产品信息、英文名
 
 ---
 
@@ -65,7 +76,12 @@
 
 ---
 
-## 第四步：三轮英文润色（内部执行，不可跳过）
+## 第四步：Trope 扫描 + 三轮英文润色（内部执行，不可跳过）
+
+### Trope 模式扫描
+对照 `config/rules/tropes.md` 扫描 word_choice、tone 类模式（使用英文检测模式）：
+- 推文极短，重点检测：AI高频词(#1 EN: "delve/leverage/landscape")、过度热情(#18)
+- critical → 280字符内出现一个就很致命，必须替换
 
 ### 第一轮：降AI味 (De-AI)
 - 删除正式连接词：Furthermore/Moreover/Additionally/In conclusion
