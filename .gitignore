@@ -8,11 +8,27 @@ node_modules/
 __pycache__/
 *.pyc
 .env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
 *.egg-info/
 package-lock.json
 
-# --- 敏感文件（Cookies / 凭证）---
+# --- 敏感文件（Cookies / 凭证 / 本地密钥）---
 config/xhs_cookies.json
+*.pem
+*.key
+*.p12
+*.pfx
+*.mobileprovision
+*.secret
+*.secrets
+secrets/
+*.local.json
+*.local.yaml
+*.local.yml
 
 # --- 子项目已清除，以下条目保留防止误添加 ---
 Auto-Redbook-Skills/

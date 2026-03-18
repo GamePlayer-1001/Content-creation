@@ -67,8 +67,8 @@ router.post('/generate', async (req, res) => {
 
   // --- 服务可用性检查 ---
   if (!imageGenerator) {
-    console.log(`  ${ts()}  [图片] ✗ 服务未配置 (缺少 GOOGLE_AI_KEY)`);
-    return res.status(503).json({ error: '图片生成服务未配置 (缺少 GOOGLE_AI_KEY)' });
+    console.log(`  ${ts()}  [图片] ✗ 服务未配置 (缺少 GOOGLE_GENAI_API_KEY)`);
+    return res.status(503).json({ error: '图片生成服务未配置 (缺少 GOOGLE_GENAI_API_KEY，兼容 GOOGLE_AI_KEY / GEMINI_API_KEY)' });
   }
 
   // --- 根据 imageType 构建 prompt ---

@@ -5,13 +5,27 @@
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 
-const { spawn } = require('child_process');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const { spawn, spawnSync } = require('child_process');
 const https = require('https');
 
 class AIAdapter {
   constructor() {
+    this.codexCommand = process.env.CODEX_PATH || 'codex';
     this.engines = {
       claude: { available: true },
+      codex: {
+        available: this._commandExists(this.codexCommand),
+        model: process.env.CODEX_MODEL || process.env.OPENAI_MODEL || 'gpt-5.2',
+      },
+      openai: {
+        available: !!process.env.OPENAI_API_KEY,
+        key: process.env.OPENAI_API_KEY,
+        model: process.env.OPENAI_MODEL || 'gpt-5.2',
+        endpoint: 'https://api.openai.com/v1/chat/completions',
+      },
       openrouter: {
         available: !!process.env.OPENROUTER_API_KEY,
         key: process.env.OPENROUTER_API_KEY,
@@ -23,6 +37,12 @@ class AIAdapter {
         key: process.env.DEEPSEEK_API_KEY,
         model: process.env.DEEPSEEK_MODEL || 'deepseek-chat',
         endpoint: 'https://api.deepseek.com/v1/chat/completions',
+      },
+      gemini: {
+        available: !!(process.env.GOOGLE_GENAI_API_KEY || process.env.GOOGLE_AI_KEY || process.env.GEMINI_API_KEY),
+        key: process.env.GOOGLE_GENAI_API_KEY || process.env.GOOGLE_AI_KEY || process.env.GEMINI_API_KEY,
+        model: process.env.GOOGLE_GENAI_MODEL || process.env.GEMINI_MODEL || 'gemini-3.1-pro-preview',
+        endpoint: 'https://generativelanguage.googleapis.com',
       },
     };
   }
@@ -54,7 +74,11 @@ class AIAdapter {
 
     const gen = engine === 'claude'
       ? this._claudeCLI(prompt)
-      : this._apiStream(cfg, prompt);
+      : engine === 'codex'
+        ? this._codexCLI(prompt, cfg)
+      : engine === 'gemini'
+        ? this._geminiStream(cfg, prompt)
+        : this._apiStream(cfg, prompt);
 
     for await (const chunk of gen) {
       totalChars += chunk.length;
@@ -110,7 +134,57 @@ class AIAdapter {
     }
   }
 
-  // --- OpenRouter / DeepSeek: 标准 OpenAI 兼容 API ---
+  // --- Codex CLI: 本地登录态，非交互 exec 输出最终消息 ---
+  async *_codexCLI(prompt, cfg) {
+    const outputFile = path.join(os.tmpdir(), `codex-last-${Date.now()}-${Math.random().toString(36).slice(2)}.txt`);
+    console.log(`  ${_ts()}  [AI] Codex CLI 启动 -> codex exec -m ${cfg.model}`);
+
+    const child = spawn(this.codexCommand, [
+      'exec',
+      '--skip-git-repo-check',
+      '--sandbox', 'read-only',
+      '--color', 'never',
+      '--model', cfg.model,
+      '--output-last-message', outputFile,
+      '-',
+    ], {
+      shell: true,
+      stdio: ['pipe', 'pipe', 'pipe'],
+      env: { ...process.env },
+    });
+
+    child.stdin.write(prompt);
+    child.stdin.end();
+
+    let stderr = '';
+    child.stderr.on('data', (chunk) => { stderr += chunk.toString(); });
+
+    let stdout = '';
+    for await (const chunk of child.stdout) {
+      stdout += chunk.toString('utf-8');
+    }
+
+    const exitCode = await new Promise((resolve) => child.on('close', resolve));
+    if (exitCode !== 0) {
+      const detail = stderr || stdout || 'Codex CLI 调用失败';
+      throw new Error(`Codex CLI 退出码=${exitCode}: ${detail.slice(0, 400)}`);
+    }
+
+    let result = '';
+    if (fs.existsSync(outputFile)) {
+      result = fs.readFileSync(outputFile, 'utf-8');
+      fs.unlinkSync(outputFile);
+    }
+    if (!result.trim()) {
+      result = stdout.trim();
+    }
+    if (!result.trim()) {
+      throw new Error('Codex CLI 未返回文本内容');
+    }
+    yield result;
+  }
+
+  // --- OpenAI / OpenRouter / DeepSeek: 标准 Chat Completions API ---
   async *_apiStream(cfg, prompt) {
     console.log(`  ${_ts()}  [AI] API 请求 → ${cfg.endpoint}  model=${cfg.model}`);
     const url = new URL(cfg.endpoint);
@@ -168,6 +242,83 @@ class AIAdapter {
       req.write(body);
       req.end();
     });
+  }
+
+  // --- Gemini: Google Generative Language API (文本生成) ---
+  async *_geminiStream(cfg, prompt) {
+    const body = JSON.stringify({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 8192,
+      },
+    });
+
+    const path = `/v1beta/models/${encodeURIComponent(cfg.model)}:generateContent?key=${cfg.key}`;
+    console.log(`  ${_ts()}  [AI] Gemini 请求 => ${path.replace(cfg.key, '***')} `);
+
+    const data = await this._httpsJson({
+      hostname: 'generativelanguage.googleapis.com',
+      port: 443,
+      path,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body),
+      },
+    }, body);
+
+    const parts = data?.candidates?.[0]?.content?.parts || [];
+    const text = parts.map(p => p?.text || '').join('');
+    if (!text) {
+      throw new Error('Gemini 未返回文本内容');
+    }
+    yield text;
+  }
+
+  _httpsJson(options, body) {
+    return new Promise((resolve, reject) => {
+      const req = https.request(options, (res) => {
+        let chunks = '';
+        res.on('data', c => chunks += c);
+        res.on('end', () => {
+          if (res.statusCode !== 200) {
+            return reject(new Error(`API ${res.statusCode}: ${chunks.slice(0, 300)}`));
+          }
+          try {
+            resolve(JSON.parse(chunks));
+          } catch (e) {
+            reject(new Error(`JSON 解析失败: ${e.message}`));
+          }
+        });
+      });
+      req.on('error', reject);
+      req.write(body);
+      req.end();
+    });
+  }
+
+  _commandExists(command) {
+    if (!command) return false;
+    if (path.isAbsolute(command)) {
+      return fs.existsSync(command);
+    }
+
+    if (process.platform === 'win32') {
+      const comspec = process.env.ComSpec || 'cmd.exe';
+      const result = spawnSync(comspec, ['/d', '/s', '/c', `where ${command}`], {
+        stdio: 'ignore',
+        timeout: 3000,
+        windowsHide: true,
+      });
+      return result.status === 0;
+    }
+
+    const result = spawnSync('which', [command], {
+      stdio: 'ignore',
+      timeout: 3000,
+    });
+    return result.status === 0;
   }
 }
 

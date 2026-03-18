@@ -38,13 +38,14 @@ const skillLoader      = new SkillLoader(COMMANDS_DIR, configManager, TEMPLATES_
 const complianceEngine = new ComplianceEngine(configManager);
 const promptStore      = new PromptStore(CONFIG_DIR);
 
-// 图片生成: 仅在配置了 GOOGLE_AI_KEY 时启用
-const imageGenerator = process.env.GOOGLE_AI_KEY
-  ? new ImageGenerator(process.env.GOOGLE_AI_KEY, OUTPUT_DIR)
+// 图片生成: 优先读取规范变量，兼容旧变量
+const googleImageKey = process.env.GOOGLE_GENAI_API_KEY || process.env.GOOGLE_AI_KEY || process.env.GEMINI_API_KEY;
+const imageGenerator = googleImageKey
+  ? new ImageGenerator(googleImageKey, OUTPUT_DIR)
   : null;
 
 if (!imageGenerator) {
-  console.warn('[WARN] GOOGLE_AI_KEY 未配置, 图片生成功能不可用');
+  console.warn('[WARN] GOOGLE_GENAI_API_KEY 未配置（兼容 GOOGLE_AI_KEY / GEMINI_API_KEY）, 图片生成功能不可用');
 }
 
 // 挂载到 app.locals 供路由访问
@@ -148,8 +149,11 @@ app.listen(PORT, () => {
   console.log('');
   console.log('  服务状态:');
   console.log(`    AI 引擎    Claude CLI (本地)    ✓`);
+  console.log(`    AI 引擎    Codex CLI            ${aiAdapter.listEngines().find(e => e.name === 'codex')?.available ? '✓' : '—'}`);
+  console.log(`    AI 引擎    OpenAI               ${process.env.OPENAI_API_KEY ? '✓' : '—'}`);
   console.log(`    AI 引擎    OpenRouter           ${process.env.OPENROUTER_API_KEY ? '✓' : '—'}`);
   console.log(`    AI 引擎    DeepSeek             ${process.env.DEEPSEEK_API_KEY ? '✓' : '—'}`);
+  console.log(`    AI 引擎    Gemini               ${(process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_KEY) ? '✓' : '—'}`);
   console.log(`    图片生成   Nano Banana Pro      ${imageGenerator ? '✓' : '—'}`);
   console.log(`    配置目录   ${CONFIG_DIR}`);
   console.log(`    输出目录   ${OUTPUT_DIR}`);

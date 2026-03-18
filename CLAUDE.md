@@ -6,8 +6,8 @@ Claude Code Skills + YAML Config + 统一工具链
 ## 架构概览
 
 一篇母稿 → 13个平台衍生内容。双层质量体系：
-- **母稿层**：双路径输入 → 角度发散(4维评分) → 原创编撰(病毒公式) → 对抗性审查(Cold Editor) → 质量门控(>=8分) → 合规检查
-- **平台层**：三轮润色 → 质量门控(>=9分) → 合规检查 → 后处理
+- **母稿层**：双路径输入 → 角度发散(4维评分) → 原创编撰(病毒公式) → 对抗性审查(Cold Editor) → Composition Trope检查 → 质量门控(>=8分) → 合规检查
+- **平台层**：Trope扫描 + 三轮润色 → 质量门控(>=9分) → 合规检查 → 后处理
 
 母稿是干净的高质量内容原料，不做口语化/降AI味处理。三轮润色下沉到平台适配层。
 四项目融合完毕(CAT5_Brain/CAT5_Factory/Auto-Redbook/玄学赛道)，CAT5_Factory v5.0 全量吸收（病毒方法论+10种洗稿风格+4新平台+四轨审核+海报提示词）。
@@ -47,7 +47,11 @@ Claude Code Skills + YAML Config + 统一工具链
 │   ├── platforms.yaml      # 13平台语气风格规则(6组) + 配图命名
 │   ├── schedule.yaml       # 60天排期 + 日类型 + 发布时段
 │   ├── compliance.yaml     # 合规规则库（敏感词/红线）
-│   ├── creator.yaml        # 人设 + 风格DNA + 病毒方法论 + 8种创作方向 + 双层质量体系
+│   ├── rules/              # AI消费的Markdown规则（4文件）
+│   │   ├── persona.md      # 人设+8种创作方向+病毒方法论+标题元素+互动设计
+│   │   ├── writing-rules.md # 中英黑名单+三轮润色+平台力度覆盖+代码保护
+│   │   ├── quality.md      # 母稿门控+平台门控+四轨审核+Cold Editor+反AI检测
+│   │   └── tropes.md       # 34条AI写作模式（识别+根因+改写+中英示例）
 │   ├── icons.json          # Lucide图标分类映射（12类×1000+）
 │   ├── hashtags.json       # 标签库（12类×83标签）
 │   ├── topics.json         # 热门话题库
@@ -55,8 +59,8 @@ Claude Code Skills + YAML Config + 统一工具链
 │   ├── selectors.json      # 小红书CSS选择器（自动化发布）
 │   ├── image-prompts.json  # 图片 prompt 历史存储
 │   ├── poster-templates.json # 海报提示词模板（11种文字放置×8视觉风格）
-│   ├── .env                # 环境变量 (GOOGLE_AI_KEY 等)
-│   └── .env.example        # 环境变量模板
+│   ├── .env                # 环境变量（本地私有，不提交；主变量 GOOGLE_GENAI_API_KEY）
+│   └── .env.example        # 环境变量模板（可提交）
 │
 ├── templates/              # 内容模板（11 + 参考案例）
 │   ├── 母稿-猎奇型.md
@@ -111,7 +115,7 @@ Claude Code Skills + YAML Config + 统一工具链
 ├── webapp/                 # Web 控制台（本地 HTTP 服务）
 │   ├── server.js           # Express 入口 (port 3210)
 │   ├── services/           # 核心服务层 (8个模块)
-│   │   ├── ai-adapter.js       # AI 三引擎统一适配 (Claude/OpenRouter/DeepSeek)
+│   │   ├── ai-adapter.js       # AI 六引擎统一适配 (Claude/Codex/OpenAI/OpenRouter/DeepSeek/Gemini)
 │   │   ├── compliance-engine.js # 6维合规扫描
 │   │   ├── config-manager.js    # YAML/JSON 读写
 │   │   ├── output-manager.js    # output/ 目录管理
@@ -184,7 +188,7 @@ Claude Code Skills + YAML Config + 统一工具链
 
 ### AI 引擎
 
-默认 Claude CLI（本地认证），可选 OpenRouter / DeepSeek（需配置 config/.env）。
+默认 Claude CLI（本地认证），可选 Codex CLI / OpenAI / OpenRouter / DeepSeek（需配置 config/.env）。
 图片生成使用 Nano Banana Pro (Gemini 3 Pro Image)，需配置 GOOGLE_AI_KEY。
 
 ## 日常使用（CLI 模式）
@@ -221,21 +225,23 @@ Claude Code Skills + YAML Config + 统一工具链
 
 ## 核心机制
 
-### 母稿创作引擎（9步流程）
-1. **加载配置** — product.yaml + creator.yaml + compliance.yaml
+### 母稿创作引擎（10步流程）
+1. **加载配置** — product.yaml + config/rules/*.md(persona/writing-rules/quality/tropes) + compliance.yaml
 2. **输入分流** — <200字走关键词路径，>=200字走文章拆解路径（五维度）
 3. **角度发散** — 在创作方向约束下发散3-5角度，4维评分(爆点潜力/病毒传播力/交互感/内容深度)选最优
 4. **原创编撰** — 病毒公式(Virality=Novelty×Resonance) + 三种钩子 + Burstiness节奏 + 中文黑名单零容忍
 5. **对抗性审查** — Cold Editor 三问攻击（为什么继续看/观点早知道了/看完所以呢），致命级→打回
 6. **修订循环** — 最多2轮 Writer↔Editor 循环
-7. **质量门控** — 四维评分(钩子强度/洞察密度/传播基因/论证深度) >= 8分通过
-8. **合规检查** — compliance.yaml 规则扫描
-9. **输出** — 只输出标题+正文，零过程信息
+7. **Composition Trope检查** — 对照 tropes.md 扫描结构类模式(#28-#34)，critical→必须消除
+8. **质量门控** — 四维评分(钩子强度/洞察密度/传播基因/论证深度) >= 8分通过
+9. **合规检查** — compliance.yaml 规则扫描
+10. **输出** — 只输出标题+正文，零过程信息
 
-### 平台适配层（三轮润色）
-1. 降AI味：删除书面连接词 + 替换书面表达 + 打破逻辑链
-2. 加人类废话(10-15%)：语气词 + 口头废话 + 情绪爆发
-3. 加倒装句(3-5个)：先蹦重点再补主语
+### 平台适配层（Trope扫描 + 三轮润色）
+1. Trope扫描：对照 tropes.md 扫描平台对应类别，critical/high→必须消除
+2. 降AI味：删除书面连接词 + 替换书面表达 + 打破逻辑链
+3. 加人类废话(10-15%)：语气词 + 口头废话 + 情绪爆发
+4. 加倒装句(3-5个)：先蹦重点再补主语
 平台质量门控：四维评分(钩子强度/互动设计/人味指数/趣味度) >= 9分 + 四轨审核(SEO20%+AI痕迹30%+爆发度25%+传播潜力25%) >= 70分
 
 ### 病毒方法论（from CAT5_Factory v5.0）
@@ -276,7 +282,7 @@ cd "D:/Software/内容生成输出" && node tools/screenshot/generate-wechat-scr
 
 ## 换赛道
 
-只需修改 `config/` 下的 YAML/JSON 文件。Skills 和 tools/ 本身是赛道无关的。
+只需修改 `config/` 下的 YAML/JSON/Markdown 文件。Skills 和 tools/ 本身是赛道无关的。
 
 ## 融合记录
 
@@ -284,6 +290,6 @@ cd "D:/Software/内容生成输出" && node tools/screenshot/generate-wechat-scr
 |--------|------|----------|
 | CAT5_Brain | 已清除 | 洗稿模板、技术文章模板 → templates/ |
 | Auto-Redbook-Skills | 已清除 | 存档文档 → docs/auto-redbook/ |
-| CAT5_Factory v5.0 | 已删除 | 病毒方法论 + 10种洗稿风格(A-J) + 4新平台(知乎/Medium/Reddit/Quora) + 四轨审核 + 海报提示词 → creator.yaml + 洗稿.md + platforms.yaml + poster-templates.json |
+| CAT5_Factory v5.0 | 已删除 | 病毒方法论 + 10种洗稿风格(A-J) + 4新平台(知乎/Medium/Reddit/Quora) + 四轨审核 + 海报提示词 → config/rules/*.md + 洗稿.md + platforms.yaml + poster-templates.json |
 
 [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md

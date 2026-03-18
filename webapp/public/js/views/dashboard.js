@@ -31,7 +31,7 @@ const DashboardView = {
         <div class="card">
           <div class="card-header">图片引擎</div>
           <div class="card-value" style="font-size:16px">${imageEnabled ? 'Nano Banana Pro' : '未配置'}</div>
-          <div class="card-sub">${imageEnabled ? '就绪' : '需配置 GOOGLE_AI_KEY'}</div>
+          <div class="card-sub">${imageEnabled ? '就绪' : '需配置 GOOGLE_GENAI_API_KEY'}</div>
         </div>
       </div>`;
 
