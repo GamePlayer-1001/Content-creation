@@ -39,9 +39,21 @@ def mask(text: str) -> str:
     return text
 
 
+PLACEHOLDER_MARKERS = (
+    'your_cookie_string_here',
+    'your_key_here',
+    'your_api_key_here',
+    'example',
+    'placeholder',
+)
+
+
 def scan_text(label: str, text: str):
     hits = []
     for i, line in enumerate(text.splitlines(), 1):
+        lowered = line.lower()
+        if any(m in lowered for m in PLACEHOLDER_MARKERS):
+            continue
         if any(p.search(line) for p in PATTERNS.values()):
             hits.append(f'{label}:{i}:{mask(line)[:240]}')
     return hits
