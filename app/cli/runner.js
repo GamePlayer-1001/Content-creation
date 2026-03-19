@@ -132,6 +132,8 @@ async function main() {
       if (!fromStage || !toStage) {
         throw new Error('缺少参数: --from 与 --to');
       }
+      const onError = resolveOnError(flagValue('--on-error', 'stop'));
+      const retry = resolveRetry(flagValue('--retry', '0'));
       const stageList = resolveStageRange(fromStage, toStage);
       if (stageList.length === 0) {
         throw new Error(`区间内没有可执行阶段: ${fromStage} -> ${toStage}`);
@@ -140,17 +142,21 @@ async function main() {
       const runOptions = buildRunOptions();
       const results = [];
       for (const stage of stageList) {
-        const result = await stepExecutor.runStep(taskId, {
-          stage,
-          ...runOptions,
-          note: runOptions.note || `CLI run-range 执行 ${stage}`,
-        });
-        results.push(result);
+        const stageResult = await executeStageWithRetry(taskId, stage, runOptions, retry);
+        results.push(stageResult);
+
+        if (!stageResult.ok && onError === 'stop') {
+          throw new Error(
+            `run-range 在阶段 ${stage} 失败（已重试 ${stageResult.attempts} 次）：${stageResult.error}`
+          );
+        }
       }
       console.log(JSON.stringify({
         taskId,
         fromStage,
         toStage,
+        onError,
+        retry,
         executedStages: stageList,
         results,
       }, null, 2));
@@ -263,6 +269,50 @@ function resolveStageRange(fromStage, toStage) {
     .map((s) => s.key);
 }
 
+async function executeStageWithRetry(taskId, stage, runOptions, retry) {
+  let attempts = 0;
+  let lastError = null;
+  while (attempts <= retry) {
+    attempts += 1;
+    try {
+      const result = await stepExecutor.runStep(taskId, {
+        stage,
+        ...runOptions,
+        note: runOptions.note || `CLI run-range 执行 ${stage}`,
+      });
+      return {
+        stage,
+        ok: true,
+        attempts,
+        result,
+      };
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  return {
+    stage,
+    ok: false,
+    attempts,
+    error: lastError?.message || '未知错误',
+  };
+}
+
+function resolveOnError(raw) {
+  const value = String(raw || 'stop').trim().toLowerCase();
+  if (value === 'stop' || value === 'skip') return value;
+  throw new Error(`不支持的 --on-error: ${raw}（可选: stop|skip）`);
+}
+
+function resolveRetry(raw) {
+  const parsed = Number.parseInt(raw, 10);
+  if (Number.isNaN(parsed) || parsed < 0) {
+    throw new Error(`不支持的 --retry: ${raw}（需为 >=0 的整数）`);
+  }
+  return parsed;
+}
+
 function printHelp() {
   console.log(`
 用法:
@@ -290,6 +340,8 @@ function printHelp() {
   --aspect-ratio / --image-size             图片比例/尺寸（默认 1:1 / 1K）
   --engine                                  指定 AI 引擎（默认 claude）
   --confirm                                  对非确认阶段显式传入确认标记
+  --on-error                                run-range 失败策略: stop|skip（默认 stop）
+  --retry                                   run-range 单阶段失败重试次数（默认 0）
   run-range                                 仅执行当前 CLI 已支持的阶段（draft/platform/review/visual/export）
   visual-generate                           依赖图片 API Key，未配置时 run-range 会自动跳过该阶段
 `);

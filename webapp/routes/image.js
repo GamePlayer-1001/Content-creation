@@ -165,16 +165,19 @@ router.post('/generate', async (req, res) => {
 
     const sec = ((Date.now() - start) / 1000).toFixed(1);
     console.log(`  ${ts()}  [图片] ✓ ${typeLabel}生成完成  耗时=${sec}s  size=${imageSize}  文件=${result.path}`);
+    const imageAsset = {
+      platform: platform || 'general',
+      imageType,
+      path: result.path,
+      filename: result.filename,
+    };
+    const metadataPatch = _buildImageMetadataPatch(req, taskId, imageAsset, {
+      aspectRatio,
+      imageSize,
+    });
     const taskProgress = _advanceTask(req, taskId, 'visual-generate', {
       note: `WebApp 图片生成完成 (${typeLabel} · ${platform || 'general'})`,
-      metadataPatch: {
-        lastImage: {
-          platform: platform || 'general',
-          imageType,
-          path: result.path,
-          filename: result.filename,
-        },
-      },
+      metadataPatch,
     });
 
     res.json({
@@ -239,6 +242,86 @@ function _advanceTask(req, taskId, toStage, { confirm = false, note = '', metada
   } catch (error) {
     return { error: error.message };
   }
+}
+
+function _buildImageMetadataPatch(req, taskId, imageAsset, { aspectRatio = '1:1', imageSize = '1K' } = {}) {
+  if (!taskId) {
+    return { lastImage: imageAsset };
+  }
+  const runner = req.app.locals.workflowRunner;
+  if (!runner) {
+    return { lastImage: imageAsset };
+  }
+
+  const task = runner.getTask(taskId);
+  if (!task) {
+    return { lastImage: imageAsset };
+  }
+
+  const now = new Date().toISOString();
+  const metadata = task.metadata && typeof task.metadata === 'object' ? task.metadata : {};
+  const imageAssets = _mergeImageAssets(metadata.imageAssets, imageAsset);
+  const artifacts = _mergeArtifacts(metadata.artifacts, {
+    at: now,
+    type: 'image',
+    stage: 'visual-generate',
+    platform: imageAsset.platform,
+    imageType: imageAsset.imageType,
+    path: imageAsset.path,
+  });
+  const stageOutputs = {
+    ...(metadata.stageOutputs || {}),
+    'visual-generate': {
+      at: now,
+      total: imageAssets.length,
+      imageTypes: Array.from(new Set(imageAssets.map((x) => x.imageType))).filter(Boolean),
+      aspectRatio,
+      imageSize,
+      lastImagePath: imageAsset.path,
+    },
+  };
+  const checkpoints = [
+    ...(Array.isArray(metadata.checkpoints) ? metadata.checkpoints : []),
+    {
+      at: now,
+      stage: 'visual-generate',
+      source: 'webapp-image-route',
+      note: `图片生成完成 (${imageAsset.imageType} · ${imageAsset.platform})`,
+    },
+  ].slice(-80);
+
+  return {
+    ...metadata,
+    lastImage: imageAsset,
+    imageAssets,
+    artifacts,
+    stageOutputs,
+    checkpoints,
+    lastUpdatedBy: 'webapp-image-route',
+    lastUpdatedAt: now,
+  };
+}
+
+function _mergeImageAssets(currentAssets, imageAsset) {
+  const list = Array.isArray(currentAssets) ? currentAssets : [];
+  const map = new Map();
+  for (const item of [...list, imageAsset]) {
+    if (!item || !item.path) continue;
+    const key = `${item.platform || '-'}|${item.imageType || '-'}|${item.path}`;
+    map.set(key, item);
+  }
+  return Array.from(map.values()).slice(-300);
+}
+
+function _mergeArtifacts(currentArtifacts, artifact) {
+  const list = Array.isArray(currentArtifacts) ? currentArtifacts : [];
+  const map = new Map();
+  for (const item of [...list, artifact]) {
+    if (!item || !item.path) continue;
+    const key = `${item.stage || '-'}|${item.type || '-'}|${item.path}`;
+    map.set(key, item);
+  }
+  return Array.from(map.values()).slice(-300);
 }
 
 module.exports = router;
