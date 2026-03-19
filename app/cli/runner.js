@@ -42,6 +42,12 @@ const stepExecutor = new PipelineStepExecutor({
   complianceEngine,
   projectRoot: PROJECT_ROOT,
 });
+const EXECUTABLE_STAGE_SET = new Set([
+  'draft-generate',
+  'platform-rewrite',
+  'review-optimize',
+  'export-output',
+]);
 
 const args = process.argv.slice(2);
 const command = args[0];
@@ -102,27 +108,41 @@ async function main() {
         throw new Error('缺少参数: --stage (或 --to)');
       }
 
-      const input = resolveTextInput('--input', '--input-file');
-      const draftContent = resolveTextInput('--draft-content', '--draft-content-file');
-      const draftFile = flagValue('--draft-file', '').trim();
-      const style = flagValue('--style', '').trim();
-      const engine = flagValue('--engine', 'claude').trim() || 'claude';
-      const platforms = splitListFlag('--platforms');
-      const note = flagValue('--note', '');
-      const confirm = hasFlag('--confirm');
-
-      const result = await stepExecutor.runStep(taskId, {
-        stage,
-        input,
-        style,
-        engine,
-        platforms,
-        draftFile,
-        draftContent,
-        note,
-        confirm,
-      });
+      const runOptions = buildRunOptions();
+      const result = await stepExecutor.runStep(taskId, { stage, ...runOptions });
       console.log(JSON.stringify(result, null, 2));
+      return;
+    }
+
+    if (command === 'task' && subcommand === 'run-range') {
+      const taskId = requiredFlag('--id');
+      const fromStage = flagValue('--from', '').trim();
+      const toStage = flagValue('--to', '').trim();
+      if (!fromStage || !toStage) {
+        throw new Error('缺少参数: --from 与 --to');
+      }
+      const stageList = resolveStageRange(fromStage, toStage);
+      if (stageList.length === 0) {
+        throw new Error(`区间内没有可执行阶段: ${fromStage} -> ${toStage}`);
+      }
+
+      const runOptions = buildRunOptions();
+      const results = [];
+      for (const stage of stageList) {
+        const result = await stepExecutor.runStep(taskId, {
+          stage,
+          ...runOptions,
+          note: runOptions.note || `CLI run-range 执行 ${stage}`,
+        });
+        results.push(result);
+      }
+      console.log(JSON.stringify({
+        taskId,
+        fromStage,
+        toStage,
+        executedStages: stageList,
+        results,
+      }, null, 2));
       return;
     }
 
@@ -196,6 +216,35 @@ function resolveTextInput(directFlag, fileFlag) {
   return fs.readFileSync(fullPath, 'utf-8');
 }
 
+function buildRunOptions() {
+  return {
+    input: resolveTextInput('--input', '--input-file'),
+    draftContent: resolveTextInput('--draft-content', '--draft-content-file'),
+    draftFile: flagValue('--draft-file', '').trim(),
+    style: flagValue('--style', '').trim(),
+    engine: flagValue('--engine', 'claude').trim() || 'claude',
+    platforms: splitListFlag('--platforms'),
+    note: flagValue('--note', ''),
+    confirm: hasFlag('--confirm'),
+  };
+}
+
+function resolveStageRange(fromStage, toStage) {
+  const fromDef = PIPELINE_STAGES.find((s) => s.key === fromStage);
+  const toDef = PIPELINE_STAGES.find((s) => s.key === toStage);
+  if (!fromDef || !toDef) {
+    throw new Error(`阶段不存在: ${fromStage} / ${toStage}`);
+  }
+  if (fromDef.order > toDef.order) {
+    throw new Error(`阶段顺序非法: ${fromStage} 在 ${toStage} 之后`);
+  }
+
+  return PIPELINE_STAGES
+    .filter((s) => s.order >= fromDef.order && s.order <= toDef.order)
+    .filter((s) => EXECUTABLE_STAGE_SET.has(s.key))
+    .map((s) => s.key);
+}
+
 function printHelp() {
   console.log(`
 用法:
@@ -208,6 +257,7 @@ function printHelp() {
   node app/cli/runner.js task run-step --id task-xxxx --stage platform-rewrite [--platforms 公众号,知乎]
   node app/cli/runner.js task run-step --id task-xxxx --stage review-optimize [--platforms 公众号,知乎]
   node app/cli/runner.js task run-step --id task-xxxx --stage export-output [--platforms 公众号,知乎]
+  node app/cli/runner.js task run-range --id task-xxxx --from draft-generate --to export-output
 
 说明:
   --input / --input-file                    传入输入素材（draft-generate）
@@ -216,6 +266,7 @@ function printHelp() {
   --platforms                               逗号分隔的平台名（默认全部/全量）
   --engine                                  指定 AI 引擎（默认 claude）
   --confirm                                  对非确认阶段显式传入确认标记
+  run-range                                 仅执行当前 CLI 已支持的阶段（draft/platform/review/export）
 `);
 }
 
