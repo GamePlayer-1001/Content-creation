@@ -127,36 +127,76 @@ async function main() {
 
     if (command === 'task' && subcommand === 'run-range') {
       const taskId = requiredFlag('--id');
-      const fromStage = flagValue('--from', '').trim();
-      const toStage = flagValue('--to', '').trim();
-      if (!fromStage || !toStage) {
-        throw new Error('缺少参数: --from 与 --to');
-      }
+      const resumeFromFailed = hasFlag('--resume-from-failed');
       const onError = resolveOnError(flagValue('--on-error', 'stop'));
       const retry = resolveRetry(flagValue('--retry', '0'));
+      const task = runner.getTask(taskId);
+      if (!task) {
+        throw new Error(`任务不存在: ${taskId}`);
+      }
+
+      let fromStage = flagValue('--from', '').trim();
+      let toStage = flagValue('--to', '').trim();
+      if (resumeFromFailed) {
+        if (!fromStage) {
+          fromStage = resolveResumeFromStage(task);
+        }
+        if (!toStage) {
+          toStage = resolveDefaultResumeToStage();
+        }
+      }
+
+      if (!fromStage || !toStage) {
+        throw new Error('缺少参数: --from 与 --to（或使用 --resume-from-failed 自动推断）');
+      }
       const stageList = resolveStageRange(fromStage, toStage);
       if (stageList.length === 0) {
         throw new Error(`区间内没有可执行阶段: ${fromStage} -> ${toStage}`);
       }
 
+      const startedAt = new Date().toISOString();
       const runOptions = buildRunOptions();
       const results = [];
+      let stopError = '';
       for (const stage of stageList) {
         const stageResult = await executeStageWithRetry(taskId, stage, runOptions, retry);
         results.push(stageResult);
 
         if (!stageResult.ok && onError === 'stop') {
-          throw new Error(
-            `run-range 在阶段 ${stage} 失败（已重试 ${stageResult.attempts} 次）：${stageResult.error}`
-          );
+          stopError = `run-range 在阶段 ${stage} 失败（已重试 ${stageResult.attempts} 次）：${stageResult.error}`;
+          break;
         }
       }
+
+      const failedStages = results.filter((x) => !x.ok).map((x) => x.stage);
+      const resumeFromStage = failedStages[0] || null;
+      const finishedAt = new Date().toISOString();
+      saveRunRangeSnapshot(taskId, {
+        fromStage,
+        toStage,
+        onError,
+        retry,
+        resumeFromFailed,
+        startedAt,
+        finishedAt,
+        executedStages: stageList,
+        failedStages,
+        resumeFromStage,
+        results,
+      });
+
+      if (stopError) {
+        throw new Error(stopError);
+      }
+
       console.log(JSON.stringify({
         taskId,
         fromStage,
         toStage,
         onError,
         retry,
+        resumeFromFailed,
+        resumeFromStage,
         executedStages: stageList,
         results,
       }, null, 2));
@@ -269,6 +309,55 @@ function resolveStageRange(fromStage, toStage) {
     .map((s) => s.key);
 }
 
+function resolveResumeFromStage(task) {
+  const metadata = task?.metadata && typeof task.metadata === 'object' ? task.metadata : {};
+  const runRange = metadata.runRange && typeof metadata.runRange === 'object' ? metadata.runRange : {};
+  const explicitResume = String(runRange.resumeFromStage || '').trim();
+  if (explicitResume && EXECUTABLE_STAGE_SET.has(explicitResume)) {
+    return explicitResume;
+  }
+
+  const failedStages = Array.isArray(runRange.failedStages) ? runRange.failedStages : [];
+  const firstFailed = failedStages.find((stage) => EXECUTABLE_STAGE_SET.has(stage));
+  if (firstFailed) return firstFailed;
+
+  if (task.currentStage) {
+    const nextStage = resolveNextExecutableStage(task.currentStage);
+    if (nextStage) return nextStage;
+  }
+
+  return resolveDefaultResumeFromStage();
+}
+
+function resolveDefaultResumeFromStage() {
+  const ordered = PIPELINE_STAGES
+    .filter((s) => EXECUTABLE_STAGE_SET.has(s.key))
+    .sort((a, b) => a.order - b.order);
+  if (ordered.length === 0) {
+    throw new Error('当前无可执行阶段');
+  }
+  return ordered[0].key;
+}
+
+function resolveDefaultResumeToStage() {
+  const ordered = PIPELINE_STAGES
+    .filter((s) => EXECUTABLE_STAGE_SET.has(s.key))
+    .sort((a, b) => a.order - b.order);
+  if (ordered.length === 0) {
+    throw new Error('当前无可执行阶段');
+  }
+  return ordered[ordered.length - 1].key;
+}
+
+function resolveNextExecutableStage(afterStageKey) {
+  const current = PIPELINE_STAGES.find((s) => s.key === afterStageKey);
+  if (!current) return null;
+  const next = PIPELINE_STAGES
+    .filter((s) => s.order > current.order && EXECUTABLE_STAGE_SET.has(s.key))
+    .sort((a, b) => a.order - b.order)[0];
+  return next ? next.key : null;
+}
+
 async function executeStageWithRetry(taskId, stage, runOptions, retry) {
   let attempts = 0;
   let lastError = null;
@@ -313,6 +402,71 @@ function resolveRetry(raw) {
   return parsed;
 }
 
+function saveRunRangeSnapshot(taskId, {
+  fromStage,
+  toStage,
+  onError,
+  retry,
+  resumeFromFailed,
+  startedAt,
+  finishedAt,
+  executedStages,
+  failedStages,
+  resumeFromStage,
+  results,
+}) {
+  const task = runner.getTask(taskId);
+  if (!task) return;
+
+  const metadata = task.metadata && typeof task.metadata === 'object' ? task.metadata : {};
+  const sanitizedResults = Array.isArray(results)
+    ? results.map((item) => ({
+      stage: item.stage,
+      ok: !!item.ok,
+      attempts: item.attempts || 0,
+      error: item.error || null,
+    }))
+    : [];
+
+  const checkpoints = [
+    ...(Array.isArray(metadata.checkpoints) ? metadata.checkpoints : []),
+    {
+      at: finishedAt,
+      stage: failedStages[0] || toStage,
+      source: 'cli-run-range',
+      note: failedStages.length
+        ? `run-range 完成(失败:${failedStages.join(',')})`
+        : `run-range 完成(${fromStage}→${toStage})`,
+    },
+  ].slice(-120);
+
+  const nextTask = {
+    ...task,
+    updatedAt: finishedAt,
+    metadata: {
+      ...metadata,
+      runRange: {
+        fromStage,
+        toStage,
+        onError,
+        retry,
+        resumeFromFailed: !!resumeFromFailed,
+        startedAt,
+        finishedAt,
+        executedStages: Array.isArray(executedStages) ? executedStages : [],
+        failedStages: Array.isArray(failedStages) ? failedStages : [],
+        resumeFromStage: resumeFromStage || null,
+        results: sanitizedResults,
+      },
+      checkpoints,
+      lastUpdatedBy: 'cli-runner',
+      lastUpdatedAt: finishedAt,
+    },
+  };
+
+  runner.taskStateStore.saveTask(nextTask);
+}
+
 function printHelp() {
   console.log(`
 用法:
@@ -327,6 +481,7 @@ function printHelp() {
   node app/cli/runner.js task run-step --id task-xxxx --stage visual-generate [--platforms 公众号] [--image-type both]
   node app/cli/runner.js task run-step --id task-xxxx --stage export-output [--platforms 公众号,知乎]
   node app/cli/runner.js task run-range --id task-xxxx --from draft-generate --to export-output
+  node app/cli/runner.js task run-range --id task-xxxx --resume-from-failed [--to export-output]
 
 说明:
   --input / --input-file                    传入输入素材（draft-generate）
@@ -342,6 +497,7 @@ function printHelp() {
   --confirm                                  对非确认阶段显式传入确认标记
   --on-error                                run-range 失败策略: stop|skip（默认 stop）
   --retry                                   run-range 单阶段失败重试次数（默认 0）
+  --resume-from-failed                      run-range 自动从最近失败阶段续跑（可省略 --from/--to）
   run-range                                 仅执行当前 CLI 已支持的阶段（draft/platform/review/visual/export）
   visual-generate                           依赖图片 API Key，未配置时 run-range 会自动跳过该阶段
 `);

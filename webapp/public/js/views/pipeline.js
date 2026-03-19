@@ -223,6 +223,7 @@ const PipelineView = {
     const checkpoints = Array.isArray(metadata.checkpoints) ? metadata.checkpoints : [];
     const latestCheckpoint = checkpoints.length ? checkpoints[checkpoints.length - 1] : null;
     const finalFiles = Array.isArray(metadata.finalFiles) ? metadata.finalFiles : [];
+    const runRange = metadata.runRange && typeof metadata.runRange === 'object' ? metadata.runRange : null;
 
     const stageRows = stageKeys.slice(-4).map((key) => {
       const output = stageOutputs[key] || {};
@@ -239,6 +240,29 @@ const PipelineView = {
         ${file}
       </div>
     `).join('');
+
+    const runRangeRow = runRange ? `
+      <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+        <div style="font-size:11px;color:var(--muted)">最近批量执行</div>
+        <div style="font-size:12px;margin-top:2px">
+          ${runRange.fromStage || '-'} → ${runRange.toStage || '-'}
+          · 失败 ${Array.isArray(runRange.failedStages) ? runRange.failedStages.length : 0}
+          · 建议续跑 ${runRange.resumeFromStage || '-'}
+        </div>
+      </div>
+    ` : '';
+
+    const checkpointRows = checkpoints.slice(-6).reverse().map((cp) => {
+      const stamp = cp?.at ? String(cp.at).replace('T', ' ').slice(0, 19) : '-';
+      const stage = cp?.stage || '-';
+      const source = cp?.source || '-';
+      const note = cp?.note || '';
+      return `
+        <div style="font-size:11px;color:var(--muted);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+          ${stamp} · <code>${stage}</code> · ${source}${note ? ` · ${note}` : ''}
+        </div>
+      `;
+    }).join('');
 
     return `
       <div class="card" style="margin:-4px 0 14px">
@@ -263,6 +287,8 @@ const PipelineView = {
         </div>
         ${stageRows ? `<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)"><div style="font-size:11px;color:var(--muted)">最近阶段输出</div>${stageRows}</div>` : ''}
         ${finalRows ? `<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)"><div style="font-size:11px;color:var(--muted)">最近导出文件</div>${finalRows}</div>` : ''}
+        ${runRangeRow}
+        ${checkpointRows ? `<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)"><div style="font-size:11px;color:var(--muted)">执行时间线</div>${checkpointRows}</div>` : ''}
       </div>
     `;
   },
