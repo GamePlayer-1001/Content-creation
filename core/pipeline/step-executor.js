@@ -1,5 +1,5 @@
 /**
- * [INPUT]: 依赖 WorkflowRunner + AI/Skill/Output/Compliance 服务
+ * [INPUT]: 依赖 WorkflowRunner + AI/Skill/Output/Compliance/Image 服务
  * [OUTPUT]: 导出 PipelineStepExecutor（runStep 执行已实现阶段）
  * [POS]: core/pipeline 的阶段执行器，被 CLI 复用
  */
@@ -63,6 +63,7 @@ class PipelineStepExecutor {
     skillLoader,
     outputManager,
     complianceEngine,
+    imageGenerator = null,
     projectRoot,
     logger = console,
   }) {
@@ -71,6 +72,7 @@ class PipelineStepExecutor {
     this.skillLoader = skillLoader;
     this.outputManager = outputManager;
     this.complianceEngine = complianceEngine;
+    this.imageGenerator = imageGenerator;
     this.projectRoot = projectRoot;
     this.logger = logger;
   }
@@ -83,6 +85,13 @@ class PipelineStepExecutor {
     platforms = [],
     draftFile = '',
     draftContent = '',
+    imagePrompt = '',
+    stylePrompt = '',
+    coverTitle = '',
+    coverSubtitle = '',
+    imageType = '',
+    aspectRatio = '',
+    imageSize = '',
     note = '',
     confirm = false,
   } = {}) {
@@ -102,6 +111,17 @@ class PipelineStepExecutor {
       execution = await this._runPlatformRewrite(task, { draftFile, draftContent, engine, platforms });
     } else if (stage === 'review-optimize') {
       execution = await this._runReviewOptimize(task, { engine, platforms });
+    } else if (stage === 'visual-generate') {
+      execution = await this._runVisualGenerate(task, {
+        platforms,
+        imagePrompt,
+        stylePrompt,
+        coverTitle,
+        coverSubtitle,
+        imageType,
+        aspectRatio,
+        imageSize,
+      });
     } else if (stage === 'export-output') {
       execution = await this._runExportOutput(task, { platforms });
     } else {
@@ -299,6 +319,87 @@ class PipelineStepExecutor {
     };
   }
 
+  async _runVisualGenerate(task, {
+    platforms,
+    imagePrompt,
+    stylePrompt,
+    coverTitle,
+    coverSubtitle,
+    imageType,
+    aspectRatio,
+    imageSize,
+  }) {
+    if (!this.imageGenerator) {
+      throw new Error('visual-generate 需要图片服务，请先配置 GOOGLE_GENAI_API_KEY（兼容 GOOGLE_AI_KEY / GEMINI_API_KEY）');
+    }
+
+    const targets = this._resolveVisualTargets(task, platforms);
+    if (targets.length === 0) {
+      throw new Error('visual-generate 未匹配到任何平台');
+    }
+
+    const types = _parseImageTypes(imageType);
+    const ratio = aspectRatio || '1:1';
+    const size = imageSize || '1K';
+    this.logger.log(`[CLI] 执行 visual-generate, targets=${targets.length}, types=${types.join('+')}`);
+
+    const results = [];
+    let index = 0;
+    for (const target of targets) {
+      for (const type of types) {
+        const prompt = this._buildImagePrompt(task, target, {
+          type,
+          imagePrompt,
+          stylePrompt,
+          coverTitle,
+          coverSubtitle,
+        });
+        const saveResult = await this.imageGenerator.generateAndSave(
+          prompt,
+          target.dir,
+          (task.title || target.skill || 'image').slice(0, 24),
+          `${type}-${index}`,
+          { aspectRatio: ratio, imageSize: size }
+        );
+        index += 1;
+        results.push({
+          platform: target.skill,
+          dir: target.dir,
+          imageType: type,
+          path: saveResult.path,
+          filename: saveResult.filename,
+        });
+      }
+    }
+
+    const mergedImageAssets = this._mergeImageAssets(task?.metadata?.imageAssets, results);
+
+    return {
+      note: `CLI 生成配图完成 (${results.length} 张)`,
+      output: {
+        total: results.length,
+        results,
+      },
+      stageOutput: {
+        total: results.length,
+        imageTypes: types,
+        aspectRatio: ratio,
+        imageSize: size,
+      },
+      artifacts: results.map((item) => ({
+        type: 'image',
+        stage: 'visual-generate',
+        platform: item.platform,
+        imageType: item.imageType,
+        path: item.path,
+      })),
+      metadataExtra: {
+        imageAssets: mergedImageAssets,
+        lastImage: results.length ? results[results.length - 1] : task?.metadata?.lastImage || null,
+      },
+    };
+  }
+
   async _runExportOutput(task, { platforms }) {
     const platformFileMap = task?.metadata?.platformFiles || {};
     const targetPlatforms = this._filterPlatformsByName(Object.keys(platformFileMap), platforms);
@@ -357,6 +458,71 @@ class PipelineStepExecutor {
     };
   }
 
+  _resolveVisualTargets(task, platforms) {
+    if (Array.isArray(platforms) && platforms.length > 0) {
+      return this._resolveTargetPlatforms(platforms);
+    }
+
+    const platformFiles = task?.metadata?.platformFiles || {};
+    const names = Object.keys(platformFiles);
+    if (names.length > 0) {
+      return names.map((name) => {
+        const found = PLATFORMS.find((p) => p.skill === name || p.dir === name);
+        if (found) return found;
+        return { skill: name, dir: name };
+      });
+    }
+
+    return [{ skill: '通用', dir: 'general' }];
+  }
+
+  _buildImagePrompt(task, target, {
+    type,
+    imagePrompt,
+    stylePrompt,
+    coverTitle,
+    coverSubtitle,
+  }) {
+    const platformFileMap = task?.metadata?.platformFiles || {};
+    const platformFile = platformFileMap[target.skill] || '';
+    let contentHint = '';
+    if (platformFile) {
+      try {
+        const parsed = _parseOutputPath(platformFile);
+        contentHint = this.outputManager.readFile(parsed.platform, parsed.filename).slice(0, 360);
+      } catch {}
+    }
+
+    const antiAiCore = [
+      'Use natural, organic color palette only.',
+      'Absolutely NO electric blue and NO neon purple.',
+      'No AI-typical cyan glow, no oversaturated fluorescent tones.',
+      'Prefer warm earth tones, muted natural hues, subtle film grain.',
+    ].join(' ');
+
+    if (type === 'cover') {
+      const title = (coverTitle || task?.title || `${target.skill}封面`).slice(0, 28);
+      const subtitle = (coverSubtitle || '').slice(0, 40);
+      const titleBlock = subtitle ? `${title}\n${subtitle}` : title;
+      return [
+        'Generate a poster/cover image with clearly visible, perfectly spelled text.',
+        antiAiCore,
+        stylePrompt || '',
+        imagePrompt || '',
+        `Target platform: ${target.skill}.`,
+        `Text on image: "${titleBlock}"`,
+      ].filter(Boolean).join('\n');
+    }
+
+    return [
+      'Generate a pure visual illustration with NO text, NO letters, NO watermarks.',
+      antiAiCore,
+      stylePrompt || '',
+      imagePrompt || contentHint || task?.title || target.skill,
+      `Target platform: ${target.skill}.`,
+    ].filter(Boolean).join('\n');
+  }
+
   _resolveDraftSource(task, { draftFile, draftContent }) {
     if (draftContent && draftContent.trim()) {
       return {
@@ -389,7 +555,11 @@ class PipelineStepExecutor {
   _filterPlatformsByName(platforms, includes) {
     if (!Array.isArray(includes) || includes.length === 0) return platforms;
     const allow = new Set(includes.map((x) => x.trim()).filter(Boolean));
-    return platforms.filter((name) => allow.has(name));
+    return platforms.filter((name) => {
+      if (allow.has(name)) return true;
+      const found = PLATFORMS.find((p) => p.skill === name || p.dir === name);
+      return !!(found && (allow.has(found.skill) || allow.has(found.dir)));
+    });
   }
 
   _buildMetadataPatch(task, stageKey, {
@@ -447,6 +617,18 @@ class PipelineStepExecutor {
     }
     return Array.from(map.values()).slice(-200);
   }
+
+  _mergeImageAssets(currentAssets, newAssets) {
+    const current = Array.isArray(currentAssets) ? currentAssets : [];
+    const incoming = Array.isArray(newAssets) ? newAssets : [];
+    const map = new Map();
+    for (const item of [...current, ...incoming]) {
+      if (!item || !item.path) continue;
+      const key = `${item.platform || '-'}|${item.imageType || '-'}|${item.path}`;
+      map.set(key, item);
+    }
+    return Array.from(map.values()).slice(-300);
+  }
 }
 
 function _todayTag() {
@@ -487,6 +669,14 @@ function _stripMarkdown(text) {
     .replace(/^---+$/gm, '')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
+}
+
+function _parseImageTypes(imageType) {
+  const raw = (imageType || '').trim().toLowerCase();
+  if (!raw || raw === 'illustration') return ['illustration'];
+  if (raw === 'cover') return ['cover'];
+  if (raw === 'both') return ['cover', 'illustration'];
+  throw new Error(`不支持的 imageType: ${imageType}（可选: cover|illustration|both）`);
 }
 
 module.exports = PipelineStepExecutor;

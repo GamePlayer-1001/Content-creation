@@ -19,6 +19,8 @@ const OutputManager = require('../../webapp/services/output-manager');
 const AIAdapter = require('../../webapp/services/ai-adapter');
 const SkillLoader = require('../../webapp/services/skill-loader');
 const ComplianceEngine = require('../../webapp/services/compliance-engine');
+const ImageGenerator = require('../../webapp/services/image-generator');
+const { resolveRuntimeEnv } = require('../../core/config/runtime-env');
 
 const PROJECT_ROOT = path.join(__dirname, '..', '..');
 const CONFIG_DIR = path.join(PROJECT_ROOT, 'config');
@@ -27,6 +29,7 @@ const COMMANDS_DIR = path.join(PROJECT_ROOT, '.claude', 'commands');
 const TEMPLATES_DIR = path.join(PROJECT_ROOT, 'templates');
 const STATE_FILE = path.join(OUTPUT_DIR, 'logs', 'pipeline-task-state.json');
 
+const runtimeEnv = resolveRuntimeEnv(process.env);
 const store = new TaskStateStore(STATE_FILE);
 const runner = new WorkflowRunner(store);
 const configManager = new ConfigManager(CONFIG_DIR);
@@ -34,20 +37,28 @@ const outputManager = new OutputManager(OUTPUT_DIR);
 const aiAdapter = new AIAdapter();
 const skillLoader = new SkillLoader(COMMANDS_DIR, configManager, TEMPLATES_DIR);
 const complianceEngine = new ComplianceEngine(configManager);
+const imageGenerator = runtimeEnv.image.apiKey
+  ? new ImageGenerator(runtimeEnv.image.apiKey, OUTPUT_DIR, runtimeEnv.image.model)
+  : null;
 const stepExecutor = new PipelineStepExecutor({
   runner,
   aiAdapter,
   skillLoader,
   outputManager,
   complianceEngine,
+  imageGenerator,
   projectRoot: PROJECT_ROOT,
 });
 const EXECUTABLE_STAGE_SET = new Set([
   'draft-generate',
   'platform-rewrite',
   'review-optimize',
+  'visual-generate',
   'export-output',
 ]);
+if (!imageGenerator) {
+  EXECUTABLE_STAGE_SET.delete('visual-generate');
+}
 
 const args = process.argv.slice(2);
 const command = args[0];
@@ -224,6 +235,13 @@ function buildRunOptions() {
     style: flagValue('--style', '').trim(),
     engine: flagValue('--engine', 'claude').trim() || 'claude',
     platforms: splitListFlag('--platforms'),
+    imagePrompt: resolveTextInput('--image-prompt', '--image-prompt-file'),
+    stylePrompt: flagValue('--style-prompt', '').trim(),
+    coverTitle: flagValue('--cover-title', '').trim(),
+    coverSubtitle: flagValue('--cover-subtitle', '').trim(),
+    imageType: flagValue('--image-type', '').trim(),
+    aspectRatio: flagValue('--aspect-ratio', '').trim(),
+    imageSize: flagValue('--image-size', '').trim(),
     note: flagValue('--note', ''),
     confirm: hasFlag('--confirm'),
   };
@@ -256,6 +274,7 @@ function printHelp() {
   node app/cli/runner.js task run-step --id task-xxxx --stage draft-generate --input "素材"
   node app/cli/runner.js task run-step --id task-xxxx --stage platform-rewrite [--platforms 公众号,知乎]
   node app/cli/runner.js task run-step --id task-xxxx --stage review-optimize [--platforms 公众号,知乎]
+  node app/cli/runner.js task run-step --id task-xxxx --stage visual-generate [--platforms 公众号] [--image-type both]
   node app/cli/runner.js task run-step --id task-xxxx --stage export-output [--platforms 公众号,知乎]
   node app/cli/runner.js task run-range --id task-xxxx --from draft-generate --to export-output
 
@@ -264,9 +283,15 @@ function printHelp() {
   --draft-content / --draft-content-file    直接传入母稿（platform-rewrite）
   --draft-file                              指定母稿文件（platform-rewrite）
   --platforms                               逗号分隔的平台名（默认全部/全量）
+  --image-prompt / --image-prompt-file      图片提示词（visual-generate）
+  --style-prompt                            图片风格补充提示（visual-generate）
+  --cover-title / --cover-subtitle          封面文字（image-type=cover|both）
+  --image-type                              cover|illustration|both（默认 illustration）
+  --aspect-ratio / --image-size             图片比例/尺寸（默认 1:1 / 1K）
   --engine                                  指定 AI 引擎（默认 claude）
   --confirm                                  对非确认阶段显式传入确认标记
-  run-range                                 仅执行当前 CLI 已支持的阶段（draft/platform/review/export）
+  run-range                                 仅执行当前 CLI 已支持的阶段（draft/platform/review/visual/export）
+  visual-generate                           依赖图片 API Key，未配置时 run-range 会自动跳过该阶段
 `);
 }
 
