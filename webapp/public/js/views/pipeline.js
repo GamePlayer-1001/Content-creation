@@ -40,6 +40,7 @@ const PipelineView = {
     taskId: '',
     taskStatus: '',
     taskCurrentStage: '',
+    taskSnapshot: null,
     recentTasks: [],
     input: '',
     style: '',
@@ -55,6 +56,8 @@ const PipelineView = {
     coverStylePrompts: {},         // { '小红书': '风格...' }
     illustrationStylePrompts: {},  // { '小红书': '风格...' }
     finalResults: [],
+    platformCatalog: [],
+    engineOptions: [],
   },
 
   STEPS: [
@@ -114,6 +117,7 @@ const PipelineView = {
           · 当前阶段: ${this.state.taskCurrentStage || '-'}
         </p>
       `;
+      html += this._renderTaskSummaryCard();
     }
 
     // 步骤指示器
@@ -191,6 +195,7 @@ const PipelineView = {
     this.state.taskId = task.id || this.state.taskId;
     this.state.taskStatus = task.status || this.state.taskStatus;
     this.state.taskCurrentStage = task.currentStage || this.state.taskCurrentStage;
+    this.state.taskSnapshot = task;
     if (Array.isArray(this.state.recentTasks)) {
       const idx = this.state.recentTasks.findIndex(t => t.id === task.id);
       if (idx >= 0) {
@@ -203,6 +208,63 @@ const PipelineView = {
     if (payload?.taskProgressError) {
       showToast('任务状态同步警告: ' + payload.taskProgressError, 'error');
     }
+  },
+
+  _renderTaskSummaryCard() {
+    const task = this.state.taskSnapshot;
+    if (!task) return '';
+
+    const metadata = task.metadata && typeof task.metadata === 'object' ? task.metadata : {};
+    const stageOutputs = metadata.stageOutputs && typeof metadata.stageOutputs === 'object'
+      ? metadata.stageOutputs
+      : {};
+    const stageKeys = Object.keys(stageOutputs);
+    const artifacts = Array.isArray(metadata.artifacts) ? metadata.artifacts : [];
+    const checkpoints = Array.isArray(metadata.checkpoints) ? metadata.checkpoints : [];
+    const latestCheckpoint = checkpoints.length ? checkpoints[checkpoints.length - 1] : null;
+    const finalFiles = Array.isArray(metadata.finalFiles) ? metadata.finalFiles : [];
+
+    const stageRows = stageKeys.slice(-4).map((key) => {
+      const output = stageOutputs[key] || {};
+      const stamp = output.at ? output.at.replace('T', ' ').slice(0, 19) : '-';
+      return `
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">
+          <code>${key}</code> · ${stamp}
+        </div>
+      `;
+    }).join('');
+
+    const finalRows = finalFiles.slice(-3).map((file) => `
+      <div style="font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+        ${file}
+      </div>
+    `).join('');
+
+    return `
+      <div class="card" style="margin:-4px 0 14px">
+        <div class="card-header">任务摘要</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;font-size:12px">
+          <div>
+            <div style="color:var(--muted)">阶段输出</div>
+            <div style="margin-top:2px">${stageKeys.length}</div>
+          </div>
+          <div>
+            <div style="color:var(--muted)">产物条目</div>
+            <div style="margin-top:2px">${artifacts.length}</div>
+          </div>
+          <div>
+            <div style="color:var(--muted)">检查点</div>
+            <div style="margin-top:2px">${checkpoints.length}</div>
+          </div>
+          <div>
+            <div style="color:var(--muted)">最近检查点</div>
+            <div style="margin-top:2px">${latestCheckpoint?.stage || '-'}</div>
+          </div>
+        </div>
+        ${stageRows ? `<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)"><div style="font-size:11px;color:var(--muted)">最近阶段输出</div>${stageRows}</div>` : ''}
+        ${finalRows ? `<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)"><div style="font-size:11px;color:var(--muted)">最近导出文件</div>${finalRows}</div>` : ''}
+      </div>
+    `;
   },
 
   async _loadRecentTasks(force = false) {
@@ -269,7 +331,11 @@ const PipelineView = {
         }
       } catch {}
       if (this.state.platformCatalog.length === 0) {
-        this.state.platformCatalog = [...this.DEFAULT_PLATFORMS];
+        this.state.platformCatalog = this.PLATFORMS.map((p) => ({
+          name: p.skill,
+          value: p.skill,
+          enabled: true,
+        }));
       }
     }
 
@@ -1242,6 +1308,7 @@ const PipelineView = {
         taskId: '',
         taskStatus: '',
         taskCurrentStage: '',
+        taskSnapshot: null,
         recentTasks,
         input: '',
         style: '',
