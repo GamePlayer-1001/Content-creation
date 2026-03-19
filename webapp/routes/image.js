@@ -60,6 +60,7 @@ router.post('/generate', async (req, res) => {
     imageType = 'illustration', // 'cover' | 'illustration'
     coverTitle = '',            // 封面标题
     coverSubtitle = '',         // 封面副标题
+    taskId = null,              // 任务上下文（可选）
   } = req.body;
   const { imageGenerator, promptStore, aiAdapter } = req.app.locals;
 
@@ -164,8 +165,26 @@ router.post('/generate', async (req, res) => {
 
     const sec = ((Date.now() - start) / 1000).toFixed(1);
     console.log(`  ${ts()}  [图片] ✓ ${typeLabel}生成完成  耗时=${sec}s  size=${imageSize}  文件=${result.path}`);
+    const taskProgress = _advanceTask(req, taskId, 'visual-generate', {
+      note: `WebApp 图片生成完成 (${typeLabel} · ${platform || 'general'})`,
+      metadataPatch: {
+        lastImage: {
+          platform: platform || 'general',
+          imageType,
+          path: result.path,
+          filename: result.filename,
+        },
+      },
+    });
 
-    res.json({ ...result, base64, mimeType: ext, imageType });
+    res.json({
+      ...result,
+      base64,
+      mimeType: ext,
+      imageType,
+      task: taskProgress?.task || null,
+      taskProgressError: taskProgress?.error || null,
+    });
   } catch (e) {
     console.error(`  ${ts()}  [图片] ✗ ${typeLabel}生成失败: ${e.message}`);
     res.status(500).json({ error: e.message });
@@ -210,5 +229,16 @@ router.delete('/prompts/:id', (req, res) => {
   const deleted = promptStore.delete(req.params.id);
   res.json({ deleted });
 });
+
+function _advanceTask(req, taskId, toStage, { confirm = false, note = '', metadataPatch = null } = {}) {
+  if (!taskId) return null;
+  const runner = req.app.locals.workflowRunner;
+  if (!runner) return null;
+  try {
+    return runner.advanceTask(taskId, { toStage, confirm, note, metadataPatch });
+  } catch (error) {
+    return { error: error.message };
+  }
+}
 
 module.exports = router;

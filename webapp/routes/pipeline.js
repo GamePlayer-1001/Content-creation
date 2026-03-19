@@ -1,12 +1,11 @@
 /**
  * [INPUT]: 依赖 aiAdapter + skillLoader + outputManager + complianceEngine
- * [OUTPUT]: POST /api/pipeline/draft, /api/pipeline/platforms, /api/pipeline/optimize, /api/pipeline/extract, /api/pipeline/assemble
+ * [OUTPUT]: GET /api/pipeline/stages + task API + draft/platforms/optimize/extract/assemble
  * [POS]: routes/ 的内容流水线 API, 5步向导核心后端 (optimize 合并入 platforms 步骤)
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 
 const router = require('express').Router();
-const fs = require('fs');
 const path = require('path');
 
 // ============================================================
@@ -106,6 +105,57 @@ const PLATFORMS = [
 ];
 
 // ============================================================
+//  共享阶段定义与任务状态 API（WebApp/CLI 共用）
+// ============================================================
+router.get('/stages', (req, res) => {
+  const stages = req.app.locals.pipelineStages || [];
+  res.json(stages);
+});
+
+router.get('/tasks', (req, res) => {
+  const runner = req.app.locals.workflowRunner;
+  if (!runner) return res.status(500).json({ error: 'workflowRunner 未初始化' });
+
+  const limit = Number.parseInt(req.query.limit, 10);
+  const tasks = runner.listTasks(Number.isNaN(limit) ? 20 : limit);
+  res.json({ tasks });
+});
+
+router.post('/tasks', (req, res) => {
+  const runner = req.app.locals.workflowRunner;
+  if (!runner) return res.status(500).json({ error: 'workflowRunner 未初始化' });
+
+  const { title = '', source = 'manual', metadata = {} } = req.body || {};
+  const result = runner.createTask({ title, source, metadata });
+  res.status(201).json(result);
+});
+
+router.get('/tasks/:taskId', (req, res) => {
+  const runner = req.app.locals.workflowRunner;
+  if (!runner) return res.status(500).json({ error: 'workflowRunner 未初始化' });
+
+  const task = runner.getTask(req.params.taskId);
+  if (!task) return res.status(404).json({ error: `任务不存在: ${req.params.taskId}` });
+  res.json({ task });
+});
+
+router.post('/tasks/:taskId/advance', (req, res) => {
+  const runner = req.app.locals.workflowRunner;
+  if (!runner) return res.status(500).json({ error: 'workflowRunner 未初始化' });
+
+  try {
+    const { toStage, confirm = false, note = '', metadataPatch = null } = req.body || {};
+    if (!toStage) {
+      return res.status(400).json({ error: '缺少参数: toStage' });
+    }
+    const result = runner.advanceTask(req.params.taskId, { toStage, confirm, note, metadataPatch });
+    res.json(result);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// ============================================================
 //  获取创作方向列表
 // ============================================================
 router.get('/styles', (req, res) => {
@@ -120,7 +170,7 @@ router.get('/styles', (req, res) => {
 //  Step 2: 生成母稿 (SSE)
 // ============================================================
 router.post('/draft', async (req, res) => {
-  const { input, style, engine = 'claude' } = req.body;
+  const { input, style, engine = 'claude', taskId = null } = req.body;
   const { aiAdapter, skillLoader, outputManager } = req.app.locals;
 
   const inputPreview = (input || '').replace(/\s+/g, ' ').slice(0, 60);
@@ -162,9 +212,24 @@ router.post('/draft', async (req, res) => {
     const safeTopic = input.slice(0, 20).replace(/[<>:"/\\|?*\n\r]/g, '_');
     const filename = `${today}-${safeTopic}.md`;
     outputManager.writeFile('母稿', filename, fullContent);
+    const taskProgress = _advanceTask(req, taskId, 'draft-generate', {
+      note: 'WebApp Step2 母稿生成完成',
+      metadataPatch: {
+        inputSnapshot: input,
+        style: style || '',
+        engine,
+        draftFile: `母稿/${filename}`,
+      },
+    });
 
     console.log(`  ${_ts()}  [流水线] ✓ 母稿已保存  文件=母稿/${filename}  长度=${fullContent.length}字`);
-    _send(res, { type: 'done', file: `母稿/${filename}`, length: fullContent.length });
+    _send(res, {
+      type: 'done',
+      file: `母稿/${filename}`,
+      length: fullContent.length,
+      task: taskProgress?.task || null,
+      taskProgressError: taskProgress?.error || null,
+    });
   } catch (e) {
     console.error(`  ${_ts()}  [流水线] ✗ 母稿生成失败: ${e.message}`);
     _send(res, { type: 'error', message: e.message });
@@ -176,7 +241,7 @@ router.post('/draft', async (req, res) => {
 //  Step 3: 多平台生成 (SSE)
 // ============================================================
 router.post('/platforms', async (req, res) => {
-  const { draftContent, platforms, engine = 'claude' } = req.body;
+  const { draftContent, platforms, engine = 'claude', taskId = null } = req.body;
   const { aiAdapter, skillLoader, outputManager } = req.app.locals;
 
   const platformList = platforms?.join(',') || '全部';
@@ -231,8 +296,28 @@ router.post('/platforms', async (req, res) => {
     });
 
     const ok = results.filter(r => !r.error).length;
+    const platformFiles = {};
+    for (const item of results) {
+      if (!item.error && item.platform && item.file) {
+        platformFiles[item.platform] = item.file;
+      }
+    }
+    const taskProgress = _advanceTask(req, taskId, 'platform-rewrite', {
+      note: `WebApp Step3 多平台生成完成 (${ok}/${targetPlatforms.length})`,
+      metadataPatch: {
+        engine,
+        platformFiles,
+      },
+    });
     console.log(`  ${_ts()}  [流水线] Step3 完成  成功=${ok}/${targetPlatforms.length}`);
-    _send(res, { type: 'done', results, success: ok, total: targetPlatforms.length });
+    _send(res, {
+      type: 'done',
+      results,
+      success: ok,
+      total: targetPlatforms.length,
+      task: taskProgress?.task || null,
+      taskProgressError: taskProgress?.error || null,
+    });
   } catch (e) {
     console.error(`  ${_ts()}  [流水线] ✗ 多平台生成整体失败: ${e.message}`);
     _send(res, { type: 'error', message: e.message });
@@ -244,7 +329,7 @@ router.post('/platforms', async (req, res) => {
 //  Step 3b: 自循环优化 (SSE) — 合并入 Step 3 前端调用
 // ============================================================
 router.post('/optimize', async (req, res) => {
-  const { contents, engine = 'claude' } = req.body;
+  const { contents, engine = 'claude', taskId = null } = req.body;
   // contents: [{ platform, content, file }]
   const { aiAdapter, skillLoader, outputManager, complianceEngine } = req.app.locals;
 
@@ -305,8 +390,21 @@ router.post('/optimize', async (req, res) => {
       return { platform: item.platform, error: r.reason?.message };
     });
 
+    const ok = results.filter(r => !r.error).length;
+    const taskProgress = _advanceTask(req, taskId, 'review-optimize', {
+      confirm: true,
+      note: `WebApp Step3b 优化完成 (${ok}/${results.length})`,
+      metadataPatch: {
+        optimizedPlatforms: results.filter(r => !r.error).map(r => r.platform),
+      },
+    });
     console.log(`  ${_ts()}  [流水线] Step3b 优化完成`);
-    _send(res, { type: 'done', results });
+    _send(res, {
+      type: 'done',
+      results,
+      task: taskProgress?.task || null,
+      taskProgressError: taskProgress?.error || null,
+    });
   } catch (e) {
     console.error(`  ${_ts()}  [流水线] ✗ 优化整体失败: ${e.message}`);
     _send(res, { type: 'error', message: e.message });
@@ -401,7 +499,7 @@ ${draftContent.slice(0, 3000)}`;
 //  Step 5: 组装最终文件
 // ============================================================
 router.post('/assemble', async (req, res) => {
-  const { contents, images } = req.body;
+  const { contents, images, taskId = null } = req.body;
   // contents: [{ platform, content, file }]
   // images: [{ platform, path }]
   const { outputManager } = req.app.locals;
@@ -444,8 +542,18 @@ router.post('/assemble', async (req, res) => {
       });
     }
 
+    const taskProgress = _advanceTask(req, taskId, 'export-output', {
+      note: `WebApp Step5 导出完成 (${results.length} 个文件)`,
+      metadataPatch: {
+        finalFiles: results.map(r => r.file),
+      },
+    });
     console.log(`  ${_ts()}  [流水线] ✓ Step5 组装完成  文件=${results.map(r => r.file).join(', ')}`);
-    res.json({ results });
+    res.json({
+      results,
+      task: taskProgress?.task || null,
+      taskProgressError: taskProgress?.error || null,
+    });
   } catch (e) {
     console.error(`  ${_ts()}  [流水线] ✗ 组装失败: ${e.message}`);
     res.status(500).json({ error: e.message });
@@ -484,6 +592,18 @@ function _sseHeaders(res) {
 
 function _send(res, data) {
   res.write(`data: ${JSON.stringify(data)}\n\n`);
+}
+
+function _advanceTask(req, taskId, toStage, { confirm = false, note = '', metadataPatch = null } = {}) {
+  if (!taskId) return null;
+  const runner = req.app.locals.workflowRunner;
+  if (!runner) return null;
+  try {
+    return runner.advanceTask(taskId, { toStage, confirm, note, metadataPatch });
+  } catch (error) {
+    console.warn(`  ${_ts()}  [流水线] ⚠ 任务推进失败 taskId=${taskId} stage=${toStage}: ${error.message}`);
+    return { error: error.message };
+  }
 }
 
 module.exports = router;

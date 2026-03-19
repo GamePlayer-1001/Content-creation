@@ -1,5 +1,5 @@
 /**
- * [INPUT]: 依赖 express/dotenv, 依赖 services/ 和 routes/ 全体模块
+ * [INPUT]: 依赖 express/dotenv, 依赖 services/ + core/pipeline + routes/ 模块
  * [OUTPUT]: 对外提供 HTTP 服务 (localhost:PORT)
  * [POS]: webapp/ 的入口文件, 装载中间件 + 挂载路由 + 启动监听
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
@@ -29,6 +29,9 @@ const SkillLoader      = require('./services/skill-loader');
 const ComplianceEngine = require('./services/compliance-engine');
 const ImageGenerator   = require('./services/image-generator');
 const PromptStore      = require('./services/prompt-store');
+const TaskStateStore   = require('../core/pipeline/task-state-store');
+const WorkflowRunner   = require('../core/pipeline/workflow-runner');
+const { PIPELINE_STAGES } = require('../core/pipeline/stages');
 
 const configManager    = new ConfigManager(CONFIG_DIR);
 const scheduleEngine   = new ScheduleEngine(configManager);
@@ -37,6 +40,8 @@ const aiAdapter        = new AIAdapter();
 const skillLoader      = new SkillLoader(COMMANDS_DIR, configManager, TEMPLATES_DIR);
 const complianceEngine = new ComplianceEngine(configManager);
 const promptStore      = new PromptStore(CONFIG_DIR);
+const taskStateStore   = new TaskStateStore(path.join(OUTPUT_DIR, 'logs', 'pipeline-task-state.json'));
+const workflowRunner   = new WorkflowRunner(taskStateStore);
 
 // 图片生成: 优先读取规范变量，兼容旧变量
 const googleImageKey = process.env.GOOGLE_GENAI_API_KEY || process.env.GOOGLE_AI_KEY || process.env.GEMINI_API_KEY;
@@ -63,6 +68,9 @@ app.locals.skillLoader      = skillLoader;
 app.locals.complianceEngine = complianceEngine;
 app.locals.imageGenerator   = imageGenerator;
 app.locals.promptStore      = promptStore;
+app.locals.pipelineStages   = PIPELINE_STAGES;
+app.locals.taskStateStore   = taskStateStore;
+app.locals.workflowRunner   = workflowRunner;
 
 // ============================================================
 //  请求日志中间件

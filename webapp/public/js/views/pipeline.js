@@ -37,6 +37,10 @@ const PipelineView = {
   // ============================================================
   state: {
     step: 0,
+    taskId: '',
+    taskStatus: '',
+    taskCurrentStage: '',
+    recentTasks: [],
     input: '',
     style: '',
     engine: 'claude',
@@ -92,8 +96,25 @@ const PipelineView = {
   async render() {
     const app = document.getElementById('app');
     this.state.engine = localStorage.getItem('ai_engine') || 'claude';
+    await this._ensureRuntimeOptions();
+    if (this.state.step === 0) {
+      await this._loadRecentTasks();
+    }
+    if (!this.state.engineOptions.some(e => e.value === this.state.engine)) {
+      this.state.engine = this.state.engineOptions[0]?.value || 'claude';
+      localStorage.setItem('ai_engine', this.state.engine);
+    }
 
     let html = `<h2>内容流水线</h2>`;
+    if (this.state.taskId) {
+      html += `
+        <p style="font-size:12px;color:var(--muted);margin:4px 0 12px">
+          任务: <code>${this.state.taskId}</code>
+          · 状态: ${this.state.taskStatus || '-'}
+          · 当前阶段: ${this.state.taskCurrentStage || '-'}
+        </p>
+      `;
+    }
 
     // 步骤指示器
     html += `<div class="pipeline-steps">`;
@@ -142,15 +163,185 @@ const PipelineView = {
   },
 
   // ============================================================
+  //  任务上下文（WebApp/CLI 共用）
+  // ============================================================
+  async _ensureTaskContext() {
+    if (this.state.taskId) return true;
+    const shortInput = (this.state.input || '').replace(/\s+/g, ' ').slice(0, 24);
+    const title = shortInput || `内容任务-${new Date().toISOString().slice(0, 10)}`;
+
+    try {
+      const data = await API.post('/pipeline/tasks', {
+        title,
+        source: 'webapp',
+        metadata: { entry: 'pipeline-view' },
+      });
+      this._updateTaskFromResponse(data);
+      await this._loadRecentTasks(true);
+      return !!this.state.taskId;
+    } catch (e) {
+      showToast('创建任务上下文失败: ' + e.message, 'error');
+      return false;
+    }
+  },
+
+  _updateTaskFromResponse(payload) {
+    const task = payload?.task;
+    if (!task) return;
+    this.state.taskId = task.id || this.state.taskId;
+    this.state.taskStatus = task.status || this.state.taskStatus;
+    this.state.taskCurrentStage = task.currentStage || this.state.taskCurrentStage;
+    if (Array.isArray(this.state.recentTasks)) {
+      const idx = this.state.recentTasks.findIndex(t => t.id === task.id);
+      if (idx >= 0) {
+        this.state.recentTasks[idx] = { ...this.state.recentTasks[idx], ...task };
+      } else {
+        this.state.recentTasks.unshift(task);
+        this.state.recentTasks = this.state.recentTasks.slice(0, 8);
+      }
+    }
+    if (payload?.taskProgressError) {
+      showToast('任务状态同步警告: ' + payload.taskProgressError, 'error');
+    }
+  },
+
+  async _loadRecentTasks(force = false) {
+    if (!force && this.state.recentTasks.length > 0) return;
+    try {
+      const data = await API.get('/pipeline/tasks?limit=8');
+      this.state.recentTasks = Array.isArray(data?.tasks) ? data.tasks : [];
+    } catch {
+      this.state.recentTasks = [];
+    }
+  },
+
+  _mapStageToViewStep(stageKey) {
+    if (!stageKey) return 0;
+    if (['hotspot-list', 'hotspot-select', 'hotspot-enrich'].includes(stageKey)) return 0;
+    if (stageKey === 'draft-generate') return 1;
+    if (['platform-rewrite', 'review-optimize'].includes(stageKey)) return 2;
+    if (stageKey === 'visual-generate') return 3;
+    if (['layout-compose', 'export-output'].includes(stageKey)) return 4;
+    return 0;
+  },
+
+  async _restoreTask(taskId) {
+    try {
+      const data = await API.get(`/pipeline/tasks/${encodeURIComponent(taskId)}`);
+      this._updateTaskFromResponse(data);
+      const task = data?.task;
+      if (!task) return;
+
+      const draftFile = task?.metadata?.draftFile || '';
+      if (draftFile && draftFile.includes('/')) {
+        try {
+          const [platform, filename] = draftFile.split('/');
+          const draftData = await API.get(`/content/${encodeURIComponent(platform)}/${encodeURIComponent(filename)}`);
+          this.state.draftFile = draftFile;
+          this.state.draftContent = draftData?.content || '';
+        } catch {
+          this.state.draftFile = '';
+          this.state.draftContent = '';
+        }
+      }
+
+      const restoreStep = this._mapStageToViewStep(task.currentStage);
+      this.state.step = restoreStep;
+      if (!this.state.input && task.title) {
+        this.state.input = task.title;
+      }
+      showToast(`已恢复任务: ${task.id}`);
+      this.render();
+    } catch (e) {
+      showToast('恢复任务失败: ' + e.message, 'error');
+    }
+  },
+
+  // ============================================================
+  //  运行时选项加载（平台列表 + AI 引擎）
+  // ============================================================
+  async _ensureRuntimeOptions() {
+    if (this.state.platformCatalog.length === 0) {
+      try {
+        const platforms = await API.get('/platforms');
+        if (Array.isArray(platforms) && platforms.length > 0) {
+          this.state.platformCatalog = platforms;
+        }
+      } catch {}
+      if (this.state.platformCatalog.length === 0) {
+        this.state.platformCatalog = [...this.DEFAULT_PLATFORMS];
+      }
+    }
+
+    if (this.state.engineOptions.length === 0) {
+      try {
+        const engines = await API.get('/engines');
+        const normalized = (engines || []).map(e => ({
+          value: e.name,
+          label: this._engineLabel(e.name),
+          available: !!e.available,
+        }));
+        if (normalized.length > 0) {
+          this.state.engineOptions = normalized;
+        }
+      } catch {}
+      if (this.state.engineOptions.length === 0) {
+        this.state.engineOptions = [
+          { value: 'claude', label: this._engineLabel('claude'), available: true },
+          { value: 'codex', label: this._engineLabel('codex'), available: false },
+          { value: 'openai', label: this._engineLabel('openai'), available: false },
+          { value: 'openrouter', label: this._engineLabel('openrouter'), available: false },
+          { value: 'deepseek', label: this._engineLabel('deepseek'), available: false },
+          { value: 'gemini', label: this._engineLabel('gemini'), available: false },
+        ];
+      }
+    }
+  },
+
+  _engineLabel(name) {
+    const map = {
+      claude: 'Claude CLI (本地)',
+      codex: 'Codex CLI (本地)',
+      openai: 'OpenAI (云端)',
+      openrouter: 'OpenRouter (云端)',
+      deepseek: 'DeepSeek (云端)',
+      gemini: 'Gemini (Google)',
+    };
+    return map[name] || name;
+  },
+
+  // ============================================================
   //  Step 1: 输入素材
   // ============================================================
   _renderInput() {
     const el = document.getElementById('pipeline-content');
+    const taskRows = this.state.recentTasks.map((task) => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border:1px solid var(--border);border-radius:8px;margin-top:8px">
+        <div style="min-width:0">
+          <div style="font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${task.title || task.id}</div>
+          <div style="font-size:11px;color:var(--muted)">
+            ${task.id} · ${task.status || '-'} · ${task.currentStage || '-'}
+          </div>
+        </div>
+        <button class="btn btn-sm pl-task-restore" data-task-id="${task.id}">恢复</button>
+      </div>
+    `).join('');
+
     el.innerHTML = `
       <h3>输入素材</h3>
       <p style="font-size:13px;color:var(--muted);margin-bottom:16px">
         输入关键词、想法、长文本或热帖内容作为创作素材
       </p>
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-header" style="display:flex;justify-content:space-between;align-items:center">
+          <span>最近任务</span>
+          <button class="btn btn-sm" id="pl-refresh-tasks">刷新</button>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:6px">
+          可从历史任务恢复 taskId，并续接到对应阶段
+        </div>
+        ${taskRows || '<div style="font-size:12px;color:var(--muted)">暂无历史任务</div>'}
+      </div>
       <div class="form-group">
         <label class="form-label">素材内容</label>
         <textarea class="form-textarea" id="pl-input" placeholder="输入关键词、想法、或粘贴一段长文本/热帖内容..."
@@ -169,6 +360,15 @@ const PipelineView = {
       this.state.step = 1;
       this.render();
     };
+
+    document.getElementById('pl-refresh-tasks').onclick = async () => {
+      await this._loadRecentTasks(true);
+      this._renderInput();
+    };
+
+    document.querySelectorAll('.pl-task-restore').forEach((btn) => {
+      btn.onclick = () => this._restoreTask(btn.dataset.taskId);
+    });
   },
 
   // ============================================================
@@ -283,6 +483,9 @@ const PipelineView = {
     const outputEl = document.getElementById('pl-draft-output');
 
     genBtn.onclick = async () => {
+      const ready = await this._ensureTaskContext();
+      if (!ready) return;
+
       outputEl.style.display = 'block';
       genBtn.style.display = 'none';
       stopBtn.style.display = 'inline-block';
@@ -292,12 +495,14 @@ const PipelineView = {
         input: this.state.input,
         style: this.state.style,
         engine: this.state.engine,
+        taskId: this.state.taskId,
       });
 
       stopBtn.style.display = 'none';
       genBtn.style.display = 'inline-block';
 
       if (result && renderer.getContent()) {
+        this._updateTaskFromResponse(result);
         this.state.draftContent = renderer.getContent();
         this.state.draftFile = result.file || '';
         // 重新渲染以显示编辑区和启用下一步
@@ -418,6 +623,9 @@ const PipelineView = {
 
     // --- 一键生成（生成 + 自动优化勾选平台）---
     document.getElementById('pl-gen-platforms').onclick = async () => {
+      const ready = await this._ensureTaskContext();
+      if (!ready) return;
+
       if (this.state.platforms.length === 0) {
         showToast('请至少选择一个平台', 'error');
         return;
@@ -440,6 +648,7 @@ const PipelineView = {
           draftContent: this.state.draftContent,
           platforms: this.state.platforms,
           engine: this.state.engine,
+          taskId: this.state.taskId,
         }, (data) => {
           if (data.type === 'platform_start') {
             resultsEl.innerHTML += `<div class="card" id="pr-${data.platform}">
@@ -465,6 +674,8 @@ const PipelineView = {
               file: data.file || '',
               length: data.length,
             });
+          } else if (data.type === 'done') {
+            this._updateTaskFromResponse(data);
           }
         });
 
@@ -542,7 +753,9 @@ const PipelineView = {
     }));
 
     await API.stream('/pipeline/optimize', {
-      contents, engine: this.state.engine,
+      contents,
+      engine: this.state.engine,
+      taskId: this.state.taskId,
     }, (data) => {
       if (data.type === 'optimize_start') {
         streamEl.innerHTML += `<div class="card" id="opt-${data.platform}">
@@ -573,6 +786,8 @@ const PipelineView = {
           pr.content = data.content || '';
           pr.length = data.length;
         }
+      } else if (data.type === 'done') {
+        this._updateTaskFromResponse(data);
       }
     });
   },
@@ -863,6 +1078,7 @@ const PipelineView = {
         draftContent: this.state.draftContent,
         platforms,
         engine: this.state.engine,
+        taskId: this.state.taskId,
       });
 
       // 填充双轨数据
@@ -916,6 +1132,7 @@ const PipelineView = {
       imageSize: sizeEl.value,
       engine: this.state.engine,
       imageType,
+      taskId: this.state.taskId,
     };
 
     if (imageType === 'cover') {
@@ -955,6 +1172,7 @@ const PipelineView = {
 
     try {
       const result = await API.post('/image/generate', requestBody);
+      this._updateTaskFromResponse(result);
 
       previewEl.innerHTML = `
         <div class="image-card">
@@ -1018,12 +1236,28 @@ const PipelineView = {
 
     document.getElementById('pl-back6').onclick = () => { this.state.step = 3; this.render(); };
     document.getElementById('pl-restart').onclick = () => {
+      const { engine, platformCatalog, engineOptions, recentTasks } = this.state;
       this.state = {
-        step: 0, input: '', style: '', engine: this.state.engine,
-        draftContent: '', draftFile: '', platforms: [],
-        platformsOptimize: [], platformResults: [], images: [],
-        coverExtractions: {}, illustrationExtractions: {},
-        coverStylePrompts: {}, illustrationStylePrompts: {},
+        step: 0,
+        taskId: '',
+        taskStatus: '',
+        taskCurrentStage: '',
+        recentTasks,
+        input: '',
+        style: '',
+        engine,
+        draftContent: '',
+        draftFile: '',
+        platforms: [],
+        platformsOptimize: [],
+        platformResults: [],
+        platformCatalog,
+        engineOptions,
+        images: [],
+        coverExtractions: {},
+        illustrationExtractions: {},
+        coverStylePrompts: {},
+        illustrationStylePrompts: {},
         finalResults: [],
       };
       this.render();
@@ -1044,8 +1278,10 @@ const PipelineView = {
         const result = await API.post('/pipeline/assemble', {
           contents,
           images: this.state.images,
+          taskId: this.state.taskId,
         });
 
+        this._updateTaskFromResponse(result);
         this.state.finalResults = result.results;
         this._showFinalLinks();
         btn.textContent = '重新组装';
