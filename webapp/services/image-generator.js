@@ -13,10 +13,10 @@ const path = require('path');
 const keepAliveAgent = new https.Agent({ keepAlive: true, maxSockets: 6 });
 
 class ImageGenerator {
-  constructor(apiKey, outputDir) {
+  constructor(apiKey, outputDir, model = 'gemini-3.1-flash-image-preview') {
     this.apiKey = apiKey;
     this.outputDir = outputDir;
-    this.model = 'gemini-3-pro-image-preview';
+    this.model = model;
     this.endpoint = `generativelanguage.googleapis.com`;
     this.basePath = `/v1beta/models/${this.model}:generateContent`;
   }

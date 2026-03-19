@@ -10,38 +10,40 @@ const os = require('os');
 const path = require('path');
 const { spawn, spawnSync } = require('child_process');
 const https = require('https');
+const { resolveRuntimeEnv } = require('../../core/config/runtime-env');
 
 class AIAdapter {
   constructor() {
-    this.codexCommand = process.env.CODEX_PATH || 'codex';
+    this.runtimeEnv = resolveRuntimeEnv(process.env);
+    this.codexCommand = this.runtimeEnv.codex.path || 'codex';
     this.engines = {
       claude: { available: true },
       codex: {
         available: this._commandExists(this.codexCommand),
-        model: process.env.CODEX_MODEL || process.env.OPENAI_MODEL || 'gpt-5.2',
+        model: this.runtimeEnv.codex.model || 'gpt-5.4',
       },
       openai: {
-        available: !!process.env.OPENAI_API_KEY,
-        key: process.env.OPENAI_API_KEY,
-        model: process.env.OPENAI_MODEL || 'gpt-5.2',
+        available: !!this.runtimeEnv.openai.apiKey,
+        key: this.runtimeEnv.openai.apiKey,
+        model: this.runtimeEnv.openai.model,
         endpoint: 'https://api.openai.com/v1/chat/completions',
       },
       openrouter: {
-        available: !!process.env.OPENROUTER_API_KEY,
-        key: process.env.OPENROUTER_API_KEY,
-        model: process.env.OPENROUTER_MODEL || 'anthropic/claude-3.5-sonnet',
+        available: !!this.runtimeEnv.openrouter.apiKey,
+        key: this.runtimeEnv.openrouter.apiKey,
+        model: this.runtimeEnv.openrouter.model,
         endpoint: 'https://openrouter.ai/api/v1/chat/completions',
       },
       deepseek: {
-        available: !!process.env.DEEPSEEK_API_KEY,
-        key: process.env.DEEPSEEK_API_KEY,
-        model: process.env.DEEPSEEK_MODEL || 'deepseek-chat',
+        available: !!this.runtimeEnv.deepseek.apiKey,
+        key: this.runtimeEnv.deepseek.apiKey,
+        model: this.runtimeEnv.deepseek.model,
         endpoint: 'https://api.deepseek.com/v1/chat/completions',
       },
       gemini: {
-        available: !!(process.env.GOOGLE_GENAI_API_KEY || process.env.GOOGLE_AI_KEY || process.env.GEMINI_API_KEY),
-        key: process.env.GOOGLE_GENAI_API_KEY || process.env.GOOGLE_AI_KEY || process.env.GEMINI_API_KEY,
-        model: process.env.GOOGLE_GENAI_MODEL || process.env.GEMINI_MODEL || 'gemini-3.1-pro-preview',
+        available: !!this.runtimeEnv.gemini.apiKey,
+        key: this.runtimeEnv.gemini.apiKey,
+        model: this.runtimeEnv.gemini.model,
         endpoint: 'https://generativelanguage.googleapis.com',
       },
     };

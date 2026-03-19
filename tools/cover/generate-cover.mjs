@@ -22,7 +22,7 @@ import * as path from 'node:path';
 // ================================================================
 
 const API_KEY = process.env.GOOGLE_GENAI_API_KEY || process.env.GOOGLE_AI_KEY || process.env.GEMINI_API_KEY || '';
-const MODEL = process.env.GOOGLE_GENAI_MODEL || process.env.GEMINI_MODEL || 'gemini-3-pro-image-preview';
+const MODEL = process.env.GOOGLE_IMAGE_MODEL || process.env.GOOGLE_GENAI_MODEL || process.env.GEMINI_MODEL || 'gemini-3.1-flash-image-preview';
 
 // ================================================================
 //  参数解析
@@ -182,7 +182,7 @@ async function main() {
   const { title, type, output, keywords } = parseArgs();
 
   if (!API_KEY) {
-    throw new Error('未配置 GOOGLE_AI_KEY 或 GEMINI_API_KEY；当前 Gemini Key 已标记为待替换');
+    throw new Error('未配置 GOOGLE_GENAI_API_KEY（兼容 GOOGLE_AI_KEY / GEMINI_API_KEY）');
   }
 
   console.log('\n📷 小红书封面生成器');

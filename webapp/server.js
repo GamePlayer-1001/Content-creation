@@ -32,7 +32,9 @@ const PromptStore      = require('./services/prompt-store');
 const TaskStateStore   = require('../core/pipeline/task-state-store');
 const WorkflowRunner   = require('../core/pipeline/workflow-runner');
 const { PIPELINE_STAGES } = require('../core/pipeline/stages');
+const { resolveRuntimeEnv } = require('../core/config/runtime-env');
 
+const runtimeEnv = resolveRuntimeEnv(process.env);
 const configManager    = new ConfigManager(CONFIG_DIR);
 const scheduleEngine   = new ScheduleEngine(configManager);
 const outputManager    = new OutputManager(OUTPUT_DIR);
@@ -44,9 +46,9 @@ const taskStateStore   = new TaskStateStore(path.join(OUTPUT_DIR, 'logs', 'pipel
 const workflowRunner   = new WorkflowRunner(taskStateStore);
 
 // 图片生成: 优先读取规范变量，兼容旧变量
-const googleImageKey = process.env.GOOGLE_GENAI_API_KEY || process.env.GOOGLE_AI_KEY || process.env.GEMINI_API_KEY;
+const googleImageKey = runtimeEnv.image.apiKey;
 const imageGenerator = googleImageKey
-  ? new ImageGenerator(googleImageKey, OUTPUT_DIR)
+  ? new ImageGenerator(googleImageKey, OUTPUT_DIR, runtimeEnv.image.model)
   : null;
 
 if (!imageGenerator) {
@@ -71,6 +73,7 @@ app.locals.promptStore      = promptStore;
 app.locals.pipelineStages   = PIPELINE_STAGES;
 app.locals.taskStateStore   = taskStateStore;
 app.locals.workflowRunner   = workflowRunner;
+app.locals.runtimeEnv       = runtimeEnv;
 
 // ============================================================
 //  请求日志中间件
@@ -145,7 +148,7 @@ app.use((err, req, res, _next) => {
 // ============================================================
 //  启动
 // ============================================================
-const PORT = process.env.PORT || 3210;
+const PORT = runtimeEnv.server.port;
 app.listen(PORT, () => {
   const time = new Date().toLocaleTimeString('zh-CN', { hour12: false });
   console.log('');
@@ -158,10 +161,10 @@ app.listen(PORT, () => {
   console.log('  服务状态:');
   console.log(`    AI 引擎    Claude CLI (本地)    ✓`);
   console.log(`    AI 引擎    Codex CLI            ${aiAdapter.listEngines().find(e => e.name === 'codex')?.available ? '✓' : '—'}`);
-  console.log(`    AI 引擎    OpenAI               ${process.env.OPENAI_API_KEY ? '✓' : '—'}`);
-  console.log(`    AI 引擎    OpenRouter           ${process.env.OPENROUTER_API_KEY ? '✓' : '—'}`);
-  console.log(`    AI 引擎    DeepSeek             ${process.env.DEEPSEEK_API_KEY ? '✓' : '—'}`);
-  console.log(`    AI 引擎    Gemini               ${(process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_KEY) ? '✓' : '—'}`);
+  console.log(`    AI 引擎    OpenAI               ${runtimeEnv.openai.apiKey ? '✓' : '—'}`);
+  console.log(`    AI 引擎    OpenRouter           ${runtimeEnv.openrouter.apiKey ? '✓' : '—'}`);
+  console.log(`    AI 引擎    DeepSeek             ${runtimeEnv.deepseek.apiKey ? '✓' : '—'}`);
+  console.log(`    AI 引擎    Gemini               ${runtimeEnv.gemini.apiKey ? '✓' : '—'}`);
   console.log(`    图片生成   Nano Banana Pro      ${imageGenerator ? '✓' : '—'}`);
   console.log(`    配置目录   ${CONFIG_DIR}`);
   console.log(`    输出目录   ${OUTPUT_DIR}`);
