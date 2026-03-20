@@ -31,6 +31,7 @@ const ImageGenerator   = require('./services/image-generator');
 const PromptStore      = require('./services/prompt-store');
 const TaskStateStore   = require('../core/pipeline/task-state-store');
 const WorkflowRunner   = require('../core/pipeline/workflow-runner');
+const PipelineStepExecutor = require('../core/pipeline/step-executor');
 const HotspotService   = require('../core/services/hotspot/hotspot-service');
 const { PIPELINE_STAGES } = require('../core/pipeline/stages');
 const { resolveRuntimeEnv } = require('../core/config/runtime-env');
@@ -55,6 +56,16 @@ const googleImageKey = runtimeEnv.image.apiKey;
 const imageGenerator = googleImageKey
   ? new ImageGenerator(googleImageKey, OUTPUT_DIR, runtimeEnv.image.model)
   : null;
+const pipelineStepExecutor = new PipelineStepExecutor({
+  runner: workflowRunner,
+  hotspotService,
+  aiAdapter,
+  skillLoader,
+  outputManager,
+  complianceEngine,
+  imageGenerator,
+  projectRoot: PROJECT_ROOT,
+});
 
 if (!imageGenerator) {
   console.warn('[WARN] GOOGLE_GENAI_API_KEY 未配置（兼容 GOOGLE_AI_KEY / GEMINI_API_KEY）, 图片生成功能不可用');
@@ -79,6 +90,7 @@ app.locals.pipelineStages   = PIPELINE_STAGES;
 app.locals.taskStateStore   = taskStateStore;
 app.locals.workflowRunner   = workflowRunner;
 app.locals.hotspotService   = hotspotService;
+app.locals.pipelineStepExecutor = pipelineStepExecutor;
 app.locals.runtimeEnv       = runtimeEnv;
 
 // ============================================================

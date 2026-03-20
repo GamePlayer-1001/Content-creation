@@ -93,6 +93,86 @@ router.post('/tasks/:taskId/advance', (req, res) => {
   }
 });
 
+router.post('/tasks/:taskId/run-step', async (req, res) => {
+  const stepExecutor = req.app.locals.pipelineStepExecutor;
+  if (!stepExecutor) return res.status(500).json({ error: 'pipelineStepExecutor 未初始化' });
+
+  const taskId = req.params.taskId;
+  const stage = String(req.body?.stage || req.body?.toStage || '').trim();
+  if (!stage) {
+    return res.status(400).json({ error: '缺少参数: stage（或 toStage）' });
+  }
+
+  try {
+    const runOptions = _buildStepRunOptions(req.body || {});
+    const result = await stepExecutor.runStep(taskId, {
+      stage,
+      ...runOptions,
+    });
+    res.json(result);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+router.post('/tasks/:taskId/run-range', async (req, res) => {
+  const stepExecutor = req.app.locals.pipelineStepExecutor;
+  const runner = req.app.locals.workflowRunner;
+  const stageDefs = Array.isArray(req.app.locals.pipelineStages) ? req.app.locals.pipelineStages : [];
+  if (!stepExecutor) return res.status(500).json({ error: 'pipelineStepExecutor 未初始化' });
+  if (!runner) return res.status(500).json({ error: 'workflowRunner 未初始化' });
+
+  const taskId = req.params.taskId;
+  const task = runner.getTask(taskId);
+  if (!task) return res.status(404).json({ error: `任务不存在: ${taskId}` });
+
+  const fromStage = String(req.body?.fromStage || req.body?.from || '').trim();
+  const toStage = String(req.body?.toStage || req.body?.to || '').trim();
+  if (!fromStage || !toStage) {
+    return res.status(400).json({ error: '缺少参数: fromStage/toStage（或 from/to）' });
+  }
+
+  try {
+    const includeVisual = !!req.app.locals.imageGenerator;
+    const stageList = _resolveExecutableStageRange(stageDefs, fromStage, toStage, { includeVisual });
+    const onError = String(req.body?.onError || 'stop').trim().toLowerCase() === 'skip' ? 'skip' : 'stop';
+    const retry = _toInt(req.body?.retry, 0, 0, 5);
+    const runOptions = _buildStepRunOptions(req.body || {});
+    const startedAt = new Date().toISOString();
+
+    const results = [];
+    let stopped = false;
+    let stopReason = '';
+    for (const stage of stageList) {
+      const stageResult = await _runStageWithRetry(stepExecutor, taskId, stage, runOptions, retry);
+      results.push(stageResult);
+      if (!stageResult.ok && onError === 'stop') {
+        stopped = true;
+        stopReason = stageResult.error || `阶段失败: ${stage}`;
+        break;
+      }
+    }
+
+    const failedStages = results.filter((item) => !item.ok).map((item) => item.stage);
+    res.json({
+      taskId,
+      fromStage,
+      toStage,
+      onError,
+      retry,
+      startedAt,
+      finishedAt: new Date().toISOString(),
+      executedStages: stageList,
+      failedStages,
+      stopped,
+      stopReason,
+      results,
+    });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
 router.get('/hotspots', async (req, res) => {
   const hotspotService = req.app.locals.hotspotService;
   if (!hotspotService) return res.status(500).json({ error: 'hotspotService 未初始化' });
@@ -864,6 +944,100 @@ function _parseOutputPath(file) {
     platform: parts[0],
     filename: parts.slice(1).join('/'),
   };
+}
+
+function _buildStepRunOptions(body = {}) {
+  return {
+    engine: String(body.engine || 'claude').trim() || 'claude',
+    query: String(body.query || '').trim(),
+    limit: _toInt(body.limit, 20, 1, 200),
+    source: String(body.source || 'auto').trim() || 'auto',
+    hotspotId: String(body.hotspotId || '').trim(),
+    enrichment: String(body.enrichment || '').trim(),
+    facts: _normalizeList(body.facts),
+    constraints: _normalizeList(body.constraints),
+    materials: _normalizeList(body.materials),
+    input: String(body.input || '').trim(),
+    style: String(body.style || '').trim(),
+    platforms: _normalizeList(body.platforms),
+    draftFile: String(body.draftFile || '').trim(),
+    draftContent: String(body.draftContent || ''),
+    imagePrompt: String(body.imagePrompt || ''),
+    stylePrompt: String(body.stylePrompt || ''),
+    coverTitle: String(body.coverTitle || ''),
+    coverSubtitle: String(body.coverSubtitle || ''),
+    imageType: String(body.imageType || ''),
+    aspectRatio: String(body.aspectRatio || ''),
+    imageSize: String(body.imageSize || ''),
+    note: String(body.note || ''),
+    confirm: _toBoolean(body.confirm, false),
+  };
+}
+
+function _resolveExecutableStageRange(stageDefs, fromStage, toStage, { includeVisual = true } = {}) {
+  const list = (Array.isArray(stageDefs) ? stageDefs : [])
+    .filter((stage) => stage && stage.key && stage.implemented)
+    .filter((stage) => includeVisual || stage.key !== 'visual-generate');
+  const fromDef = list.find((stage) => stage.key === fromStage);
+  const toDef = list.find((stage) => stage.key === toStage);
+  if (!fromDef || !toDef) {
+    throw new Error(`阶段不存在或不可执行: ${fromStage} / ${toStage}`);
+  }
+  if (fromDef.order > toDef.order) {
+    throw new Error(`阶段顺序非法: ${fromStage} 在 ${toStage} 之后`);
+  }
+
+  return list
+    .filter((stage) => stage.order >= fromDef.order && stage.order <= toDef.order)
+    .sort((a, b) => a.order - b.order)
+    .map((stage) => stage.key);
+}
+
+async function _runStageWithRetry(stepExecutor, taskId, stage, runOptions, retry) {
+  let attempts = 0;
+  let lastError = null;
+  while (attempts <= retry) {
+    attempts += 1;
+    try {
+      const result = await stepExecutor.runStep(taskId, {
+        stage,
+        ...runOptions,
+      });
+      return {
+        stage,
+        ok: true,
+        attempts,
+        result,
+      };
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  return {
+    stage,
+    ok: false,
+    attempts,
+    error: lastError?.message || '未知错误',
+  };
+}
+
+function _toBoolean(value, fallback = false) {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value !== 0;
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (['1', 'true', 'yes', 'y', 'on'].includes(normalized)) return true;
+    if (['0', 'false', 'no', 'n', 'off'].includes(normalized)) return false;
+  }
+  return fallback;
+}
+
+function _toInt(value, fallback, min, max) {
+  const parsed = Number.parseInt(value, 10);
+  if (Number.isNaN(parsed)) return fallback;
+  const upper = Number.isFinite(max) ? Math.min(parsed, max) : parsed;
+  return Math.max(min, upper);
 }
 
 function _sseHeaders(res) {
