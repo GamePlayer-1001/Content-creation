@@ -1,4 +1,4 @@
-/**
+﻿/**
  * [INPUT]: 依赖 API + StreamRenderer
  * [OUTPUT]: Views.pipeline 对象
  * [POS]: views/ 的内容流水线页面, 5步向导式创作核心
@@ -156,6 +156,7 @@ const PipelineView = {
     html += `<div class="pipeline-content" id="pipeline-content"></div>`;
 
     app.innerHTML = html;
+    this._bindTaskActions();
 
     // 步骤点击
     document.querySelectorAll('.pipeline-step').forEach(el => {
@@ -244,6 +245,9 @@ const PipelineView = {
     const latestCheckpoint = checkpoints.length ? checkpoints[checkpoints.length - 1] : null;
     const finalFiles = Array.isArray(metadata.finalFiles) ? metadata.finalFiles : [];
     const runRange = metadata.runRange && typeof metadata.runRange === 'object' ? metadata.runRange : null;
+    const nextStage = this._resolveNextRunnableStage(task);
+    const implementedStages = this._getImplementedStages();
+    const lastStage = implementedStages.length > 0 ? implementedStages[implementedStages.length - 1] : null;
 
     const stageRows = stageKeys.slice(-4).map((key) => {
       const output = stageOutputs[key] || {};
@@ -271,6 +275,21 @@ const PipelineView = {
         </div>
       </div>
     ` : '';
+
+    const runControlRow = `
+      <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+        <div style="font-size:11px;color:var(--muted)">阶段控制台</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:6px">
+          <button class="btn btn-sm" id="pl-task-run-next" ${nextStage ? '' : 'disabled'}>
+            ${nextStage ? `执行下一阶段: ${nextStage.key}` : '阶段已全部完成'}
+          </button>
+          <button class="btn btn-sm" id="pl-task-run-range" ${nextStage && lastStage ? '' : 'disabled'}>
+            ${nextStage && lastStage ? `从 ${nextStage.key} 跑到 ${lastStage.key}` : '无可执行区间'}
+          </button>
+          <span id="pl-task-run-status" style="font-size:11px;color:var(--muted)"></span>
+        </div>
+      </div>
+    `;
 
     const checkpointRows = checkpoints.slice(-6).reverse().map((cp) => {
       const stamp = cp?.at ? String(cp.at).replace('T', ' ').slice(0, 19) : '-';
@@ -307,10 +326,146 @@ const PipelineView = {
         </div>
         ${stageRows ? `<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)"><div style="font-size:11px;color:var(--muted)">最近阶段输出</div>${stageRows}</div>` : ''}
         ${finalRows ? `<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)"><div style="font-size:11px;color:var(--muted)">最近导出文件</div>${finalRows}</div>` : ''}
+        ${runControlRow}
         ${runRangeRow}
         ${checkpointRows ? `<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)"><div style="font-size:11px;color:var(--muted)">执行时间线</div>${checkpointRows}</div>` : ''}
       </div>
     `;
+  },
+
+  _getImplementedStages() {
+    return (Array.isArray(this.state.pipelineStages) ? this.state.pipelineStages : [])
+      .filter((stage) => stage && stage.key && stage.implemented)
+      .sort((a, b) => a.order - b.order);
+  },
+
+  _resolveNextRunnableStage(task = this.state.taskSnapshot) {
+    const implemented = this._getImplementedStages();
+    if (implemented.length === 0) return null;
+    const completed = new Set(Array.isArray(task?.completedStages) ? task.completedStages : []);
+    return implemented.find((stage) => !completed.has(stage.key)) || null;
+  },
+
+  _buildTaskRunPayload() {
+    const fallbackPlatforms = this.state.platformResults.map((item) => item.platform).filter(Boolean);
+    return {
+      source: this.state.hotspotSource || 'auto',
+      query: this.state.hotspotQuery || '',
+      limit: 20,
+      hotspotId: this.state.selectedHotspot?.id || this.state.selectedHotspot?.title || '',
+      enrichment: this.state.input || '',
+      facts: parseTextList(this.state.hotspotFactsText || ''),
+      constraints: parseTextList(this.state.hotspotConstraintsText || ''),
+      materials: parseTextList(this.state.hotspotMaterialsText || ''),
+      input: this.state.input || '',
+      style: this.state.style || '',
+      engine: this.state.engine || 'claude',
+      platforms: this.state.platforms.length > 0 ? this.state.platforms : fallbackPlatforms,
+      draftFile: this.state.draftFile || '',
+      draftContent: this.state.draftContent || '',
+      note: 'WebApp 任务摘要卡阶段执行',
+      confirm: true,
+    };
+  },
+
+  async _runTaskStage(stageKey) {
+    if (!this.state.taskId || !stageKey) return null;
+    const payload = {
+      stage: stageKey,
+      ...this._buildTaskRunPayload(),
+    };
+    const result = await API.post(`/pipeline/tasks/${encodeURIComponent(this.state.taskId)}/run-step`, payload);
+    this._updateTaskFromResponse(result);
+    return result;
+  },
+
+  async _runTaskRange(fromStage, toStage) {
+    if (!this.state.taskId || !fromStage || !toStage) return null;
+    const payload = {
+      fromStage,
+      toStage,
+      onError: 'stop',
+      retry: 0,
+      ...this._buildTaskRunPayload(),
+    };
+    const result = await API.post(`/pipeline/tasks/${encodeURIComponent(this.state.taskId)}/run-range`, payload);
+    try {
+      const latest = await API.get(`/pipeline/tasks/${encodeURIComponent(this.state.taskId)}`);
+      this._updateTaskFromResponse(latest);
+    } catch {}
+    return result;
+  },
+
+  _bindTaskActions() {
+    const runNextBtn = document.getElementById('pl-task-run-next');
+    const runRangeBtn = document.getElementById('pl-task-run-range');
+    const statusEl = document.getElementById('pl-task-run-status');
+    if (!runNextBtn && !runRangeBtn) return;
+    const baseRunNextDisabled = runNextBtn ? runNextBtn.disabled : true;
+    const baseRunRangeDisabled = runRangeBtn ? runRangeBtn.disabled : true;
+
+    const setStatus = (text, isError = false) => {
+      if (!statusEl) return;
+      statusEl.textContent = text;
+      statusEl.style.color = isError ? '#b91c1c' : 'var(--muted)';
+    };
+
+    const setButtonsDisabled = (disabled) => {
+      if (runNextBtn) runNextBtn.disabled = baseRunNextDisabled || disabled;
+      if (runRangeBtn) runRangeBtn.disabled = baseRunRangeDisabled || disabled;
+    };
+
+    if (runNextBtn) {
+      runNextBtn.onclick = async () => {
+        const next = this._resolveNextRunnableStage(this.state.taskSnapshot);
+        if (!next) {
+          showToast('任务阶段已全部完成');
+          return;
+        }
+        setButtonsDisabled(true);
+        setStatus(`执行中: ${next.key} ...`);
+        try {
+          await this._runTaskStage(next.key);
+          showToast(`阶段执行完成: ${next.key}`);
+          setStatus(`完成: ${next.key}`);
+          await this.render();
+        } catch (error) {
+          showToast(error.message, 'error');
+          setStatus(`失败: ${error.message}`, true);
+          setButtonsDisabled(false);
+        }
+      };
+    }
+
+    if (runRangeBtn) {
+      runRangeBtn.onclick = async () => {
+        const next = this._resolveNextRunnableStage(this.state.taskSnapshot);
+        const implemented = this._getImplementedStages();
+        const last = implemented.length > 0 ? implemented[implemented.length - 1] : null;
+        if (!next || !last) {
+          showToast('无可执行区间');
+          return;
+        }
+        setButtonsDisabled(true);
+        setStatus(`批量执行中: ${next.key} -> ${last.key} ...`);
+        try {
+          const result = await this._runTaskRange(next.key, last.key);
+          const failed = Array.isArray(result?.failedStages) ? result.failedStages : [];
+          if (failed.length > 0) {
+            showToast(`批量执行完成，失败阶段: ${failed.join(', ')}`, 'error');
+            setStatus(`完成（有失败）: ${failed.join(', ')}`, true);
+          } else {
+            showToast(`批量执行完成: ${next.key} -> ${last.key}`);
+            setStatus(`完成: ${next.key} -> ${last.key}`);
+          }
+          await this.render();
+        } catch (error) {
+          showToast(error.message, 'error');
+          setStatus(`失败: ${error.message}`, true);
+          setButtonsDisabled(false);
+        }
+      };
+    }
   },
 
   _renderStageProgressStrip() {
