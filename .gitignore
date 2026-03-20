@@ -51,6 +51,7 @@ output/queue/
 output/published/
 output/scraper/
 output/test_covers/
+output/*/
 output/GitHub/
 
 # --- web hot generated datasets ---

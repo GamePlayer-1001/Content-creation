@@ -1,4 +1,4 @@
-/**
+﻿/**
  * [INPUT]: 依赖 aiAdapter + skillLoader + outputManager + complianceEngine
  * [OUTPUT]: GET /api/pipeline/stages + hotspots/platforms + task API + draft/platforms/optimize/compose/assemble
  * [POS]: routes/ 的内容流水线 API, 5步向导核心后端（含热点阶段与排版导出）
@@ -681,21 +681,26 @@ router.post('/compose', async (req, res) => {
     for (const item of composeItems) {
       const platform = String(item?.platform || '').trim();
       if (!platform) continue;
+      const platformSkill = resolvePlatformSkillName(platform) || platform;
+      const outputDir = _resolvePlatformOutputDir(platform, item?.file || '');
 
       const sourceContent = String(item?.content || '');
-      const relatedImages = (Array.isArray(images) ? images : []).filter((img) => img?.platform === platform);
+      const relatedImages = (Array.isArray(images) ? images : []).filter((img) => {
+        const imgSkill = resolvePlatformSkillName(img?.platform || '') || String(img?.platform || '').trim();
+        return imgSkill === platformSkill;
+      });
       const markdown = composeLayoutMarkdown({
-        platform,
+        platform: platformSkill,
         sourceFile: item?.file || '',
         sourceContent,
         images: relatedImages,
       });
 
-      const filename = `${today}-layout-${_safeFileName(platform, 24)}.md`;
-      outputManager.writeFile(platform, filename, markdown);
+      const filename = `${today}-layout-${_safeFileName(platformSkill, 24)}.md`;
+      outputManager.writeFile(outputDir, filename, markdown);
       results.push({
-        platform,
-        file: `${platform}/${filename}`,
+        platform: platformSkill,
+        file: `${outputDir}/${filename}`,
         length: markdown.length,
         imageCount: relatedImages.length,
       });
@@ -738,11 +743,17 @@ router.post('/assemble', async (req, res) => {
   try {
     const results = [];
     for (const item of contents) {
+      const platformRaw = String(item?.platform || '').trim();
+      const platformSkill = resolvePlatformSkillName(platformRaw) || platformRaw;
+      const dir = _resolvePlatformOutputDir(platformRaw, item?.file || '');
       // 移除 markdown 特殊符号
       let clean = _stripMarkdown(item.content);
 
       // 如果有对应图片, 在末尾追加图片路径
-      const relatedImages = (images || []).filter(img => img.platform === item.platform);
+      const relatedImages = (images || []).filter((img) => {
+        const imgSkill = resolvePlatformSkillName(img?.platform || '') || String(img?.platform || '').trim();
+        return imgSkill === platformSkill;
+      });
       if (relatedImages.length > 0) {
         clean += '\n\n---\n配图:\n';
         relatedImages.forEach((img, idx) => {
@@ -752,9 +763,8 @@ router.post('/assemble', async (req, res) => {
       }
 
       // 保存最终文件
-      const dir = item.platform || '母稿';
       const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-      const filename = `${today}-final-${dir}.txt`;
+      const filename = `${today}-final-${_safeFileName(platformSkill || dir, 24)}.txt`;
       outputManager.writeFile(dir, filename, clean);
 
       // 构建 Obsidian URI
@@ -763,7 +773,7 @@ router.post('/assemble', async (req, res) => {
       const obsidianUri = `obsidian://open?vault=${encodeURIComponent(vaultName)}&file=${encodeURIComponent(obsidianFile)}`;
 
       results.push({
-        platform: item.platform,
+        platform: platformSkill,
         file: `${dir}/${filename}`,
         obsidianUri,
         length: clean.length,
@@ -831,6 +841,29 @@ function _safeFileName(text, maxLen = 24) {
     .slice(0, maxLen)
     .trim();
   return safe || 'untitled';
+}
+
+function _resolvePlatformOutputDir(platform, sourceFile = '') {
+  const parsed = _parseOutputPath(sourceFile);
+  if (parsed) return parsed.platform;
+
+  const skillName = resolvePlatformSkillName(platform) || String(platform || '').trim();
+  if (!skillName) return 'drafts';
+
+  const found = PLATFORM_CATALOG.find((item) => item.skill === skillName);
+  return found?.dir || skillName;
+}
+
+function _parseOutputPath(file) {
+  const raw = String(file || '').trim();
+  if (!raw.includes('/')) return null;
+
+  const parts = raw.split('/').filter(Boolean);
+  if (parts.length < 2) return null;
+  return {
+    platform: parts[0],
+    filename: parts.slice(1).join('/'),
+  };
 }
 
 function _sseHeaders(res) {
