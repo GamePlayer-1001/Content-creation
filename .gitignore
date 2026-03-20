@@ -51,6 +51,10 @@ output/queue/
 output/published/
 output/scraper/
 output/test_covers/
+output/GitHub/
+
+# --- web hot generated datasets ---
+web hot/
 
 # --- 工具运行产物 ---
 tools/screenshot/.cache/
