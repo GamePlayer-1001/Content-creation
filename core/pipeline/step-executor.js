@@ -6,59 +6,17 @@
 
 const path = require('path');
 const { getPipelineStage } = require('./stages');
-
-const CREATION_STYLES = {
-  contrarian: {
-    label: '反对大众观点',
-    prompt: '请以挑战主流认知的角度来写。大胆质疑大众普遍接受的观点，用事实和逻辑反驳常见误区，引发读者重新思考。语气犀利但有理有据。',
-  },
-  fresh: {
-    label: '提出新观点',
-    prompt: '请从一个全新的、前所未有的角度来解读这个话题。避免重复已有的讨论，而是提出独到的见解和创新性的思考框架，让读者有"原来还能这样看"的感觉。',
-  },
-  debunk: {
-    label: '反对旧观点提出新观点',
-    prompt: '先破后立：先指出现有主流观点的漏洞和局限性，用数据或案例论证其不足，然后提出你的新观点作为替代方案。逻辑链条要清晰有力。',
-  },
-  extend: {
-    label: '剖析旧观点引申新价值',
-    prompt: '深入剖析已有观点的底层逻辑，挖掘出被忽视的新维度和隐藏价值。不是否定原有观点，而是在其基础上发现新的可能性和应用场景。',
-  },
-  contrast: {
-    label: '反差冲突对比',
-    prompt: '用强烈的对比和反差来制造认知冲击。将看似矛盾的事物放在一起比较，揭示隐藏的联系或讽刺的现实。善用"你以为是A，其实是B"的叙事结构。',
-  },
-  review: {
-    label: '对比评测',
-    prompt: '以客观评测者的视角，从多个维度（成本、效果、易用性、适用场景等）横向对比。用具体数据和真实使用体验说话，给出有理有据的推荐结论。',
-  },
-  deconstruct: {
-    label: '深度拆解',
-    prompt: '像庖丁解牛一样，逐层剖析这个话题的底层逻辑、运作机制、关键节点。从表象到本质，从现象到规律，让读者获得系统性的认知升级。',
-  },
-  predict: {
-    label: '趋势预判',
-    prompt: '基于当前信号和历史规律，预测这个领域的未来走向。分析关键趋势、拐点信号和可能的演化路径。语气要自信但留有余地，让读者觉得有前瞻性。',
-  },
-};
-
-const PLATFORMS = [
-  { skill: '公众号', dir: '公众号' },
-  { skill: '知乎', dir: '知乎' },
-  { skill: 'linuxdo', dir: 'linuxdo' },
-  { skill: 'GitHub', dir: 'GitHub' },
-  { skill: '小红书', dir: '小红书' },
-  { skill: '即刻', dir: '即刻' },
-  { skill: 'Medium', dir: 'Medium' },
-  { skill: 'Quora', dir: 'Quora' },
-  { skill: 'X推文', dir: 'X' },
-  { skill: 'Reddit', dir: 'Reddit' },
-  { skill: '朋友圈', dir: '朋友圈' },
-];
+const { composeLayoutMarkdown } = require('./layout-composer');
+const {
+  CREATION_STYLES,
+  PLATFORM_CATALOG,
+  resolvePlatformSkillName,
+} = require('./catalog');
 
 class PipelineStepExecutor {
   constructor({
     runner,
+    hotspotService = null,
     aiAdapter,
     skillLoader,
     outputManager,
@@ -68,6 +26,7 @@ class PipelineStepExecutor {
     logger = console,
   }) {
     this.runner = runner;
+    this.hotspotService = hotspotService;
     this.aiAdapter = aiAdapter;
     this.skillLoader = skillLoader;
     this.outputManager = outputManager;
@@ -80,6 +39,14 @@ class PipelineStepExecutor {
   async runStep(taskId, {
     stage,
     engine = 'claude',
+    query = '',
+    limit = 20,
+    source = 'auto',
+    hotspotId = '',
+    enrichment = '',
+    facts = [],
+    constraints = [],
+    materials = [],
     input = '',
     style = '',
     platforms = [],
@@ -105,7 +72,19 @@ class PipelineStepExecutor {
     if (!task) throw new Error(`任务不存在: ${taskId}`);
 
     let execution;
-    if (stage === 'draft-generate') {
+    if (stage === 'hotspot-list') {
+      execution = await this._runHotspotList(task, { query, limit, source });
+    } else if (stage === 'hotspot-select') {
+      execution = await this._runHotspotSelect(task, { hotspotId });
+    } else if (stage === 'hotspot-enrich') {
+      execution = await this._runHotspotEnrich(task, {
+        enrichment,
+        facts,
+        constraints,
+        materials,
+        input,
+      });
+    } else if (stage === 'draft-generate') {
       execution = await this._runDraftGenerate(task, { input, style, engine });
     } else if (stage === 'platform-rewrite') {
       execution = await this._runPlatformRewrite(task, { draftFile, draftContent, engine, platforms });
@@ -122,6 +101,8 @@ class PipelineStepExecutor {
         aspectRatio,
         imageSize,
       });
+    } else if (stage === 'layout-compose') {
+      execution = await this._runLayoutCompose(task, { platforms });
     } else if (stage === 'export-output') {
       execution = await this._runExportOutput(task, { platforms });
     } else {
@@ -153,6 +134,168 @@ class PipelineStepExecutor {
       advanced: advanced.advanced,
       requiresConfirmation: advanced.requiresConfirmation,
       message: advanced.message || null,
+    };
+  }
+
+  async _runHotspotList(task, { query, limit, source }) {
+    if (!this.hotspotService) {
+      throw new Error('hotspot-list 需要热点服务，请先配置 hotspotService');
+    }
+
+    const effectiveQuery = (query || task?.metadata?.hotspotQuery || '').trim();
+    const result = await this.hotspotService.listHotspots({
+      query: effectiveQuery,
+      limit,
+      source,
+    });
+    const snapshotItems = Array.isArray(result.items)
+      ? result.items.slice(0, 50).map((item) => ({
+        id: item.id || '',
+        title: item.title || '',
+        summary: item.summary || '',
+        category: item.category || '',
+        platform: item.platform || '',
+        url: item.url || '',
+        score: item.score ?? null,
+        heat: item.heat || '',
+        tags: Array.isArray(item.tags) ? item.tags : [],
+        publishedAt: item.publishedAt || '',
+        source: item.source || result.source || '',
+      }))
+      : [];
+
+    return {
+      note: `CLI 热点列表读取完成 (${result.total})`,
+      output: result,
+      stageOutput: {
+        source: result.source,
+        query: result.query || '',
+        total: result.total || 0,
+        warnings: Array.isArray(result.warnings) ? result.warnings : [],
+      },
+      artifacts: snapshotItems.slice(0, 20).map((item) => ({
+        type: 'hotspot',
+        stage: 'hotspot-list',
+        path: item.url || item.title || item.id || '',
+        title: item.title,
+      })),
+      metadataExtra: {
+        hotspotQuery: result.query || '',
+        hotspotListSnapshot: {
+          at: result.fetchedAt || new Date().toISOString(),
+          source: result.source,
+          query: result.query || '',
+          total: result.total || 0,
+          warnings: Array.isArray(result.warnings) ? result.warnings : [],
+          items: snapshotItems,
+        },
+      },
+    };
+  }
+
+  async _runHotspotSelect(task, { hotspotId }) {
+    const snapshotItems = Array.isArray(task?.metadata?.hotspotListSnapshot?.items)
+      ? task.metadata.hotspotListSnapshot.items
+      : [];
+    const selectedBefore = task?.metadata?.selectedHotspot || null;
+    let selected = selectedBefore;
+
+    if (hotspotId) {
+      selected = snapshotItems.find((item) => {
+        if (!item) return false;
+        if (item.id && String(item.id) === hotspotId) return true;
+        if (item.title && String(item.title) === hotspotId) return true;
+        return false;
+      }) || null;
+    } else if (!selected && snapshotItems.length > 0) {
+      selected = snapshotItems[0];
+    }
+
+    if (!selected) {
+      throw new Error('hotspot-select 需要有效热点，请先执行 hotspot-list 或传入 --hotspot-id');
+    }
+
+    const normalized = {
+      id: selected.id || '',
+      title: selected.title || '',
+      summary: selected.summary || '',
+      category: selected.category || '',
+      platform: selected.platform || '',
+      url: selected.url || '',
+      score: selected.score ?? null,
+      heat: selected.heat || '',
+      tags: Array.isArray(selected.tags) ? selected.tags : [],
+      publishedAt: selected.publishedAt || '',
+      source: selected.source || '',
+    };
+
+    return {
+      note: `CLI 热点选择完成: ${normalized.title || normalized.id || '未命名热点'}`,
+      output: { selectedHotspot: normalized },
+      stageOutput: {
+        selectedHotspotId: normalized.id || '',
+        selectedTitle: normalized.title || '',
+      },
+      artifacts: [
+        {
+          type: 'hotspot-selected',
+          stage: 'hotspot-select',
+          path: normalized.url || normalized.title || normalized.id || '',
+        },
+      ],
+      metadataExtra: {
+        selectedHotspot: normalized,
+      },
+    };
+  }
+
+  async _runHotspotEnrich(task, {
+    enrichment,
+    facts,
+    constraints,
+    materials,
+    input,
+  }) {
+    const selected = task?.metadata?.selectedHotspot || null;
+    const rawText = (enrichment || input || '').trim();
+    const fallback = selected
+      ? [selected.title, selected.summary].filter(Boolean).join('\n\n')
+      : '';
+    const finalEnrichment = rawText || fallback;
+    const normalizedFacts = _toStringList(facts);
+    const normalizedConstraints = _toStringList(constraints);
+    const normalizedMaterials = _toStringList(materials);
+
+    if (!finalEnrichment && !normalizedFacts.length && !normalizedConstraints.length && !normalizedMaterials.length) {
+      throw new Error('hotspot-enrich 缺少内容，请传入 --enrichment 或 --input');
+    }
+
+    const now = new Date().toISOString();
+    return {
+      note: 'CLI 热点补充信息录入完成',
+      output: {
+        enrichment: finalEnrichment,
+        facts: normalizedFacts,
+        constraints: normalizedConstraints,
+        materials: normalizedMaterials,
+      },
+      stageOutput: {
+        enrichmentLength: finalEnrichment.length,
+        facts: normalizedFacts.length,
+        constraints: normalizedConstraints.length,
+        materials: normalizedMaterials.length,
+      },
+      artifacts: [],
+      metadataExtra: {
+        hotspotEnrichment: {
+          at: now,
+          enrichment: finalEnrichment,
+          facts: normalizedFacts,
+          constraints: normalizedConstraints,
+          materials: normalizedMaterials,
+        },
+        inputSnapshot: finalEnrichment || task?.metadata?.inputSnapshot || '',
+      },
     };
   }
 
@@ -400,6 +543,66 @@ class PipelineStepExecutor {
     };
   }
 
+  async _runLayoutCompose(task, { platforms }) {
+    const platformFileMap = task?.metadata?.platformFiles || {};
+    const targetPlatforms = this._filterPlatformsByName(Object.keys(platformFileMap), platforms);
+    if (targetPlatforms.length === 0) {
+      throw new Error('layout-compose 需要先有 metadata.platformFiles');
+    }
+
+    this.logger.log(`[CLI] 执行 layout-compose, targets=${targetPlatforms.length}`);
+
+    const imageAssets = Array.isArray(task?.metadata?.imageAssets) ? task.metadata.imageAssets : [];
+    const selectedHotspot = task?.metadata?.selectedHotspot || {};
+    const enrichment = task?.metadata?.hotspotEnrichment?.enrichment || task?.metadata?.inputSnapshot || '';
+    const results = [];
+
+    for (const platformName of targetPlatforms) {
+      const sourceFile = platformFileMap[platformName];
+      const parsed = _parseOutputPath(sourceFile);
+      const content = this.outputManager.readFile(parsed.platform, parsed.filename);
+      const relatedImages = imageAssets.filter((img) => img.platform === platformName);
+      const markdown = composeLayoutMarkdown({
+        platform: platformName,
+        sourceFile,
+        sourceContent: content,
+        hotspotTitle: selectedHotspot?.title || task?.title || '',
+        hotspotSummary: selectedHotspot?.summary || enrichment || '',
+        images: relatedImages,
+      });
+
+      const filename = `${_todayTag()}-layout-${_safeFileName(platformName, 20)}.md`;
+      this.outputManager.writeFile(parsed.platform, filename, markdown);
+      const layoutFile = `${parsed.platform}/${filename}`;
+
+      results.push({
+        platform: platformName,
+        sourceFile,
+        file: layoutFile,
+        imageCount: relatedImages.length,
+        length: markdown.length,
+      });
+    }
+
+    return {
+      note: `CLI 排版完成 (${results.length} 个平台)`,
+      output: { results },
+      stageOutput: {
+        total: results.length,
+        files: results.map((r) => r.file),
+      },
+      artifacts: results.map((item) => ({
+        type: 'layout-markdown',
+        stage: 'layout-compose',
+        platform: item.platform,
+        path: item.file,
+      })),
+      metadataExtra: {
+        layoutFiles: results.map((r) => r.file),
+      },
+    };
+  }
+
   async _runExportOutput(task, { platforms }) {
     const platformFileMap = task?.metadata?.platformFiles || {};
     const targetPlatforms = this._filterPlatformsByName(Object.keys(platformFileMap), platforms);
@@ -467,7 +670,8 @@ class PipelineStepExecutor {
     const names = Object.keys(platformFiles);
     if (names.length > 0) {
       return names.map((name) => {
-        const found = PLATFORMS.find((p) => p.skill === name || p.dir === name);
+        const skillName = resolvePlatformSkillName(name);
+        const found = PLATFORM_CATALOG.find((p) => p.skill === skillName);
         if (found) return found;
         return { skill: name, dir: name };
       });
@@ -546,19 +750,26 @@ class PipelineStepExecutor {
 
   _resolveTargetPlatforms(platforms) {
     if (!Array.isArray(platforms) || platforms.length === 0) {
-      return [...PLATFORMS];
+      return [...PLATFORM_CATALOG];
     }
-    const allowSet = new Set(platforms.map((x) => x.trim()).filter(Boolean));
-    return PLATFORMS.filter((p) => allowSet.has(p.skill) || allowSet.has(p.dir));
+    const allowSet = new Set(
+      platforms
+        .map((x) => resolvePlatformSkillName(String(x).trim()))
+        .filter(Boolean)
+    );
+    return PLATFORM_CATALOG.filter((p) => allowSet.has(p.skill));
   }
 
   _filterPlatformsByName(platforms, includes) {
     if (!Array.isArray(includes) || includes.length === 0) return platforms;
-    const allow = new Set(includes.map((x) => x.trim()).filter(Boolean));
+    const allow = new Set(
+      includes
+        .map((x) => resolvePlatformSkillName(String(x).trim()))
+        .filter(Boolean)
+    );
     return platforms.filter((name) => {
-      if (allow.has(name)) return true;
-      const found = PLATFORMS.find((p) => p.skill === name || p.dir === name);
-      return !!(found && (allow.has(found.skill) || allow.has(found.dir)));
+      const skillName = resolvePlatformSkillName(name) || name;
+      return allow.has(skillName);
     });
   }
 
@@ -677,6 +888,18 @@ function _parseImageTypes(imageType) {
   if (raw === 'cover') return ['cover'];
   if (raw === 'both') return ['cover', 'illustration'];
   throw new Error(`不支持的 imageType: ${imageType}（可选: cover|illustration|both）`);
+}
+
+function _toStringList(input) {
+  if (Array.isArray(input)) {
+    return input.map((x) => String(x || '').trim()).filter(Boolean);
+  }
+  const raw = String(input || '').trim();
+  if (!raw) return [];
+  return raw
+    .split(/[,\uFF0C;\n]/g)
+    .map((x) => x.trim())
+    .filter(Boolean);
 }
 
 module.exports = PipelineStepExecutor;

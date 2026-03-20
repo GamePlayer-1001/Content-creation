@@ -31,6 +31,22 @@ function createDynamicLimiter(initial, max, rampAfter) {
   });
 }
 
+function escapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function parseTextList(value) {
+  return String(value || '')
+    .split(/[\n,，;；]/g)
+    .map((x) => x.trim())
+    .filter(Boolean);
+}
+
 const PipelineView = {
   // ============================================================
   //  状态管理
@@ -42,6 +58,15 @@ const PipelineView = {
     taskCurrentStage: '',
     taskSnapshot: null,
     recentTasks: [],
+    hotspots: [],
+    hotspotQuery: '',
+    hotspotSource: 'auto',
+    hotspotWarnings: [],
+    hotspotSourceUsed: '',
+    selectedHotspot: null,
+    hotspotFactsText: '',
+    hotspotConstraintsText: '',
+    hotspotMaterialsText: '',
     input: '',
     style: '',
     engine: 'claude',
@@ -57,7 +82,9 @@ const PipelineView = {
     illustrationStylePrompts: {},  // { '小红书': '风格...' }
     finalResults: [],
     platformCatalog: [],
+    styleCatalog: [],
     engineOptions: [],
+    pipelineStages: [],
   },
 
   STEPS: [
@@ -68,29 +95,15 @@ const PipelineView = {
     { label: '最终输出', key: 'output' },
   ],
 
-  STYLES: [
-    { key: 'contrarian', name: '反对大众观点', desc: '大家都说XX对，但其实...' },
-    { key: 'fresh', name: '提出新观点', desc: '没人这么想过，但如果...' },
-    { key: 'debunk', name: '反对旧观点提新', desc: '传统做法是XX，更好的是...' },
-    { key: 'extend', name: '剖析引申新价值', desc: '大家都知道XX，但很少人意识到...' },
-    { key: 'contrast', name: '反差冲突对比', desc: '你以为是A，其实是B' },
-    { key: 'review', name: '对比评测', desc: '多维度横评，数据说话' },
-    { key: 'deconstruct', name: '深度拆解', desc: '逐层剖析底层逻辑' },
-    { key: 'predict', name: '趋势预判', desc: '信号→趋势→预测' },
-  ],
-
-  PLATFORMS: [
-    { skill: '公众号', dir: '公众号', group: 'A' },
-    { skill: '知乎', dir: '知乎', group: 'A' },
-    { skill: 'linuxdo', dir: 'linuxdo', group: 'B' },
-    { skill: 'GitHub', dir: 'GitHub', group: 'B' },
-    { skill: '小红书', dir: '小红书', group: 'C' },
-    { skill: '即刻', dir: '即刻', group: 'C' },
-    { skill: 'Medium', dir: 'Medium', group: 'D' },
-    { skill: 'Quora', dir: 'Quora', group: 'D' },
-    { skill: 'X推文', dir: 'X', group: 'E' },
-    { skill: 'Reddit', dir: 'Reddit', group: 'E' },
-    { skill: '朋友圈', dir: '朋友圈', group: 'F' },
+  STYLE_FALLBACK: [
+    { key: 'contrarian', label: '反对大众观点', desc: '大家都说XX对，但其实...' },
+    { key: 'fresh', label: '提出新观点', desc: '没人这么想过，但如果...' },
+    { key: 'debunk', label: '反对旧观点提出新观点', desc: '传统做法是XX，更好的是...' },
+    { key: 'extend', label: '剖析旧观点引申新价值', desc: '大家都知道XX，但很少人意识到...' },
+    { key: 'contrast', label: '反差冲突对比', desc: '你以为是A，其实是B' },
+    { key: 'review', label: '对比评测', desc: '多维度横评，数据说话' },
+    { key: 'deconstruct', label: '深度拆解', desc: '逐层剖析底层逻辑' },
+    { key: 'predict', label: '趋势预判', desc: '信号→趋势→预测' },
   ],
 
   // ============================================================
@@ -100,11 +113,17 @@ const PipelineView = {
     const app = document.getElementById('app');
     this.state.engine = localStorage.getItem('ai_engine') || 'claude';
     await this._ensureRuntimeOptions();
+    await this._loadPipelineStages();
     if (this.state.step === 0) {
       await this._loadRecentTasks();
+      await this._loadHotspots();
     }
-    if (!this.state.engineOptions.some(e => e.value === this.state.engine)) {
-      this.state.engine = this.state.engineOptions[0]?.value || 'claude';
+    const hasUsableEngine = this.state.engineOptions.some(
+      (e) => e.value === this.state.engine && e.available !== false
+    );
+    if (!hasUsableEngine) {
+      const firstAvailable = this.state.engineOptions.find((e) => e.available !== false);
+      this.state.engine = firstAvailable?.value || this.state.engineOptions[0]?.value || 'claude';
       localStorage.setItem('ai_engine', this.state.engine);
     }
 
@@ -119,6 +138,7 @@ const PipelineView = {
       `;
       html += this._renderTaskSummaryCard();
     }
+    html += this._renderStageProgressStrip();
 
     // 步骤指示器
     html += `<div class="pipeline-steps">`;
@@ -293,6 +313,48 @@ const PipelineView = {
     `;
   },
 
+  _renderStageProgressStrip() {
+    const stages = Array.isArray(this.state.pipelineStages) ? this.state.pipelineStages : [];
+    if (stages.length === 0) return '';
+
+    const task = this.state.taskSnapshot || {};
+    const completed = new Set(Array.isArray(task?.completedStages) ? task.completedStages : []);
+    const current = task?.currentStage || '';
+    const waiting = task?.pendingConfirmationStage || '';
+
+    const chips = stages.map((stage) => {
+      let status = 'planned';
+      if (completed.has(stage.key)) status = 'done';
+      else if (current === stage.key) status = 'current';
+      else if (waiting === stage.key) status = 'waiting';
+      else if (stage.implemented) status = 'ready';
+
+      const colorMap = {
+        done: '#16a34a',
+        current: '#2563eb',
+        waiting: '#d97706',
+        ready: '#64748b',
+        planned: '#9ca3af',
+      };
+      const dot = colorMap[status] || '#9ca3af';
+      const hint = stage.implemented ? '已实现' : '规划中';
+      return `
+        <div style="display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);border-radius:999px;padding:4px 10px;font-size:11px;white-space:nowrap">
+          <span style="width:7px;height:7px;border-radius:50%;background:${dot};display:inline-block"></span>
+          <span>${stage.order}. ${escapeHtml(stage.label)}</span>
+          <span style="color:var(--muted)">(${hint})</span>
+        </div>
+      `;
+    }).join('');
+
+    return `
+      <div class="card" style="margin:-2px 0 12px">
+        <div class="card-header">9阶段进度</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">${chips}</div>
+      </div>
+    `;
+  },
+
   async _loadRecentTasks(force = false) {
     if (!force && this.state.recentTasks.length > 0) return;
     try {
@@ -300,6 +362,101 @@ const PipelineView = {
       this.state.recentTasks = Array.isArray(data?.tasks) ? data.tasks : [];
     } catch {
       this.state.recentTasks = [];
+    }
+  },
+
+  async _loadPipelineStages(force = false) {
+    if (!force && this.state.pipelineStages.length > 0) return;
+    try {
+      const data = await API.get('/pipeline/stages');
+      if (Array.isArray(data) && data.length > 0) {
+        this.state.pipelineStages = data;
+        return;
+      }
+    } catch {}
+
+    this.state.pipelineStages = [
+      { key: 'hotspot-list', order: 1, label: '读谷歌表格热点列表', implemented: true },
+      { key: 'hotspot-select', order: 2, label: '选热点', implemented: true },
+      { key: 'hotspot-enrich', order: 3, label: '录入热点详细内容', implemented: true },
+      { key: 'draft-generate', order: 4, label: '生成母稿', implemented: true },
+      { key: 'platform-rewrite', order: 5, label: '多平台改写', implemented: true },
+      { key: 'review-optimize', order: 6, label: '审核优化 / 去 AI 味', implemented: true },
+      { key: 'visual-generate', order: 7, label: '生成多张配图', implemented: true },
+      { key: 'layout-compose', order: 8, label: '排版', implemented: true },
+      { key: 'export-output', order: 9, label: '导出图文结果并可打开', implemented: true },
+    ];
+  },
+
+  async _loadHotspots(force = false) {
+    if (!force && this.state.hotspots.length > 0) return;
+    try {
+      const query = encodeURIComponent(this.state.hotspotQuery || '');
+      const source = encodeURIComponent(this.state.hotspotSource || 'auto');
+      const data = await API.get(`/pipeline/hotspots?query=${query}&limit=20&source=${source}`);
+      this.state.hotspots = Array.isArray(data?.items) ? data.items : [];
+      this.state.hotspotWarnings = Array.isArray(data?.warnings) ? data.warnings : [];
+      this.state.hotspotSourceUsed = data?.source || '';
+    } catch (e) {
+      this.state.hotspots = [];
+      this.state.hotspotWarnings = [`热点池读取失败: ${e.message}`];
+      this.state.hotspotSourceUsed = '';
+    }
+  },
+
+  async _syncHotspotStage() {
+    if (!this.state.taskId) return;
+    try {
+      const data = await API.post(`/pipeline/tasks/${encodeURIComponent(this.state.taskId)}/hotspot-list`, {
+        query: this.state.hotspotQuery || '',
+        source: this.state.hotspotSource || 'auto',
+        limit: 20,
+        note: 'WebApp Step1 输入素材阶段同步热点列表',
+      });
+      this._updateTaskFromResponse(data);
+      if (Array.isArray(data?.items)) {
+        this.state.hotspots = data.items;
+      }
+      this.state.hotspotWarnings = Array.isArray(data?.warnings) ? data.warnings : [];
+      this.state.hotspotSourceUsed = data?.source || this.state.hotspotSourceUsed;
+      if (this.state.hotspotWarnings.length > 0) {
+        showToast(`热点读取提示: ${this.state.hotspotWarnings[0]}`);
+      }
+    } catch (e) {
+      showToast('热点阶段同步失败: ' + e.message, 'error');
+    }
+  },
+
+  async _syncHotspotSelect() {
+    if (!this.state.taskId || !this.state.selectedHotspot) return;
+    try {
+      const payload = {
+        hotspotId: this.state.selectedHotspot.id || this.state.selectedHotspot.title || '',
+        hotspot: this.state.selectedHotspot,
+        confirm: true,
+        note: 'WebApp Step1 选择热点',
+      };
+      const data = await API.post(`/pipeline/tasks/${encodeURIComponent(this.state.taskId)}/hotspot-select`, payload);
+      this._updateTaskFromResponse(data);
+    } catch (e) {
+      showToast('热点选择同步失败: ' + e.message, 'error');
+    }
+  },
+
+  async _syncHotspotEnrich({ enrichment = '', facts = [], constraints = [], materials = [] } = {}) {
+    if (!this.state.taskId) return;
+    try {
+      const data = await API.post(`/pipeline/tasks/${encodeURIComponent(this.state.taskId)}/hotspot-enrich`, {
+        enrichment: enrichment || '',
+        facts,
+        constraints,
+        materials,
+        confirm: true,
+        note: 'WebApp Step1 录入热点补充信息',
+      });
+      this._updateTaskFromResponse(data);
+    } catch (e) {
+      showToast('热点补充信息同步失败: ' + e.message, 'error');
     }
   },
 
@@ -338,6 +495,28 @@ const PipelineView = {
       if (!this.state.input && task.title) {
         this.state.input = task.title;
       }
+      if (task?.metadata?.style) {
+        this.state.style = task.metadata.style;
+      }
+      const hotspotSnapshot = task?.metadata?.hotspotListSnapshot;
+      if (Array.isArray(hotspotSnapshot?.items) && hotspotSnapshot.items.length > 0) {
+        this.state.hotspots = hotspotSnapshot.items;
+        this.state.hotspotQuery = hotspotSnapshot.query || '';
+        this.state.hotspotSource = hotspotSnapshot.source || this.state.hotspotSource;
+        this.state.hotspotSourceUsed = hotspotSnapshot.source || '';
+      }
+      if (task?.metadata?.selectedHotspot) {
+        this.state.selectedHotspot = task.metadata.selectedHotspot;
+      }
+      if (task?.metadata?.hotspotEnrichment) {
+        const enrich = task.metadata.hotspotEnrichment;
+        if (enrich.enrichment) {
+          this.state.input = enrich.enrichment;
+        }
+        this.state.hotspotFactsText = Array.isArray(enrich.facts) ? enrich.facts.join('\n') : '';
+        this.state.hotspotConstraintsText = Array.isArray(enrich.constraints) ? enrich.constraints.join('\n') : '';
+        this.state.hotspotMaterialsText = Array.isArray(enrich.materials) ? enrich.materials.join('\n') : '';
+      }
       showToast(`已恢复任务: ${task.id}`);
       this.render();
     } catch (e) {
@@ -351,17 +530,41 @@ const PipelineView = {
   async _ensureRuntimeOptions() {
     if (this.state.platformCatalog.length === 0) {
       try {
-        const platforms = await API.get('/platforms');
+        const platforms = await API.get('/pipeline/platforms');
         if (Array.isArray(platforms) && platforms.length > 0) {
-          this.state.platformCatalog = platforms;
+          this.state.platformCatalog = platforms.filter((item) => item && item.value && item.enabled !== false);
         }
       } catch {}
       if (this.state.platformCatalog.length === 0) {
-        this.state.platformCatalog = this.PLATFORMS.map((p) => ({
-          name: p.skill,
-          value: p.skill,
-          enabled: true,
-        }));
+        this.state.platformCatalog = [
+          { name: '公众号', value: '公众号', enabled: true, group: 'A' },
+          { name: '知乎', value: '知乎', enabled: true, group: 'A' },
+          { name: 'linuxdo', value: 'linuxdo', enabled: true, group: 'B' },
+          { name: 'GitHub', value: 'GitHub', enabled: true, group: 'B' },
+          { name: '小红书', value: '小红书', enabled: true, group: 'C' },
+          { name: '即刻', value: '即刻', enabled: true, group: 'C' },
+          { name: 'Medium', value: 'Medium', enabled: true, group: 'D' },
+          { name: 'Quora', value: 'Quora', enabled: true, group: 'D' },
+          { name: 'X推文', value: 'X推文', enabled: true, group: 'E' },
+          { name: 'Reddit', value: 'Reddit', enabled: true, group: 'E' },
+          { name: '朋友圈', value: '朋友圈', enabled: true, group: 'F' },
+        ];
+      }
+    }
+
+    if (this.state.styleCatalog.length === 0) {
+      try {
+        const styles = await API.get('/pipeline/styles');
+        if (Array.isArray(styles) && styles.length > 0) {
+          this.state.styleCatalog = styles.map((item) => ({
+            key: item.key,
+            label: item.label || item.name || item.key,
+            desc: item.desc || '',
+          }));
+        }
+      } catch {}
+      if (this.state.styleCatalog.length === 0) {
+        this.state.styleCatalog = this.STYLE_FALLBACK.map((item) => ({ ...item }));
       }
     }
 
@@ -402,6 +605,25 @@ const PipelineView = {
     return map[name] || name;
   },
 
+  _getActivePlatforms() {
+    const list = Array.isArray(this.state.platformCatalog) ? this.state.platformCatalog : [];
+    const enabled = list.filter((item) => item && item.value && item.enabled !== false);
+    if (enabled.length > 0) return enabled;
+    return [
+      { name: '公众号', value: '公众号', enabled: true, group: 'A' },
+      { name: '知乎', value: '知乎', enabled: true, group: 'A' },
+      { name: 'linuxdo', value: 'linuxdo', enabled: true, group: 'B' },
+      { name: 'GitHub', value: 'GitHub', enabled: true, group: 'B' },
+      { name: '小红书', value: '小红书', enabled: true, group: 'C' },
+      { name: '即刻', value: '即刻', enabled: true, group: 'C' },
+      { name: 'Medium', value: 'Medium', enabled: true, group: 'D' },
+      { name: 'Quora', value: 'Quora', enabled: true, group: 'D' },
+      { name: 'X推文', value: 'X推文', enabled: true, group: 'E' },
+      { name: 'Reddit', value: 'Reddit', enabled: true, group: 'E' },
+      { name: '朋友圈', value: '朋友圈', enabled: true, group: 'F' },
+    ];
+  },
+
   // ============================================================
   //  Step 1: 输入素材
   // ============================================================
@@ -418,6 +640,26 @@ const PipelineView = {
         <button class="btn btn-sm pl-task-restore" data-task-id="${task.id}">恢复</button>
       </div>
     `).join('');
+    const hotspotRows = this.state.hotspots.map((item, idx) => `
+      <div style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;margin-top:8px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+          <div style="font-size:12px;line-height:1.5;min-width:0">
+            <div style="color:var(--text);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(item.title || '')}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">
+              ${escapeHtml(item.platform || item.category || item.source || '-')}${item.score != null ? ` · 分值 ${escapeHtml(item.score)}` : ''}${item.heat ? ` · 热度 ${escapeHtml(item.heat)}` : ''}
+            </div>
+          </div>
+          <button class="btn btn-sm pl-pick-hotspot" data-hotspot-idx="${idx}">选用</button>
+        </div>
+        ${item.summary ? `<div style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.6">${escapeHtml(item.summary)}</div>` : ''}
+      </div>
+    `).join('');
+    const warningRows = this.state.hotspotWarnings
+      .map((w) => `<div style="font-size:11px;color:#b45309;line-height:1.5">${escapeHtml(w)}</div>`)
+      .join('');
+    const sourceLabel = this.state.hotspotSourceUsed
+      ? `<span style="font-size:11px;color:var(--muted)">来源: ${escapeHtml(this.state.hotspotSourceUsed)}</span>`
+      : '';
 
     el.innerHTML = `
       <h3>输入素材</h3>
@@ -434,10 +676,59 @@ const PipelineView = {
         </div>
         ${taskRows || '<div style="font-size:12px;color:var(--muted)">暂无历史任务</div>'}
       </div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-header" style="display:flex;justify-content:space-between;align-items:center">
+          <span>热点池（阶段1）</span>
+          ${sourceLabel}
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+          <input class="form-input" id="pl-hotspot-query" placeholder="关键词过滤（可留空）" style="max-width:280px" value="${escapeHtml(this.state.hotspotQuery || '')}" />
+          <select class="form-select" id="pl-hotspot-source" style="width:auto">
+            <option value="auto" ${this.state.hotspotSource === 'auto' ? 'selected' : ''}>自动</option>
+            <option value="google_sheets" ${this.state.hotspotSource === 'google_sheets' ? 'selected' : ''}>仅 Google Sheets</option>
+            <option value="manual" ${this.state.hotspotSource === 'manual' ? 'selected' : ''}>仅手动热点池</option>
+          </select>
+          <button class="btn btn-sm" id="pl-hotspot-search">刷新热点</button>
+        </div>
+        ${warningRows ? `<div style="margin-bottom:8px">${warningRows}</div>` : ''}
+        <div style="max-height:260px;overflow:auto;padding-right:2px">
+          ${hotspotRows || '<div style="font-size:12px;color:var(--muted)">暂无热点数据，点击“刷新热点”重试</div>'}
+        </div>
+      </div>
       <div class="form-group">
         <label class="form-label">素材内容</label>
         <textarea class="form-textarea" id="pl-input" placeholder="输入关键词、想法、或粘贴一段长文本/热帖内容..."
           style="min-height:250px">${this.state.input}</textarea>
+      </div>
+      ${this.state.selectedHotspot ? `
+        <div class="card" style="margin-bottom:12px">
+          <div class="card-header">已选热点（阶段2）</div>
+          <div style="font-size:12px;line-height:1.7">
+            <div><strong>${escapeHtml(this.state.selectedHotspot.title || this.state.selectedHotspot.id || '')}</strong></div>
+            <div style="color:var(--muted)">${escapeHtml(this.state.selectedHotspot.category || this.state.selectedHotspot.platform || '-')}</div>
+          </div>
+        </div>
+      ` : ''}
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-header">热点补充信息（阶段3）</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px">
+          支持换行或逗号分隔。会写入任务状态，供后续母稿生成使用。
+        </div>
+        <div class="form-group">
+          <label class="form-label">关键事实（facts）</label>
+          <textarea class="form-textarea" id="pl-hotspot-facts" placeholder="例如：数据、时间、事件、案例..."
+            style="min-height:90px">${escapeHtml(this.state.hotspotFactsText || '')}</textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">约束条件（constraints）</label>
+          <textarea class="form-textarea" id="pl-hotspot-constraints" placeholder="例如：口吻限制、不能提及、合规边界..."
+            style="min-height:90px">${escapeHtml(this.state.hotspotConstraintsText || '')}</textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">参考素材（materials）</label>
+          <textarea class="form-textarea" id="pl-hotspot-materials" placeholder="例如：引用链接、资料来源、补充线索..."
+            style="min-height:90px">${escapeHtml(this.state.hotspotMaterialsText || '')}</textarea>
+        </div>
       </div>
       <div class="pipeline-nav">
         <span></span>
@@ -445,10 +736,27 @@ const PipelineView = {
       </div>
     `;
 
-    document.getElementById('pl-next1').onclick = () => {
+    document.getElementById('pl-next1').onclick = async () => {
       const val = document.getElementById('pl-input').value.trim();
       if (!val) { showToast('请输入素材内容', 'error'); return; }
+      const factsText = document.getElementById('pl-hotspot-facts').value.trim();
+      const constraintsText = document.getElementById('pl-hotspot-constraints').value.trim();
+      const materialsText = document.getElementById('pl-hotspot-materials').value.trim();
+
       this.state.input = val;
+      this.state.hotspotFactsText = factsText;
+      this.state.hotspotConstraintsText = constraintsText;
+      this.state.hotspotMaterialsText = materialsText;
+      const ready = await this._ensureTaskContext();
+      if (!ready) return;
+      await this._syncHotspotStage();
+      await this._syncHotspotSelect();
+      await this._syncHotspotEnrich({
+        enrichment: val,
+        facts: parseTextList(factsText),
+        constraints: parseTextList(constraintsText),
+        materials: parseTextList(materialsText),
+      });
       this.state.step = 1;
       this.render();
     };
@@ -458,8 +766,48 @@ const PipelineView = {
       this._renderInput();
     };
 
+    document.getElementById('pl-hotspot-search').onclick = async () => {
+      this.state.hotspotQuery = document.getElementById('pl-hotspot-query').value.trim();
+      this.state.hotspotSource = document.getElementById('pl-hotspot-source').value || 'auto';
+      await this._loadHotspots(true);
+      this._renderInput();
+    };
+
+    document.getElementById('pl-hotspot-query').onkeydown = async (e) => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      this.state.hotspotQuery = document.getElementById('pl-hotspot-query').value.trim();
+      this.state.hotspotSource = document.getElementById('pl-hotspot-source').value || 'auto';
+      await this._loadHotspots(true);
+      this._renderInput();
+    };
+
     document.querySelectorAll('.pl-task-restore').forEach((btn) => {
       btn.onclick = () => this._restoreTask(btn.dataset.taskId);
+    });
+
+    document.querySelectorAll('.pl-pick-hotspot').forEach((btn) => {
+      btn.onclick = () => {
+        const idx = Number.parseInt(btn.dataset.hotspotIdx, 10);
+        const hotspot = this.state.hotspots[idx];
+        if (!hotspot) return;
+
+        const sourceText = [hotspot.title, hotspot.summary].filter(Boolean).join('\n\n');
+        this.state.selectedHotspot = hotspot;
+        this.state.input = sourceText || hotspot.title || '';
+        this.state.hotspotFactsText = Array.isArray(hotspot.tags) ? hotspot.tags.join('\n') : '';
+        this.state.hotspotConstraintsText = '';
+        this.state.hotspotMaterialsText = hotspot.url ? String(hotspot.url) : '';
+        const inputEl = document.getElementById('pl-input');
+        if (inputEl) inputEl.value = this.state.input;
+        const factsEl = document.getElementById('pl-hotspot-facts');
+        if (factsEl) factsEl.value = this.state.hotspotFactsText;
+        const constraintsEl = document.getElementById('pl-hotspot-constraints');
+        if (constraintsEl) constraintsEl.value = this.state.hotspotConstraintsText;
+        const materialsEl = document.getElementById('pl-hotspot-materials');
+        if (materialsEl) materialsEl.value = this.state.hotspotMaterialsText;
+        showToast(`已选热点: ${hotspot.title || hotspot.id || '未命名热点'}`);
+      };
     });
   },
 
@@ -469,14 +817,28 @@ const PipelineView = {
   _renderDraft() {
     const el = document.getElementById('pipeline-content');
     let html = `<h3>选择创作方向 & AI 引擎</h3>`;
+    const styleList = this.state.styleCatalog.length > 0 ? this.state.styleCatalog : this.STYLE_FALLBACK;
+    const engineOptions = this.state.engineOptions.length > 0
+      ? this.state.engineOptions
+      : [{ value: 'claude', label: 'Claude CLI (本地)', available: true }];
+    const engineOptionRows = engineOptions.map((item) => {
+      const value = String(item?.value || '').trim();
+      if (!value) return '';
+      const label = item?.label || value;
+      const selected = this.state.engine === value ? 'selected' : '';
+      const unavailable = item?.available === false;
+      const disabled = unavailable ? 'disabled' : '';
+      const suffix = unavailable ? ' (未配置)' : '';
+      return `<option value="${escapeHtml(value)}" ${selected} ${disabled}>${escapeHtml(`${label}${suffix}`)}</option>`;
+    }).join('');
 
     // 创作方向
     html += `<div class="style-grid">`;
-    this.STYLES.forEach(s => {
+    styleList.forEach(s => {
       const sel = this.state.style === s.key ? 'selected' : '';
       html += `
         <div class="style-option ${sel}" data-style="${s.key}">
-          <div class="style-name">${s.name}</div>
+          <div class="style-name">${s.label || s.name || s.key}</div>
           <div class="style-desc">${s.desc}</div>
         </div>`;
     });
@@ -487,9 +849,7 @@ const PipelineView = {
       <div class="form-group">
         <label class="form-label">AI 引擎</label>
         <select class="form-select" id="pl-engine">
-          <option value="claude" ${this.state.engine === 'claude' ? 'selected' : ''}>Claude CLI (本地)</option>
-          <option value="openrouter" ${this.state.engine === 'openrouter' ? 'selected' : ''}>OpenRouter (云端)</option>
-          <option value="deepseek" ${this.state.engine === 'deepseek' ? 'selected' : ''}>DeepSeek (云端)</option>
+          ${engineOptionRows}
         </select>
       </div>
     `;
@@ -614,16 +974,20 @@ const PipelineView = {
   // ============================================================
   _renderPlatforms() {
     const el = document.getElementById('pipeline-content');
+    const platformList = this._getActivePlatforms();
+    const allowedSet = new Set(platformList.map((item) => item.value));
+    this.state.platforms = this.state.platforms.filter((name) => allowedSet.has(name));
+    this.state.platformsOptimize = this.state.platformsOptimize.filter((name) => allowedSet.has(name));
     let html = `<h3>选择目标平台</h3>`;
 
     // 平台选择
     html += `<div class="platform-grid">`;
-    this.PLATFORMS.forEach(p => {
-      const checked = this.state.platforms.includes(p.skill) ? 'checked' : '';
+    platformList.forEach(p => {
+      const checked = this.state.platforms.includes(p.value) ? 'checked' : '';
       html += `
-        <label class="platform-check ${checked}" data-platform="${p.skill}">
+        <label class="platform-check ${checked}" data-platform="${p.value}">
           <input type="checkbox" ${checked ? 'checked' : ''} />
-          ${p.skill}
+          ${p.name}
         </label>`;
     });
     html += `</div>`;
@@ -693,7 +1057,7 @@ const PipelineView = {
     });
 
     document.getElementById('pl-select-all').onclick = () => {
-      this.state.platforms = this.PLATFORMS.map(p => p.skill);
+      this.state.platforms = platformList.map(p => p.value);
       document.querySelectorAll('.platform-check').forEach(l => {
         l.classList.add('checked');
         l.querySelector('input').checked = true;
@@ -1328,7 +1692,7 @@ const PipelineView = {
 
     document.getElementById('pl-back6').onclick = () => { this.state.step = 3; this.render(); };
     document.getElementById('pl-restart').onclick = () => {
-      const { engine, platformCatalog, engineOptions, recentTasks } = this.state;
+      const { engine, platformCatalog, styleCatalog, engineOptions, recentTasks, hotspotSource, pipelineStages } = this.state;
       this.state = {
         step: 0,
         taskId: '',
@@ -1336,6 +1700,15 @@ const PipelineView = {
         taskCurrentStage: '',
         taskSnapshot: null,
         recentTasks,
+        hotspots: [],
+        hotspotQuery: '',
+        hotspotSource: hotspotSource || 'auto',
+        hotspotWarnings: [],
+        hotspotSourceUsed: '',
+        selectedHotspot: null,
+        hotspotFactsText: '',
+        hotspotConstraintsText: '',
+        hotspotMaterialsText: '',
         input: '',
         style: '',
         engine,
@@ -1345,7 +1718,9 @@ const PipelineView = {
         platformsOptimize: [],
         platformResults: [],
         platformCatalog,
+        styleCatalog,
         engineOptions,
+        pipelineStages,
         images: [],
         coverExtractions: {},
         illustrationExtractions: {},
@@ -1359,7 +1734,7 @@ const PipelineView = {
     document.getElementById('pl-assemble').onclick = async () => {
       const btn = document.getElementById('pl-assemble');
       btn.disabled = true;
-      btn.textContent = '组装中...';
+      btn.textContent = '排版中...';
 
       try {
         const contents = finalContents.map(r => ({
@@ -1368,9 +1743,21 @@ const PipelineView = {
           file: r.file || '',
         }));
 
+        const composeResult = await API.post('/pipeline/compose', {
+          contents,
+          images: this.state.images,
+          taskId: this.state.taskId,
+        });
+        this._updateTaskFromResponse(composeResult);
+        const layoutFiles = Array.isArray(composeResult?.results)
+          ? composeResult.results.map((x) => x.file).filter(Boolean)
+          : [];
+
+        btn.textContent = '导出中...';
         const result = await API.post('/pipeline/assemble', {
           contents,
           images: this.state.images,
+          layoutFiles,
           taskId: this.state.taskId,
         });
 

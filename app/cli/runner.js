@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
  * [INPUT]: 依赖 core/pipeline 共享层
- * [OUTPUT]: CLI Runner（阶段查看、任务创建、任务推进、任务查询、已实现阶段执行）
- * [POS]: app/cli 的最小可用入口，验证双通道共享任务状态
+ * [OUTPUT]: CLI Runner（阶段查看、热点读取、任务创建、任务推进、已实现阶段执行）
+ * [POS]: app/cli 的最小可用入口，验证双通道共享任务状态与阶段执行
  */
 
 const path = require('path');
@@ -20,6 +20,7 @@ const AIAdapter = require('../../webapp/services/ai-adapter');
 const SkillLoader = require('../../webapp/services/skill-loader');
 const ComplianceEngine = require('../../webapp/services/compliance-engine');
 const ImageGenerator = require('../../webapp/services/image-generator');
+const HotspotService = require('../../core/services/hotspot/hotspot-service');
 const { resolveRuntimeEnv } = require('../../core/config/runtime-env');
 
 const PROJECT_ROOT = path.join(__dirname, '..', '..');
@@ -37,11 +38,16 @@ const outputManager = new OutputManager(OUTPUT_DIR);
 const aiAdapter = new AIAdapter();
 const skillLoader = new SkillLoader(COMMANDS_DIR, configManager, TEMPLATES_DIR);
 const complianceEngine = new ComplianceEngine(configManager);
+const hotspotService = new HotspotService({
+  configDir: CONFIG_DIR,
+  runtimeEnv,
+});
 const imageGenerator = runtimeEnv.image.apiKey
   ? new ImageGenerator(runtimeEnv.image.apiKey, OUTPUT_DIR, runtimeEnv.image.model)
   : null;
 const stepExecutor = new PipelineStepExecutor({
   runner,
+  hotspotService,
   aiAdapter,
   skillLoader,
   outputManager,
@@ -50,10 +56,14 @@ const stepExecutor = new PipelineStepExecutor({
   projectRoot: PROJECT_ROOT,
 });
 const EXECUTABLE_STAGE_SET = new Set([
+  'hotspot-list',
+  'hotspot-select',
+  'hotspot-enrich',
   'draft-generate',
   'platform-rewrite',
   'review-optimize',
   'visual-generate',
+  'layout-compose',
   'export-output',
 ]);
 if (!imageGenerator) {
@@ -73,6 +83,19 @@ async function main() {
 
     if (command === 'stages') {
       printStages();
+      return;
+    }
+
+    if (command === 'hotspots' && subcommand === 'list') {
+      const query = flagValue('--query', '').trim();
+      const limit = Number.parseInt(flagValue('--limit', '20'), 10);
+      const source = flagValue('--source', 'auto').trim() || 'auto';
+      const result = await hotspotService.listHotspots({
+        query,
+        limit: Number.isNaN(limit) ? 20 : limit,
+        source,
+      });
+      console.log(JSON.stringify(result, null, 2));
       return;
     }
 
@@ -274,7 +297,16 @@ function resolveTextInput(directFlag, fileFlag) {
 }
 
 function buildRunOptions() {
+  const limit = Number.parseInt(flagValue('--limit', '20'), 10);
   return {
+    query: flagValue('--query', '').trim(),
+    limit: Number.isNaN(limit) ? 20 : limit,
+    source: flagValue('--source', 'auto').trim() || 'auto',
+    hotspotId: flagValue('--hotspot-id', '').trim(),
+    enrichment: resolveTextInput('--enrichment', '--enrichment-file'),
+    facts: splitListFlag('--facts'),
+    constraints: splitListFlag('--constraints'),
+    materials: splitListFlag('--materials'),
     input: resolveTextInput('--input', '--input-file'),
     draftContent: resolveTextInput('--draft-content', '--draft-content-file'),
     draftFile: flagValue('--draft-file', '').trim(),
@@ -471,19 +503,28 @@ function printHelp() {
   console.log(`
 用法:
   node app/cli/runner.js stages
+  node app/cli/runner.js hotspots list [--query 关键词] [--limit 20] [--source auto]
   node app/cli/runner.js tasks list [--limit 20]
   node app/cli/runner.js task create --title "热点任务" [--source manual]
+  node app/cli/runner.js task run-step --id task-xxxx --stage hotspot-list [--query 关键词]
+  node app/cli/runner.js task run-step --id task-xxxx --stage hotspot-select [--hotspot-id manual-1]
+  node app/cli/runner.js task run-step --id task-xxxx --stage hotspot-enrich [--enrichment "补充信息"]
   node app/cli/runner.js task show --id task-xxxx
   node app/cli/runner.js task advance --id task-xxxx --to review-optimize [--confirm] [--note "备注"]
   node app/cli/runner.js task run-step --id task-xxxx --stage draft-generate --input "素材"
   node app/cli/runner.js task run-step --id task-xxxx --stage platform-rewrite [--platforms 公众号,知乎]
   node app/cli/runner.js task run-step --id task-xxxx --stage review-optimize [--platforms 公众号,知乎]
   node app/cli/runner.js task run-step --id task-xxxx --stage visual-generate [--platforms 公众号] [--image-type both]
+  node app/cli/runner.js task run-step --id task-xxxx --stage layout-compose [--platforms 公众号,知乎]
   node app/cli/runner.js task run-step --id task-xxxx --stage export-output [--platforms 公众号,知乎]
   node app/cli/runner.js task run-range --id task-xxxx --from draft-generate --to export-output
   node app/cli/runner.js task run-range --id task-xxxx --resume-from-failed [--to export-output]
 
 说明:
+  --query / --limit / --source               热点读取参数（hotspots list / hotspot-list）
+  --hotspot-id                               选择热点（hotspot-select），匹配热点 id 或标题
+  --enrichment / --enrichment-file           热点补充信息（hotspot-enrich）
+  --facts / --constraints / --materials      逗号分隔附加信息（hotspot-enrich）
   --input / --input-file                    传入输入素材（draft-generate）
   --draft-content / --draft-content-file    直接传入母稿（platform-rewrite）
   --draft-file                              指定母稿文件（platform-rewrite）
@@ -498,7 +539,7 @@ function printHelp() {
   --on-error                                run-range 失败策略: stop|skip（默认 stop）
   --retry                                   run-range 单阶段失败重试次数（默认 0）
   --resume-from-failed                      run-range 自动从最近失败阶段续跑（可省略 --from/--to）
-  run-range                                 仅执行当前 CLI 已支持的阶段（draft/platform/review/visual/export）
+  run-range                                 仅执行当前 CLI 已支持的阶段（hotspot-list/select/enrich + draft/platform/review/visual/layout/export）
   visual-generate                           依赖图片 API Key，未配置时 run-range 会自动跳过该阶段
 `);
 }

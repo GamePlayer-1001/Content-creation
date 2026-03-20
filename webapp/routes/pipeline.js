@@ -1,12 +1,19 @@
 /**
  * [INPUT]: 依赖 aiAdapter + skillLoader + outputManager + complianceEngine
- * [OUTPUT]: GET /api/pipeline/stages + task API + draft/platforms/optimize/extract/assemble
- * [POS]: routes/ 的内容流水线 API, 5步向导核心后端 (optimize 合并入 platforms 步骤)
+ * [OUTPUT]: GET /api/pipeline/stages + hotspots/platforms + task API + draft/platforms/optimize/compose/assemble
+ * [POS]: routes/ 的内容流水线 API, 5步向导核心后端（含热点阶段与排版导出）
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 
 const router = require('express').Router();
 const path = require('path');
+const {
+  CREATION_STYLES,
+  PLATFORM_CATALOG,
+  resolvePlatformSkillName,
+  listCreationStyles,
+} = require('../../core/pipeline/catalog');
+const { composeLayoutMarkdown } = require('../../core/pipeline/layout-composer');
 
 // ============================================================
 //  动态并发信号量 — 2并发起步, 4任务完成后升至4并发
@@ -34,75 +41,6 @@ function createDynamicLimiter(initial, max, rampAfter) {
   });
 }
 
-// ============================================================
-//  8 种创作方向（融合原 thinking_modes，与 creator.yaml 对齐）
-//  每种方向 = 创作角度 + 思维框架，单一信号源
-// ============================================================
-const CREATION_STYLES = {
-  contrarian: {
-    label: '反对大众观点',
-    thinking: '大家都说XX对，但其实...',
-    prompt: '请以挑战主流认知的角度来写。大胆质疑大众普遍接受的观点，用事实和逻辑反驳常见误区，引发读者重新思考。语气犀利但有理有据。',
-  },
-  fresh: {
-    label: '提出新观点',
-    thinking: '没人这么想过，但如果...',
-    prompt: '请从一个全新的、前所未有的角度来解读这个话题。避免重复已有的讨论，而是提出独到的见解和创新性的思考框架，让读者有"原来还能这样看"的感觉。',
-  },
-  debunk: {
-    label: '反对旧观点提出新观点',
-    thinking: '传统做法是XX，更好的方式是...',
-    prompt: '先破后立：先指出现有主流观点的漏洞和局限性，用数据或案例论证其不足，然后提出你的新观点作为替代方案。逻辑链条要清晰有力。',
-  },
-  extend: {
-    label: '剖析旧观点引申新价值',
-    thinking: '大家都知道XX，但很少人意识到...',
-    prompt: '深入剖析已有观点的底层逻辑，挖掘出被忽视的新维度和隐藏价值。不是否定原有观点，而是在其基础上发现新的可能性和应用场景。',
-  },
-  contrast: {
-    label: '反差冲突对比',
-    thinking: '你以为是A，其实是B',
-    prompt: '用强烈的对比和反差来制造认知冲击。将看似矛盾的事物放在一起比较，揭示隐藏的联系或讽刺的现实。善用"你以为是A，其实是B"的叙事结构。',
-  },
-  review: {
-    label: '对比评测',
-    thinking: '多维度横评，数据说话',
-    prompt: '以客观评测者的视角，从多个维度（成本、效果、易用性、适用场景等）横向对比。用具体数据和真实使用体验说话，给出有理有据的推荐结论。',
-  },
-  deconstruct: {
-    label: '深度拆解',
-    thinking: '逐层剖析底层逻辑',
-    prompt: '像庖丁解牛一样，逐层剖析这个话题的底层逻辑、运作机制、关键节点。从表象到本质，从现象到规律，让读者获得系统性的认知升级。',
-  },
-  predict: {
-    label: '趋势预判',
-    thinking: '信号→趋势→预测',
-    prompt: '基于当前信号和历史规律，预测这个领域的未来走向。分析关键趋势、拐点信号和可能的演化路径。语气要自信但留有余地，让读者觉得有前瞻性。',
-  },
-};
-
-// ============================================================
-//  平台映射 (Skill → 输出目录)
-// ============================================================
-const PLATFORMS = [
-  // A组：长图文
-  { skill: '公众号', dir: '公众号', group: 'A' },
-  { skill: '知乎',   dir: '知乎',   group: 'A' },
-  // B组：技术社区
-  { skill: 'linuxdo', dir: 'linuxdo', group: 'B' },
-  { skill: 'GitHub', dir: 'GitHub', group: 'B' },
-  // C组：社交平台
-  { skill: '小红书', dir: '小红书', group: 'C' },
-  { skill: '即刻',   dir: '即刻',   group: 'C' },
-  // D组：国际长文
-  { skill: 'Medium', dir: 'Medium', group: 'D' },
-  { skill: 'Quora',  dir: 'Quora',  group: 'D' },
-  // E组：国际社交
-  { skill: 'X推文',  dir: 'X',      group: 'E' },
-  { skill: 'Reddit', dir: 'Reddit', group: 'E' },
-  // F组：私域
-  { skill: '朋友圈', dir: '朋友圈', group: 'F' },
-];
 
 // ============================================================
 //  共享阶段定义与任务状态 API（WebApp/CLI 共用）
@@ -155,15 +93,240 @@ router.post('/tasks/:taskId/advance', (req, res) => {
   }
 });
 
+router.get('/hotspots', async (req, res) => {
+  const hotspotService = req.app.locals.hotspotService;
+  if (!hotspotService) return res.status(500).json({ error: 'hotspotService 未初始化' });
+
+  try {
+    const query = String(req.query.query || '');
+    const limit = Number.parseInt(req.query.limit, 10);
+    const source = String(req.query.source || 'auto');
+    const result = await hotspotService.listHotspots({
+      query,
+      limit: Number.isNaN(limit) ? 20 : limit,
+      source,
+    });
+    res.json(result);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+router.post('/tasks/:taskId/hotspot-list', async (req, res) => {
+  const hotspotService = req.app.locals.hotspotService;
+  const runner = req.app.locals.workflowRunner;
+  if (!hotspotService) return res.status(500).json({ error: 'hotspotService 未初始化' });
+  if (!runner) return res.status(500).json({ error: 'workflowRunner 未初始化' });
+
+  try {
+    const query = String(req.body?.query || '');
+    const limit = Number.parseInt(req.body?.limit, 10);
+    const source = String(req.body?.source || 'auto');
+    const note = String(req.body?.note || '');
+    const result = await hotspotService.listHotspots({
+      query,
+      limit: Number.isNaN(limit) ? 20 : limit,
+      source,
+    });
+
+    const snapshotItems = Array.isArray(result.items)
+      ? result.items.slice(0, 50).map((item) => ({
+        id: item.id || '',
+        title: item.title || '',
+        summary: item.summary || '',
+        category: item.category || '',
+        platform: item.platform || '',
+        url: item.url || '',
+        score: item.score ?? null,
+        heat: item.heat || '',
+        tags: Array.isArray(item.tags) ? item.tags : [],
+        publishedAt: item.publishedAt || '',
+        source: item.source || result.source || '',
+      }))
+      : [];
+
+    const advanced = runner.advanceTask(req.params.taskId, {
+      toStage: 'hotspot-list',
+      note: note || `WebApp 热点列表同步 (${result.total})`,
+      metadataPatch: {
+        hotspotListSnapshot: {
+          at: new Date().toISOString(),
+          source: result.source,
+          query: result.query || '',
+          total: result.total || 0,
+          warnings: Array.isArray(result.warnings) ? result.warnings : [],
+          items: snapshotItems,
+        },
+      },
+    });
+
+    res.json({
+      ...result,
+      task: advanced.task,
+      advanced: advanced.advanced,
+      requiresConfirmation: advanced.requiresConfirmation,
+      message: advanced.message || null,
+    });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+router.post('/tasks/:taskId/hotspot-select', (req, res) => {
+  const runner = req.app.locals.workflowRunner;
+  if (!runner) return res.status(500).json({ error: 'workflowRunner 未初始化' });
+
+  try {
+    const taskId = req.params.taskId;
+    const task = runner.getTask(taskId);
+    if (!task) return res.status(404).json({ error: `任务不存在: ${taskId}` });
+
+    const hotspotId = String(req.body?.hotspotId || '').trim();
+    const incomingHotspot = req.body?.hotspot && typeof req.body.hotspot === 'object'
+      ? req.body.hotspot
+      : null;
+    const confirm = req.body?.confirm !== false;
+    const note = String(req.body?.note || '').trim();
+
+    const snapshotItems = Array.isArray(task?.metadata?.hotspotListSnapshot?.items)
+      ? task.metadata.hotspotListSnapshot.items
+      : [];
+    const selectedHotspot = incomingHotspot || snapshotItems.find((item) => {
+      if (!item) return false;
+      if (hotspotId && item.id && String(item.id) === hotspotId) return true;
+      if (hotspotId && item.title && String(item.title) === hotspotId) return true;
+      return false;
+    });
+
+    if (!selectedHotspot) {
+      return res.status(400).json({ error: '未找到要选择的热点，请传入 hotspotId 或 hotspot 对象' });
+    }
+
+    const advanced = runner.advanceTask(taskId, {
+      toStage: 'hotspot-select',
+      confirm,
+      note: note || `热点选择完成: ${selectedHotspot.title || selectedHotspot.id || '未命名热点'}`,
+      metadataPatch: {
+        selectedHotspot: {
+          id: selectedHotspot.id || '',
+          title: selectedHotspot.title || '',
+          summary: selectedHotspot.summary || '',
+          category: selectedHotspot.category || '',
+          platform: selectedHotspot.platform || '',
+          url: selectedHotspot.url || '',
+          score: selectedHotspot.score ?? null,
+          heat: selectedHotspot.heat || '',
+          tags: Array.isArray(selectedHotspot.tags) ? selectedHotspot.tags : [],
+          publishedAt: selectedHotspot.publishedAt || '',
+          source: selectedHotspot.source || '',
+        },
+      },
+    });
+
+    res.json({
+      selectedHotspot,
+      task: advanced.task,
+      advanced: advanced.advanced,
+      requiresConfirmation: advanced.requiresConfirmation,
+      message: advanced.message || null,
+    });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+router.post('/tasks/:taskId/hotspot-enrich', (req, res) => {
+  const runner = req.app.locals.workflowRunner;
+  if (!runner) return res.status(500).json({ error: 'workflowRunner 未初始化' });
+
+  try {
+    const taskId = req.params.taskId;
+    const task = runner.getTask(taskId);
+    if (!task) return res.status(404).json({ error: `任务不存在: ${taskId}` });
+
+    const confirm = req.body?.confirm !== false;
+    const note = String(req.body?.note || '').trim();
+    const enrichment = String(req.body?.enrichment || req.body?.input || '').trim();
+    const facts = _normalizeList(req.body?.facts);
+    const constraints = _normalizeList(req.body?.constraints);
+    const materials = _normalizeList(req.body?.materials);
+
+    const selectedHotspot = task?.metadata?.selectedHotspot || null;
+    const fallbackText = selectedHotspot
+      ? [selectedHotspot.title, selectedHotspot.summary].filter(Boolean).join('\n\n')
+      : '';
+    const content = enrichment || fallbackText;
+
+    if (!content && facts.length === 0 && constraints.length === 0 && materials.length === 0) {
+      return res.status(400).json({ error: 'hotspot-enrich 至少需要 enrichment/facts/constraints/materials 之一' });
+    }
+
+    const now = new Date().toISOString();
+    const advanced = runner.advanceTask(taskId, {
+      toStage: 'hotspot-enrich',
+      confirm,
+      note: note || '热点补充信息已录入',
+      metadataPatch: {
+        hotspotEnrichment: {
+          at: now,
+          enrichment: content,
+          facts,
+          constraints,
+          materials,
+        },
+        inputSnapshot: content || task?.metadata?.inputSnapshot || '',
+      },
+    });
+
+    res.json({
+      hotspotEnrichment: {
+        enrichment: content,
+        facts,
+        constraints,
+        materials,
+      },
+      task: advanced.task,
+      advanced: advanced.advanced,
+      requiresConfirmation: advanced.requiresConfirmation,
+      message: advanced.message || null,
+    });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+router.get('/platforms', (req, res) => {
+  const { configManager } = req.app.locals;
+  const enabledBySkill = new Map();
+  try {
+    const parsed = configManager.read('platforms.yaml');
+    if (parsed && typeof parsed === 'object') {
+      for (const [name, value] of Object.entries(parsed)) {
+        if (!value || typeof value !== 'object' || Array.isArray(value)) continue;
+        const skillName = resolvePlatformSkillName(name);
+        if (!skillName) continue;
+        enabledBySkill.set(skillName, value.enabled !== false);
+      }
+    }
+  } catch {}
+
+  res.json(PLATFORM_CATALOG.map((item) => ({
+    name: item.skill,
+    value: item.skill,
+    enabled: enabledBySkill.has(item.skill) ? enabledBySkill.get(item.skill) : true,
+    group: item.group,
+  })));
+});
+
 // ============================================================
 //  获取创作方向列表
 // ============================================================
 router.get('/styles', (req, res) => {
-  const styles = Object.entries(CREATION_STYLES).map(([key, val]) => ({
-    key,
-    label: val.label,
-  }));
-  res.json(styles);
+  res.json(listCreationStyles().map((item) => ({
+    key: item.key,
+    label: item.label,
+    desc: item.desc || item.thinking || '',
+  })));
 });
 
 // ============================================================
@@ -256,9 +419,12 @@ router.post('/platforms', async (req, res) => {
       return res.end();
     }
 
-    const targetPlatforms = platforms && platforms.length > 0
-      ? PLATFORMS.filter(p => platforms.includes(p.skill))
-      : PLATFORMS;
+    const allowed = Array.isArray(platforms) && platforms.length > 0
+      ? new Set(platforms.map((name) => resolvePlatformSkillName(name)).filter(Boolean))
+      : null;
+    const targetPlatforms = allowed
+      ? PLATFORM_CATALOG.filter((p) => allowed.has(p.skill))
+      : PLATFORM_CATALOG;
 
     _send(res, { type: 'status', message: `开始生成 ${targetPlatforms.length} 个平台 (并发2→4)...`, total: targetPlatforms.length });
 
@@ -496,10 +662,72 @@ ${draftContent.slice(0, 3000)}`;
 });
 
 // ============================================================
+//  Step 4.5: 排版（布局稿）
+// ============================================================
+router.post('/compose', async (req, res) => {
+  const { contents = [], images = [], taskId = null } = req.body || {};
+  const { outputManager } = req.app.locals;
+
+  try {
+    const composeItems = Array.isArray(contents) ? contents : [];
+    if (composeItems.length === 0) {
+      return res.status(400).json({ error: 'compose 需要 contents' });
+    }
+
+    const now = new Date().toISOString();
+    const today = now.slice(0, 10).replace(/-/g, '');
+    const results = [];
+
+    for (const item of composeItems) {
+      const platform = String(item?.platform || '').trim();
+      if (!platform) continue;
+
+      const sourceContent = String(item?.content || '');
+      const relatedImages = (Array.isArray(images) ? images : []).filter((img) => img?.platform === platform);
+      const markdown = composeLayoutMarkdown({
+        platform,
+        sourceFile: item?.file || '',
+        sourceContent,
+        images: relatedImages,
+      });
+
+      const filename = `${today}-layout-${_safeFileName(platform, 24)}.md`;
+      outputManager.writeFile(platform, filename, markdown);
+      results.push({
+        platform,
+        file: `${platform}/${filename}`,
+        length: markdown.length,
+        imageCount: relatedImages.length,
+      });
+    }
+
+    if (results.length === 0) {
+      return res.status(400).json({ error: 'compose 未生成任何排版文件' });
+    }
+
+    const taskProgress = _advanceTask(req, taskId, 'layout-compose', {
+      confirm: true,
+      note: `WebApp 排版完成 (${results.length} 个平台)`,
+      metadataPatch: {
+        layoutFiles: results.map((r) => r.file),
+      },
+    });
+
+    res.json({
+      results,
+      task: taskProgress?.task || null,
+      taskProgressError: taskProgress?.error || null,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
 //  Step 5: 组装最终文件
 // ============================================================
 router.post('/assemble', async (req, res) => {
-  const { contents, images, taskId = null } = req.body;
+  const { contents, images, layoutFiles = [], taskId = null } = req.body;
   // contents: [{ platform, content, file }]
   // images: [{ platform, path }]
   const { outputManager } = req.app.locals;
@@ -545,6 +773,7 @@ router.post('/assemble', async (req, res) => {
     const taskProgress = _advanceTask(req, taskId, 'export-output', {
       note: `WebApp Step5 导出完成 (${results.length} 个文件)`,
       metadataPatch: {
+        layoutFiles: Array.isArray(layoutFiles) ? layoutFiles : [],
         finalFiles: results.map(r => r.file),
       },
     });
@@ -581,6 +810,27 @@ function _stripMarkdown(text) {
     .replace(/^---+$/gm, '')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
+}
+
+function _normalizeList(input) {
+  if (Array.isArray(input)) {
+    return input.map((x) => String(x || '').trim()).filter(Boolean);
+  }
+  const text = String(input || '').trim();
+  if (!text) return [];
+  return text
+    .split(/[,\uFF0C;\n]/g)
+    .map((x) => x.trim())
+    .filter(Boolean);
+}
+
+function _safeFileName(text, maxLen = 24) {
+  const safe = String(text || '')
+    .replace(/[<>:"/\\|?*\n\r#]/g, '_')
+    .replace(/\s+/g, '_')
+    .slice(0, maxLen)
+    .trim();
+  return safe || 'untitled';
 }
 
 function _sseHeaders(res) {

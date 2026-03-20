@@ -11,8 +11,8 @@ const PIPELINE_STAGES = Object.freeze([
     label: '读谷歌表格热点列表',
     description: '从热点池读取可选主题并做初步过滤。',
     requiresConfirmation: false,
-    implemented: false,
-    apiPath: null,
+    implemented: true,
+    apiPath: '/api/pipeline/hotspots',
   },
   {
     key: 'hotspot-select',
@@ -20,8 +20,8 @@ const PIPELINE_STAGES = Object.freeze([
     label: '选热点',
     description: '选择本轮要进入创作流程的热点。',
     requiresConfirmation: true,
-    implemented: false,
-    apiPath: null,
+    implemented: true,
+    apiPath: '/api/pipeline/tasks/:taskId/hotspot-select',
   },
   {
     key: 'hotspot-enrich',
@@ -29,8 +29,8 @@ const PIPELINE_STAGES = Object.freeze([
     label: '录入热点详细内容',
     description: '补充事实、观点、约束和素材上下文。',
     requiresConfirmation: true,
-    implemented: false,
-    apiPath: null,
+    implemented: true,
+    apiPath: '/api/pipeline/tasks/:taskId/hotspot-enrich',
   },
   {
     key: 'draft-generate',
@@ -74,8 +74,8 @@ const PIPELINE_STAGES = Object.freeze([
     label: '排版',
     description: '组织图文结构并输出可读成品形态。',
     requiresConfirmation: true,
-    implemented: false,
-    apiPath: null,
+    implemented: true,
+    apiPath: '/api/pipeline/compose',
   },
   {
     key: 'export-output',

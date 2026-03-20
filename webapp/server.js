@@ -31,6 +31,7 @@ const ImageGenerator   = require('./services/image-generator');
 const PromptStore      = require('./services/prompt-store');
 const TaskStateStore   = require('../core/pipeline/task-state-store');
 const WorkflowRunner   = require('../core/pipeline/workflow-runner');
+const HotspotService   = require('../core/services/hotspot/hotspot-service');
 const { PIPELINE_STAGES } = require('../core/pipeline/stages');
 const { resolveRuntimeEnv } = require('../core/config/runtime-env');
 
@@ -44,6 +45,10 @@ const complianceEngine = new ComplianceEngine(configManager);
 const promptStore      = new PromptStore(CONFIG_DIR);
 const taskStateStore   = new TaskStateStore(path.join(OUTPUT_DIR, 'logs', 'pipeline-task-state.json'));
 const workflowRunner   = new WorkflowRunner(taskStateStore);
+const hotspotService   = new HotspotService({
+  configDir: CONFIG_DIR,
+  runtimeEnv,
+});
 
 // 图片生成: 优先读取规范变量，兼容旧变量
 const googleImageKey = runtimeEnv.image.apiKey;
@@ -73,6 +78,7 @@ app.locals.promptStore      = promptStore;
 app.locals.pipelineStages   = PIPELINE_STAGES;
 app.locals.taskStateStore   = taskStateStore;
 app.locals.workflowRunner   = workflowRunner;
+app.locals.hotspotService   = hotspotService;
 app.locals.runtimeEnv       = runtimeEnv;
 
 // ============================================================

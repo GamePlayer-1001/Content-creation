@@ -40,6 +40,16 @@ function resolveRuntimeEnv(env = process.env) {
         'gemini-3.1-flash-image-preview'
       ),
     },
+    hotspot: {
+      source: pickFirst(env, ['HOTSPOT_SOURCE'], 'auto'),
+      googleSheetsCsvUrl: pickFirst(env, ['HOTSPOT_GOOGLE_SHEETS_CSV_URL', 'GOOGLE_SHEETS_CSV_URL'], ''),
+      googleSheetId: pickFirst(env, ['HOTSPOT_GOOGLE_SHEET_ID', 'GOOGLE_SHEET_ID'], ''),
+      googleSheetGid: pickFirst(env, ['HOTSPOT_GOOGLE_SHEET_GID', 'GOOGLE_SHEET_GID'], '0'),
+      fetchTimeoutMs: toPositiveInt(
+        pickFirst(env, ['HOTSPOT_FETCH_TIMEOUT_MS'], '8000'),
+        8000
+      ),
+    },
   };
 }
 
@@ -52,6 +62,12 @@ function pickFirst(env, keys, fallback = '') {
 }
 
 function toPort(value, fallback) {
+  const parsed = Number.parseInt(value, 10);
+  if (Number.isNaN(parsed) || parsed <= 0) return fallback;
+  return parsed;
+}
+
+function toPositiveInt(value, fallback) {
   const parsed = Number.parseInt(value, 10);
   if (Number.isNaN(parsed) || parsed <= 0) return fallback;
   return parsed;
