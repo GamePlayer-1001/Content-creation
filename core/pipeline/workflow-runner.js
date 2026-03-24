@@ -28,6 +28,10 @@ class WorkflowRunner {
     return this.taskStateStore.getTask(taskId);
   }
 
+  getStage(stageKey) {
+    return getPipelineStage(stageKey);
+  }
+
   createTask(payload = {}) {
     const task = this.taskStateStore.createTask(payload);
     return {
@@ -47,6 +51,14 @@ class WorkflowRunner {
       throw new Error(`未知阶段: ${toStage}`);
     }
 
+    const pendingConfirmationStage = String(task.pendingConfirmationStage || '').trim();
+    if (pendingConfirmationStage) {
+      const isConfirmingPendingStage = pendingConfirmationStage === targetStage.key && confirm;
+      if (!isConfirmingPendingStage) {
+        throw new Error(`任务存在待确认阶段: ${pendingConfirmationStage}，请先确认后再继续`);
+      }
+    }
+
     const currentStage = task.currentStage ? getPipelineStage(task.currentStage) : null;
     if (currentStage) {
       const orderDiff = compareStageOrder(targetStage.key, currentStage.key);
@@ -54,7 +66,7 @@ class WorkflowRunner {
         throw new Error('阶段顺序校验失败');
       }
       if (orderDiff < 0) {
-        throw new Error(`不支持回退阶段: ${task.currentStage} -> ${targetStage.key}`);
+        throw new Error(`暂不支持回退阶段: ${task.currentStage} -> ${targetStage.key}`);
       }
     }
 
@@ -84,7 +96,7 @@ class WorkflowRunner {
         advanced: false,
         requiresConfirmation: true,
         task: saved,
-        message: `阶段 ${targetStage.label} 需要人工确认，请追加 --confirm 再推进。`,
+        message: `阶段 ${targetStage.label} 需要人工确认，请补充 confirm 后再推进。`,
       };
     }
 
@@ -121,6 +133,61 @@ class WorkflowRunner {
       requiresConfirmation: false,
       isCompleted: saved.status === 'completed',
       task: saved,
+    };
+  }
+
+  rewindTask(taskId, { toStage, note = '', metadataPatch = null } = {}) {
+    const task = this.taskStateStore.getTask(taskId);
+    if (!task) {
+      throw new Error(`任务不存在: ${taskId}`);
+    }
+
+    const targetStage = getPipelineStage(toStage);
+    if (!targetStage) {
+      throw new Error(`未知阶段: ${toStage}`);
+    }
+
+    const currentStage = task.currentStage ? getPipelineStage(task.currentStage) : null;
+    const pendingStage = task.pendingConfirmationStage ? getPipelineStage(task.pendingConfirmationStage) : null;
+    const anchorStage = pendingStage || currentStage;
+    if (anchorStage && compareStageOrder(targetStage.key, anchorStage.key) > 0) {
+      throw new Error(`不能回退到更靠后的阶段: ${targetStage.key}`);
+    }
+
+    const now = new Date().toISOString();
+    const history = Array.isArray(task.history) ? [...task.history] : [];
+    const completedStages = PIPELINE_STAGES
+      .filter((stage) => stage.order < targetStage.order)
+      .map((stage) => stage.key);
+    const previousStage = PIPELINE_STAGES
+      .filter((stage) => stage.order < targetStage.order)
+      .sort((a, b) => b.order - a.order)[0] || null;
+
+    const rewoundTask = {
+      ...task,
+      status: completedStages.length > 0 ? 'in_progress' : 'pending',
+      currentStage: previousStage ? previousStage.key : null,
+      pendingConfirmationStage: null,
+      completedStages,
+      metadata: _mergeMetadata(task.metadata, metadataPatch),
+      updatedAt: now,
+      history: [
+        ...history,
+        {
+          at: now,
+          type: 'stage_rewound',
+          fromStage: pendingStage?.key || currentStage?.key || null,
+          toStage: targetStage.key,
+          note: note || '',
+        },
+      ],
+    };
+
+    const saved = this.taskStateStore.saveTask(rewoundTask);
+    return {
+      rewound: true,
+      task: saved,
+      nextRecommendedStage: targetStage.key,
     };
   }
 }

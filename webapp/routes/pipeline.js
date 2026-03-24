@@ -93,6 +93,23 @@ router.post('/tasks/:taskId/advance', (req, res) => {
   }
 });
 
+router.post('/tasks/:taskId/rewind', (req, res) => {
+  const runner = req.app.locals.workflowRunner;
+  if (!runner) return res.status(500).json({ error: 'workflowRunner 未初始化' });
+
+  try {
+    const { toStage, note = '' } = req.body || {};
+    if (!toStage) {
+      return res.status(400).json({ error: '缺少参数: toStage' });
+    }
+    const metadataPatch = _buildRewindMetadataPatch(req, req.params.taskId, toStage, note);
+    const result = runner.rewindTask(req.params.taskId, { toStage, note, metadataPatch });
+    res.json(result);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
 router.post('/tasks/:taskId/run-step', async (req, res) => {
   const stepExecutor = req.app.locals.pipelineStepExecutor;
   if (!stepExecutor) return res.status(500).json({ error: 'pipelineStepExecutor 未初始化' });
@@ -146,6 +163,11 @@ router.post('/tasks/:taskId/run-range', async (req, res) => {
     for (const stage of stageList) {
       const stageResult = await _runStageWithRetry(stepExecutor, taskId, stage, runOptions, retry);
       results.push(stageResult);
+      if (stageResult.requiresConfirmation) {
+        stopped = true;
+        stopReason = `阶段待确认: ${stage}`;
+        break;
+      }
       if (!stageResult.ok && onError === 'stop') {
         stopped = true;
         stopReason = stageResult.error || `阶段失败: ${stage}`;
@@ -154,6 +176,28 @@ router.post('/tasks/:taskId/run-range', async (req, res) => {
     }
 
     const failedStages = results.filter((item) => !item.ok).map((item) => item.stage);
+    const finishedAt = new Date().toISOString();
+    const latestTask = runner.getTask(taskId);
+    const pendingConfirmationStage = latestTask?.pendingConfirmationStage || null;
+    const executedStages = results.map((item) => item.stage);
+    const resumeFromStage = failedStages[0] || null;
+    _saveRunRangeSnapshot(req, taskId, {
+      fromStage,
+      toStage,
+      onError,
+      retry,
+      startedAt,
+      finishedAt,
+      executedStages,
+      failedStages,
+      resumeFromStage,
+      pendingConfirmationStage,
+      stopped,
+      stopReason,
+      results,
+    });
+    const snapshotTask = runner.getTask(taskId);
+
     res.json({
       taskId,
       fromStage,
@@ -161,12 +205,15 @@ router.post('/tasks/:taskId/run-range', async (req, res) => {
       onError,
       retry,
       startedAt,
-      finishedAt: new Date().toISOString(),
-      executedStages: stageList,
+      finishedAt,
+      executedStages,
       failedStages,
+      pendingConfirmationStage,
+      resumeFromStage,
       stopped,
       stopReason,
       results,
+      task: snapshotTask,
     });
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -193,59 +240,28 @@ router.get('/hotspots', async (req, res) => {
 });
 
 router.post('/tasks/:taskId/hotspot-list', async (req, res) => {
-  const hotspotService = req.app.locals.hotspotService;
-  const runner = req.app.locals.workflowRunner;
-  if (!hotspotService) return res.status(500).json({ error: 'hotspotService 未初始化' });
-  if (!runner) return res.status(500).json({ error: 'workflowRunner 未初始化' });
+  const stepExecutor = req.app.locals.pipelineStepExecutor;
+  if (!stepExecutor) return res.status(500).json({ error: 'pipelineStepExecutor 未初始化' });
 
   try {
     const query = String(req.body?.query || '');
     const limit = Number.parseInt(req.body?.limit, 10);
     const source = String(req.body?.source || 'auto');
     const note = String(req.body?.note || '');
-    const result = await hotspotService.listHotspots({
+    const result = await stepExecutor.runStep(req.params.taskId, {
+      stage: 'hotspot-list',
       query,
       limit: Number.isNaN(limit) ? 20 : limit,
       source,
-    });
-
-    const snapshotItems = Array.isArray(result.items)
-      ? result.items.slice(0, 50).map((item) => ({
-        id: item.id || '',
-        title: item.title || '',
-        summary: item.summary || '',
-        category: item.category || '',
-        platform: item.platform || '',
-        url: item.url || '',
-        score: item.score ?? null,
-        heat: item.heat || '',
-        tags: Array.isArray(item.tags) ? item.tags : [],
-        publishedAt: item.publishedAt || '',
-        source: item.source || result.source || '',
-      }))
-      : [];
-
-    const advanced = runner.advanceTask(req.params.taskId, {
-      toStage: 'hotspot-list',
-      note: note || `WebApp 热点列表同步 (${result.total})`,
-      metadataPatch: {
-        hotspotListSnapshot: {
-          at: new Date().toISOString(),
-          source: result.source,
-          query: result.query || '',
-          total: result.total || 0,
-          warnings: Array.isArray(result.warnings) ? result.warnings : [],
-          items: snapshotItems,
-        },
-      },
+      note: note || 'WebApp 热点列表同步',
     });
 
     res.json({
-      ...result,
-      task: advanced.task,
-      advanced: advanced.advanced,
-      requiresConfirmation: advanced.requiresConfirmation,
-      message: advanced.message || null,
+      ...(result.output || {}),
+      task: result.task,
+      advanced: result.advanced,
+      requiresConfirmation: result.requiresConfirmation,
+      message: result.message || null,
     });
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -253,123 +269,65 @@ router.post('/tasks/:taskId/hotspot-list', async (req, res) => {
 });
 
 router.post('/tasks/:taskId/hotspot-select', (req, res) => {
-  const runner = req.app.locals.workflowRunner;
-  if (!runner) return res.status(500).json({ error: 'workflowRunner 未初始化' });
+  const stepExecutor = req.app.locals.pipelineStepExecutor;
+  if (!stepExecutor) return res.status(500).json({ error: 'pipelineStepExecutor 未初始化' });
 
   try {
-    const taskId = req.params.taskId;
-    const task = runner.getTask(taskId);
-    if (!task) return res.status(404).json({ error: `任务不存在: ${taskId}` });
-
     const hotspotId = String(req.body?.hotspotId || '').trim();
-    const incomingHotspot = req.body?.hotspot && typeof req.body.hotspot === 'object'
-      ? req.body.hotspot
-      : null;
-    const confirm = req.body?.confirm !== false;
     const note = String(req.body?.note || '').trim();
-
-    const snapshotItems = Array.isArray(task?.metadata?.hotspotListSnapshot?.items)
-      ? task.metadata.hotspotListSnapshot.items
-      : [];
-    const selectedHotspot = incomingHotspot || snapshotItems.find((item) => {
-      if (!item) return false;
-      if (hotspotId && item.id && String(item.id) === hotspotId) return true;
-      if (hotspotId && item.title && String(item.title) === hotspotId) return true;
-      return false;
+    const result = stepExecutor.runStep(req.params.taskId, {
+      stage: 'hotspot-select',
+      hotspotId,
+      confirm: _toBoolean(req.body?.confirm, false),
+      note: note || '热点选择完成',
     });
-
-    if (!selectedHotspot) {
-      return res.status(400).json({ error: '未找到要选择的热点，请传入 hotspotId 或 hotspot 对象' });
-    }
-
-    const advanced = runner.advanceTask(taskId, {
-      toStage: 'hotspot-select',
-      confirm,
-      note: note || `热点选择完成: ${selectedHotspot.title || selectedHotspot.id || '未命名热点'}`,
-      metadataPatch: {
-        selectedHotspot: {
-          id: selectedHotspot.id || '',
-          title: selectedHotspot.title || '',
-          summary: selectedHotspot.summary || '',
-          category: selectedHotspot.category || '',
-          platform: selectedHotspot.platform || '',
-          url: selectedHotspot.url || '',
-          score: selectedHotspot.score ?? null,
-          heat: selectedHotspot.heat || '',
-          tags: Array.isArray(selectedHotspot.tags) ? selectedHotspot.tags : [],
-          publishedAt: selectedHotspot.publishedAt || '',
-          source: selectedHotspot.source || '',
-        },
-      },
-    });
-
-    res.json({
-      selectedHotspot,
-      task: advanced.task,
-      advanced: advanced.advanced,
-      requiresConfirmation: advanced.requiresConfirmation,
-      message: advanced.message || null,
-    });
+    Promise.resolve(result)
+      .then((data) => {
+        res.json({
+          ...(data.output || {}),
+          task: data.task,
+          advanced: data.advanced,
+          requiresConfirmation: data.requiresConfirmation,
+          message: data.message || null,
+        });
+      })
+      .catch((error) => {
+        res.status(400).json({ error: error.message });
+      });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
 });
 
 router.post('/tasks/:taskId/hotspot-enrich', (req, res) => {
-  const runner = req.app.locals.workflowRunner;
-  if (!runner) return res.status(500).json({ error: 'workflowRunner 未初始化' });
+  const stepExecutor = req.app.locals.pipelineStepExecutor;
+  if (!stepExecutor) return res.status(500).json({ error: 'pipelineStepExecutor 未初始化' });
 
   try {
-    const taskId = req.params.taskId;
-    const task = runner.getTask(taskId);
-    if (!task) return res.status(404).json({ error: `任务不存在: ${taskId}` });
-
-    const confirm = req.body?.confirm !== false;
     const note = String(req.body?.note || '').trim();
-    const enrichment = String(req.body?.enrichment || req.body?.input || '').trim();
-    const facts = _normalizeList(req.body?.facts);
-    const constraints = _normalizeList(req.body?.constraints);
-    const materials = _normalizeList(req.body?.materials);
-
-    const selectedHotspot = task?.metadata?.selectedHotspot || null;
-    const fallbackText = selectedHotspot
-      ? [selectedHotspot.title, selectedHotspot.summary].filter(Boolean).join('\n\n')
-      : '';
-    const content = enrichment || fallbackText;
-
-    if (!content && facts.length === 0 && constraints.length === 0 && materials.length === 0) {
-      return res.status(400).json({ error: 'hotspot-enrich 至少需要 enrichment/facts/constraints/materials 之一' });
-    }
-
-    const now = new Date().toISOString();
-    const advanced = runner.advanceTask(taskId, {
-      toStage: 'hotspot-enrich',
-      confirm,
+    const result = stepExecutor.runStep(req.params.taskId, {
+      stage: 'hotspot-enrich',
+      enrichment: String(req.body?.enrichment || '').trim(),
+      input: String(req.body?.input || '').trim(),
+      facts: _normalizeList(req.body?.facts),
+      constraints: _normalizeList(req.body?.constraints),
+      materials: _normalizeList(req.body?.materials),
+      confirm: _toBoolean(req.body?.confirm, false),
       note: note || '热点补充信息已录入',
-      metadataPatch: {
-        hotspotEnrichment: {
-          at: now,
-          enrichment: content,
-          facts,
-          constraints,
-          materials,
-        },
-        inputSnapshot: content || task?.metadata?.inputSnapshot || '',
-      },
     });
-
-    res.json({
-      hotspotEnrichment: {
-        enrichment: content,
-        facts,
-        constraints,
-        materials,
-      },
-      task: advanced.task,
-      advanced: advanced.advanced,
-      requiresConfirmation: advanced.requiresConfirmation,
-      message: advanced.message || null,
-    });
+    Promise.resolve(result)
+      .then((data) => {
+        res.json({
+          hotspotEnrichment: data.output || {},
+          task: data.task,
+          advanced: data.advanced,
+          requiresConfirmation: data.requiresConfirmation,
+          message: data.message || null,
+        });
+      })
+      .catch((error) => {
+        res.status(400).json({ error: error.message });
+      });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -455,20 +413,38 @@ router.post('/draft', async (req, res) => {
     const safeTopic = input.slice(0, 20).replace(/[<>:"/\\|?*\n\r]/g, '_');
     const filename = `${today}-${safeTopic}.md`;
     outputManager.writeFile('母稿', filename, fullContent);
+    const draftFile = `母稿/${filename}`;
     const taskProgress = _advanceTask(req, taskId, 'draft-generate', {
       note: 'WebApp Step2 母稿生成完成',
-      metadataPatch: {
+      metadataPatch: _buildTaskMetadataPatch(req, taskId, 'draft-generate', {
+        checkpointNote: 'WebApp Step2 母稿生成完成',
+        stageOutput: {
+          file: draftFile,
+          length: fullContent.length,
+          engine,
+          style: style || '',
+          inputPreview: input.slice(0, 100),
+        },
+        artifacts: [
+          {
+            type: 'text',
+            stage: 'draft-generate',
+            path: draftFile,
+          },
+        ],
+        metadataExtra: {
         inputSnapshot: input,
         style: style || '',
         engine,
-        draftFile: `母稿/${filename}`,
-      },
+        draftFile,
+        },
+      }),
     });
 
     console.log(`  ${_ts()}  [流水线] ✓ 母稿已保存  文件=母稿/${filename}  长度=${fullContent.length}字`);
     _send(res, {
       type: 'done',
-      file: `母稿/${filename}`,
+      file: draftFile,
       length: fullContent.length,
       task: taskProgress?.task || null,
       taskProgressError: taskProgress?.error || null,
@@ -550,10 +526,34 @@ router.post('/platforms', async (req, res) => {
     }
     const taskProgress = _advanceTask(req, taskId, 'platform-rewrite', {
       note: `WebApp Step3 多平台生成完成 (${ok}/${targetPlatforms.length})`,
-      metadataPatch: {
+      metadataPatch: _buildTaskMetadataPatch(req, taskId, 'platform-rewrite', {
+        checkpointNote: `WebApp Step3 多平台生成完成 (${ok}/${targetPlatforms.length})`,
+        stageOutput: {
+          total: targetPlatforms.length,
+          success: ok,
+          engine,
+          platformFiles,
+        },
+        artifacts: results
+          .filter((item) => !item.error && item.file)
+          .map((item) => ({
+            type: 'text',
+            stage: 'platform-rewrite',
+            platform: item.platform,
+            path: item.file,
+          })),
+        metadataExtra: {
         engine,
         platformFiles,
-      },
+        platformResults: results
+          .filter((item) => !item.error && item.file)
+          .map((item) => ({
+            platform: item.platform,
+            file: item.file,
+            length: item.length || 0,
+          })),
+        },
+      }),
     });
     console.log(`  ${_ts()}  [流水线] Step3 完成  成功=${ok}/${targetPlatforms.length}`);
     _send(res, {
@@ -624,7 +624,13 @@ router.post('/optimize', async (req, res) => {
 
         console.log(`  ${_ts()}  [流水线] ✓ ${item.platform} 优化完成  输出=${optimized.length}字`);
         _send(res, { type: 'optimize_done', platform: item.platform, length: optimized.length, content: optimized });
-        return { platform: item.platform, content: optimized, length: optimized.length, complianceScore: compliance.score };
+        return {
+          platform: item.platform,
+          file: item.file || '',
+          content: optimized,
+          length: optimized.length,
+          complianceScore: compliance.score,
+        };
       }))
     );
 
@@ -637,12 +643,30 @@ router.post('/optimize', async (req, res) => {
     });
 
     const ok = results.filter(r => !r.error).length;
+    const optimizedPlatforms = results.filter(r => !r.error).map(r => r.platform);
     const taskProgress = _advanceTask(req, taskId, 'review-optimize', {
       confirm: true,
       note: `WebApp Step3b 优化完成 (${ok}/${results.length})`,
-      metadataPatch: {
-        optimizedPlatforms: results.filter(r => !r.error).map(r => r.platform),
-      },
+      metadataPatch: _buildTaskMetadataPatch(req, taskId, 'review-optimize', {
+        checkpointNote: `WebApp Step3b 优化完成 (${ok}/${results.length})`,
+        stageOutput: {
+          total: results.length,
+          success: ok,
+          engine,
+          optimizedPlatforms,
+        },
+        artifacts: results
+          .filter((item) => !item.error && item.file)
+          .map((item) => ({
+            type: 'text',
+            stage: 'review-optimize',
+            platform: item.platform,
+            path: item.file,
+          })),
+        metadataExtra: {
+          optimizedPlatforms,
+        },
+      }),
     });
     console.log(`  ${_ts()}  [流水线] Step3b 优化完成`);
     _send(res, {
@@ -793,9 +817,28 @@ router.post('/compose', async (req, res) => {
     const taskProgress = _advanceTask(req, taskId, 'layout-compose', {
       confirm: true,
       note: `WebApp 排版完成 (${results.length} 个平台)`,
-      metadataPatch: {
-        layoutFiles: results.map((r) => r.file),
-      },
+      metadataPatch: _buildTaskMetadataPatch(req, taskId, 'layout-compose', {
+        checkpointNote: `WebApp 排版完成 (${results.length} 个平台)`,
+        stageOutput: {
+          total: results.length,
+          files: results.map((r) => r.file),
+        },
+        artifacts: results.map((item) => ({
+          type: 'layout-markdown',
+          stage: 'layout-compose',
+          platform: item.platform,
+          path: item.file,
+        })),
+        metadataExtra: {
+          layoutResults: results.map((item) => ({
+            platform: item.platform,
+            file: item.file,
+            length: item.length || 0,
+            imageCount: item.imageCount || 0,
+          })),
+          layoutFiles: results.map((r) => r.file),
+        },
+      }),
     });
 
     res.json({
@@ -862,10 +905,29 @@ router.post('/assemble', async (req, res) => {
 
     const taskProgress = _advanceTask(req, taskId, 'export-output', {
       note: `WebApp Step5 导出完成 (${results.length} 个文件)`,
-      metadataPatch: {
-        layoutFiles: Array.isArray(layoutFiles) ? layoutFiles : [],
-        finalFiles: results.map(r => r.file),
-      },
+      metadataPatch: _buildTaskMetadataPatch(req, taskId, 'export-output', {
+        checkpointNote: `WebApp Step5 导出完成 (${results.length} 个文件)`,
+        stageOutput: {
+          total: results.length,
+          files: results.map((r) => r.file),
+        },
+        artifacts: results.map((item) => ({
+          type: 'final-text',
+          stage: 'export-output',
+          platform: item.platform,
+          path: item.file,
+        })),
+        metadataExtra: {
+          layoutFiles: Array.isArray(layoutFiles) ? layoutFiles : [],
+          finalFiles: results.map(r => r.file),
+          finalResults: results.map((item) => ({
+            platform: item.platform,
+            file: item.file,
+            obsidianUri: item.obsidianUri,
+            length: item.length || 0,
+          })),
+        },
+      }),
     });
     console.log(`  ${_ts()}  [流水线] ✓ Step5 组装完成  文件=${results.map(r => r.file).join(', ')}`);
     res.json({
@@ -1007,6 +1069,7 @@ async function _runStageWithRetry(stepExecutor, taskId, stage, runOptions, retry
         stage,
         ok: true,
         attempts,
+        requiresConfirmation: !!result?.requiresConfirmation,
         result,
       };
     } catch (error) {
@@ -1049,6 +1112,170 @@ function _sseHeaders(res) {
 
 function _send(res, data) {
   res.write(`data: ${JSON.stringify(data)}\n\n`);
+}
+
+function _buildTaskMetadataPatch(req, taskId, stageKey, {
+  metadataExtra = {},
+  stageOutput = null,
+  artifacts = [],
+  checkpointNote = '',
+  source = 'webapp-pipeline-route',
+} = {}) {
+  const runner = req.app.locals.workflowRunner;
+  const task = taskId && runner ? runner.getTask(taskId) : null;
+  const now = new Date().toISOString();
+  const metadata = task?.metadata && typeof task.metadata === 'object' ? task.metadata : {};
+
+  const stageOutputs = {
+    ...(metadata.stageOutputs || {}),
+    [stageKey]: {
+      at: now,
+      ...(stageOutput || {}),
+    },
+  };
+
+  const checkpoints = [
+    ...(Array.isArray(metadata.checkpoints) ? metadata.checkpoints : []),
+    {
+      at: now,
+      stage: stageKey,
+      source,
+      note: checkpointNote || '',
+    },
+  ].slice(-120);
+
+  return {
+    ...metadata,
+    ...(metadataExtra && typeof metadataExtra === 'object' ? metadataExtra : {}),
+    stageOutputs,
+    artifacts: _mergeArtifacts(metadata.artifacts, artifacts, now),
+    checkpoints,
+    lastUpdatedBy: source,
+    lastUpdatedAt: now,
+  };
+}
+
+function _mergeArtifacts(currentArtifacts, newArtifacts, now) {
+  const existing = Array.isArray(currentArtifacts) ? currentArtifacts : [];
+  const incoming = Array.isArray(newArtifacts) ? newArtifacts : [];
+  const map = new Map();
+
+  for (const item of [...existing, ...incoming]) {
+    if (!item || !item.path) continue;
+    const normalized = {
+      at: item.at || now,
+      ...item,
+    };
+    const key = `${normalized.stage || '-'}|${normalized.type || '-'}|${normalized.path}`;
+    map.set(key, normalized);
+  }
+
+  return Array.from(map.values()).slice(-300);
+}
+
+function _saveRunRangeSnapshot(req, taskId, {
+  fromStage,
+  toStage,
+  onError,
+  retry,
+  startedAt,
+  finishedAt,
+  executedStages,
+  failedStages,
+  resumeFromStage,
+  pendingConfirmationStage,
+  stopped,
+  stopReason,
+  results,
+}) {
+  const runner = req.app.locals.workflowRunner;
+  if (!runner) return;
+  const task = runner.getTask(taskId);
+  if (!task) return;
+
+  const metadata = task.metadata && typeof task.metadata === 'object' ? task.metadata : {};
+  const sanitizedResults = Array.isArray(results)
+    ? results.map((item) => ({
+      stage: item.stage,
+      ok: !!item.ok,
+      attempts: item.attempts || 0,
+      requiresConfirmation: !!item.requiresConfirmation,
+      error: item.error || null,
+    }))
+    : [];
+
+  const checkpoints = [
+    ...(Array.isArray(metadata.checkpoints) ? metadata.checkpoints : []),
+    {
+      at: finishedAt,
+      stage: failedStages[0] || pendingConfirmationStage || toStage,
+      source: 'webapp-run-range',
+      note: failedStages.length
+        ? `run-range 完成(失败:${failedStages.join(',')})`
+        : pendingConfirmationStage
+          ? `run-range 停止(待确认:${pendingConfirmationStage})`
+          : `run-range 完成(${fromStage} -> ${toStage})`,
+    },
+  ].slice(-120);
+
+  const nextTask = {
+    ...task,
+    updatedAt: finishedAt,
+    metadata: {
+      ...metadata,
+      runRange: {
+        fromStage,
+        toStage,
+        onError,
+        retry,
+        startedAt,
+        finishedAt,
+        executedStages: Array.isArray(executedStages) ? executedStages : [],
+        failedStages: Array.isArray(failedStages) ? failedStages : [],
+        resumeFromStage: resumeFromStage || null,
+        pendingConfirmationStage: pendingConfirmationStage || null,
+        stopped: !!stopped,
+        stopReason: stopReason || '',
+        results: sanitizedResults,
+      },
+      checkpoints,
+      lastUpdatedBy: 'webapp-run-range',
+      lastUpdatedAt: finishedAt,
+    },
+  };
+
+  runner.taskStateStore.saveTask(nextTask);
+}
+
+function _buildRewindMetadataPatch(req, taskId, toStage, note = '') {
+  const runner = req.app.locals.workflowRunner;
+  const task = taskId && runner ? runner.getTask(taskId) : null;
+  const now = new Date().toISOString();
+  const metadata = task?.metadata && typeof task.metadata === 'object' ? task.metadata : {};
+  const runRange = metadata.runRange && typeof metadata.runRange === 'object' ? metadata.runRange : {};
+  const checkpoints = [
+    ...(Array.isArray(metadata.checkpoints) ? metadata.checkpoints : []),
+    {
+      at: now,
+      stage: toStage,
+      source: 'webapp-rewind',
+      note: note || `任务回退到 ${toStage}`,
+    },
+  ].slice(-120);
+
+  return {
+    ...metadata,
+    runRange: {
+      ...runRange,
+      resumeFromStage: toStage,
+      pendingConfirmationStage: null,
+      stopped: false,
+      stopReason: '',
+    },
+    checkpoints,
+    lastUpdatedBy: 'webapp-rewind',
+    lastUpdatedAt: now,
+  };
 }
 
 function _advanceTask(req, taskId, toStage, { confirm = false, note = '', metadataPatch = null } = {}) {

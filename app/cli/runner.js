@@ -135,6 +135,15 @@ async function main() {
       return;
     }
 
+    if (command === 'task' && subcommand === 'rewind') {
+      const taskId = requiredFlag('--id');
+      const toStage = requiredFlag('--to');
+      const note = flagValue('--note', '');
+      const result = runner.rewindTask(taskId, { toStage, note });
+      console.log(JSON.stringify(result, null, 2));
+      return;
+    }
+
     if (command === 'task' && subcommand === 'run-step') {
       const taskId = requiredFlag('--id');
       const stage = flagValue('--stage', '').trim() || flagValue('--to', '').trim();
@@ -181,9 +190,15 @@ async function main() {
       const runOptions = buildRunOptions();
       const results = [];
       let stopError = '';
+      let stopReason = '';
       for (const stage of stageList) {
         const stageResult = await executeStageWithRetry(taskId, stage, runOptions, retry);
         results.push(stageResult);
+
+        if (stageResult.requiresConfirmation) {
+          stopReason = `run-range 停在待确认阶段: ${stage}`;
+          break;
+        }
 
         if (!stageResult.ok && onError === 'stop') {
           stopError = `run-range 在阶段 ${stage} 失败（已重试 ${stageResult.attempts} 次）：${stageResult.error}`;
@@ -192,8 +207,11 @@ async function main() {
       }
 
       const failedStages = results.filter((x) => !x.ok).map((x) => x.stage);
-      const resumeFromStage = failedStages[0] || null;
       const finishedAt = new Date().toISOString();
+      const latestTask = runner.getTask(taskId);
+      const pendingConfirmationStage = latestTask?.pendingConfirmationStage || null;
+      const resumeFromStage = failedStages[0] || null;
+      const executedStages = results.map((item) => item.stage);
       saveRunRangeSnapshot(taskId, {
         fromStage,
         toStage,
@@ -202,9 +220,10 @@ async function main() {
         resumeFromFailed,
         startedAt,
         finishedAt,
-        executedStages: stageList,
+        executedStages,
         failedStages,
         resumeFromStage,
+        pendingConfirmationStage,
         results,
       });
 
@@ -219,8 +238,9 @@ async function main() {
         onError,
         retry,
         resumeFromFailed,
+        pendingConfirmationStage,
         resumeFromStage,
-        executedStages: stageList,
+        executedStages,
         results,
       }, null, 2));
       return;
@@ -405,6 +425,7 @@ async function executeStageWithRetry(taskId, stage, runOptions, retry) {
         stage,
         ok: true,
         attempts,
+        requiresConfirmation: !!result?.requiresConfirmation,
         result,
       };
     } catch (error) {
@@ -445,6 +466,7 @@ function saveRunRangeSnapshot(taskId, {
   executedStages,
   failedStages,
   resumeFromStage,
+  pendingConfirmationStage,
   results,
 }) {
   const task = runner.getTask(taskId);
@@ -456,6 +478,7 @@ function saveRunRangeSnapshot(taskId, {
       stage: item.stage,
       ok: !!item.ok,
       attempts: item.attempts || 0,
+      requiresConfirmation: !!item.requiresConfirmation,
       error: item.error || null,
     }))
     : [];
@@ -464,7 +487,7 @@ function saveRunRangeSnapshot(taskId, {
     ...(Array.isArray(metadata.checkpoints) ? metadata.checkpoints : []),
     {
       at: finishedAt,
-      stage: failedStages[0] || toStage,
+      stage: failedStages[0] || pendingConfirmationStage || toStage,
       source: 'cli-run-range',
       note: failedStages.length
         ? `run-range 完成(失败:${failedStages.join(',')})`
@@ -488,6 +511,7 @@ function saveRunRangeSnapshot(taskId, {
         executedStages: Array.isArray(executedStages) ? executedStages : [],
         failedStages: Array.isArray(failedStages) ? failedStages : [],
         resumeFromStage: resumeFromStage || null,
+        pendingConfirmationStage: pendingConfirmationStage || null,
         results: sanitizedResults,
       },
       checkpoints,

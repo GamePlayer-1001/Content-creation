@@ -5,7 +5,8 @@
   "main": "scripts/render_xhs_v2.js",
   "scripts": {
     "render": "node scripts/render_xhs_v2.js",
-    "install-browsers": "npx playwright install chromium"
+    "install-browsers": "npx playwright install chromium",
+    "test:pipeline-state": "node tests/pipeline-state-smoke.test.js"
   },
   "keywords": [
     "xiaohongshu",

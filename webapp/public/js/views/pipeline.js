@@ -1,7 +1,7 @@
 ﻿/**
  * [INPUT]: 依赖 API + StreamRenderer
  * [OUTPUT]: Views.pipeline 对象
- * [POS]: views/ 的内容流水线页面, 5步向导式创作核心
+ * [POS]: views/ 的内容流水线页面, 9阶段分组视图核心
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 
@@ -88,11 +88,11 @@ const PipelineView = {
   },
 
   STEPS: [
-    { label: '输入素材', key: 'input' },
-    { label: '生成母稿', key: 'draft' },
-    { label: '多平台生成', key: 'platforms' },
-    { label: '图片生成', key: 'image' },
-    { label: '最终输出', key: 'output' },
+    { label: '热点准备', key: 'input' },
+    { label: '母稿生成', key: 'draft' },
+    { label: '平台处理', key: 'platforms' },
+    { label: '视觉素材', key: 'image' },
+    { label: '排版导出', key: 'output' },
   ],
 
   STYLE_FALLBACK: [
@@ -114,6 +114,7 @@ const PipelineView = {
     this.state.engine = localStorage.getItem('ai_engine') || 'claude';
     await this._ensureRuntimeOptions();
     await this._loadPipelineStages();
+    await this._restoreHandoffTask();
     if (this.state.step === 0) {
       await this._loadRecentTasks();
       await this._loadHotspots();
@@ -127,7 +128,10 @@ const PipelineView = {
       localStorage.setItem('ai_engine', this.state.engine);
     }
 
-    let html = `<h2>内容流水线</h2>`;
+    let html = `<h2>内容流水线</h2>
+      <p style="font-size:13px;color:var(--muted);margin:-4px 0 12px">
+        当前页面是 9 阶段工作流的分组视图：1-3 热点准备，4 母稿，5-6 平台处理，7 视觉素材，8-9 排版导出。
+      </p>`;
     if (this.state.taskId) {
       html += `
         <p style="font-size:12px;color:var(--muted);margin:4px 0 12px">
@@ -231,6 +235,135 @@ const PipelineView = {
     }
   },
 
+  _normalizeFilePath(filePath) {
+    return String(filePath || '').trim();
+  },
+
+  _readSharedExecutionText(filePath) {
+    const normalized = this._normalizeFilePath(filePath);
+    if (!normalized || !normalized.includes('/')) {
+      throw new Error(`无效输出文件路径: ${normalized || '(empty)'}`);
+    }
+    return API.readOutputFile(normalized);
+  },
+
+  _writeSharedExecutionText(filePath, content) {
+    const normalized = this._normalizeFilePath(filePath);
+    if (!normalized || !normalized.includes('/')) {
+      throw new Error(`无效输出文件路径: ${normalized || '(empty)'}`);
+    }
+    return API.writeOutputFile(normalized, content);
+  },
+
+  async _loadSharedTextOutputs(items, mapFn) {
+    const list = Array.isArray(items) ? items : [];
+    const results = await Promise.allSettled(list.map(async (item, index) => {
+      const mapped = mapFn ? mapFn(item, index) : item;
+      if (!mapped?.file) return null;
+      const data = await this._readSharedExecutionText(mapped.file);
+      return {
+        ...mapped,
+        content: data?.content || '',
+      };
+    }));
+
+    return results
+      .filter((entry) => entry.status === 'fulfilled' && entry.value)
+      .map((entry) => {
+        const value = entry.value;
+        return {
+          ...value,
+          length: value.length || value.content.length,
+        };
+      });
+  },
+
+  async _hydrateTaskExecutionResults(task = this.state.taskSnapshot) {
+    if (!task) return;
+
+    const metadata = task?.metadata && typeof task.metadata === 'object' ? task.metadata : {};
+    this.state.draftFile = '';
+    this.state.draftContent = '';
+    this.state.platforms = [];
+    this.state.platformsOptimize = [];
+    this.state.platformResults = [];
+    this.state.finalResults = [];
+    this.state.images = [];
+    this.state.coverExtractions = {};
+    this.state.illustrationExtractions = {};
+    this.state.coverStylePrompts = {};
+    this.state.illustrationStylePrompts = {};
+    const draftFile = this._normalizeFilePath(metadata.draftFile || '');
+    const platformFileMap = metadata.platformFiles && typeof metadata.platformFiles === 'object'
+      ? metadata.platformFiles
+      : {};
+    const platformResultsMeta = Array.isArray(metadata.platformResults) ? metadata.platformResults : [];
+    const platformEntries = platformResultsMeta.length > 0
+      ? platformResultsMeta
+        .filter((item) => item?.platform && this._normalizeFilePath(item.file).includes('/'))
+        .map((item) => ({ platform: item.platform, file: item.file, length: item.length || 0 }))
+      : Object.entries(platformFileMap)
+        .filter(([, file]) => this._normalizeFilePath(file).includes('/'))
+        .map(([platform, file]) => ({ platform, file }));
+    const finalResultsMeta = Array.isArray(metadata.finalResults) ? metadata.finalResults : [];
+    const finalFiles = Array.isArray(metadata.finalFiles) ? metadata.finalFiles : [];
+    const imageAssets = Array.isArray(metadata.imageAssets) ? metadata.imageAssets : [];
+    const optimizedPlatforms = Array.isArray(metadata.optimizedPlatforms) ? metadata.optimizedPlatforms : [];
+
+    if (draftFile) {
+      try {
+        const draftData = await this._readSharedExecutionText(draftFile);
+        this.state.draftFile = draftFile;
+        this.state.draftContent = draftData?.content || '';
+      } catch {
+        this.state.draftFile = '';
+        this.state.draftContent = '';
+      }
+    }
+
+    if (platformEntries.length > 0) {
+      const restoredResults = await this._loadSharedTextOutputs(platformEntries, (item) => item);
+      if (restoredResults.length > 0) {
+        this.state.platformResults = restoredResults;
+        this.state.platforms = restoredResults.map((item) => item.platform).filter(Boolean);
+        this.state.platformsOptimize = this.state.platforms.filter((platform) => optimizedPlatforms.includes(platform));
+      }
+    }
+
+    if (imageAssets.length > 0) {
+      this.state.images = imageAssets
+        .filter((item) => item?.platform && item?.path)
+        .map((item) => ({
+          platform: item.platform,
+          imageType: item.imageType || 'illustration',
+          path: item.path,
+          filename: item.filename || '',
+        }));
+      for (const item of this.state.images) {
+        if (item.imageType === 'cover') {
+          this.state.coverExtractions[item.platform] = this.state.coverExtractions[item.platform] || {};
+        } else {
+          this.state.illustrationExtractions[item.platform] = this.state.illustrationExtractions[item.platform] || '';
+        }
+      }
+    }
+
+    if (finalResultsMeta.length > 0) {
+      this.state.finalResults = finalResultsMeta
+        .filter((item) => item?.file)
+        .map((item) => ({
+          platform: item.platform || '',
+          file: item.file,
+          obsidianUri: item.obsidianUri || '',
+          length: item.length || 0,
+        }));
+    } else if (finalFiles.length > 0) {
+      this.state.finalResults = finalFiles
+        .filter((file) => this._normalizeFilePath(file))
+        .map((file) => ({ file, platform: '', obsidianUri: '', length: 0 }));
+    }
+  },
+
   _renderTaskSummaryCard() {
     const task = this.state.taskSnapshot;
     if (!task) return '';
@@ -248,6 +381,14 @@ const PipelineView = {
     const nextStage = this._resolveNextRunnableStage(task);
     const implementedStages = this._getImplementedStages();
     const lastStage = implementedStages.length > 0 ? implementedStages[implementedStages.length - 1] : null;
+    const pendingStage = task?.pendingConfirmationStage || '';
+    const rewindableStages = this._getRewindableStages(task);
+    const runNextLabel = pendingStage
+      ? `确认阶段: ${pendingStage}`
+      : (nextStage ? `执行下一阶段: ${nextStage.key}` : '阶段已全部完成');
+    const runRangeLabel = pendingStage
+      ? `待确认后可批量执行: ${pendingStage}`
+      : (nextStage && lastStage ? `从 ${nextStage.key} 跑到 ${lastStage.key}` : '无可执行区间');
 
     const stageRows = stageKeys.slice(-4).map((key) => {
       const output = stageOutputs[key] || {};
@@ -271,7 +412,7 @@ const PipelineView = {
         <div style="font-size:12px;margin-top:2px">
           ${runRange.fromStage || '-'} → ${runRange.toStage || '-'}
           · 失败 ${Array.isArray(runRange.failedStages) ? runRange.failedStages.length : 0}
-          · 建议续跑 ${runRange.resumeFromStage || '-'}
+          · ${runRange.pendingConfirmationStage ? `待确认 ${runRange.pendingConfirmationStage}` : `建议续跑 ${runRange.resumeFromStage || '-'}`}
         </div>
       </div>
     ` : '';
@@ -280,13 +421,22 @@ const PipelineView = {
       <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
         <div style="font-size:11px;color:var(--muted)">阶段控制台</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:6px">
-          <button class="btn btn-sm" id="pl-task-run-next" ${nextStage ? '' : 'disabled'}>
-            ${nextStage ? `执行下一阶段: ${nextStage.key}` : '阶段已全部完成'}
+          <button class="btn btn-sm" id="pl-task-run-next" ${(pendingStage || nextStage) ? '' : 'disabled'}>
+            ${runNextLabel}
           </button>
-          <button class="btn btn-sm" id="pl-task-run-range" ${nextStage && lastStage ? '' : 'disabled'}>
-            ${nextStage && lastStage ? `从 ${nextStage.key} 跑到 ${lastStage.key}` : '无可执行区间'}
+          <button class="btn btn-sm" id="pl-task-run-range" ${(!pendingStage && nextStage && lastStage) ? '' : 'disabled'}>
+            ${runRangeLabel}
           </button>
           <span id="pl-task-run-status" style="font-size:11px;color:var(--muted)"></span>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px">
+          <select class="form-select" id="pl-task-rewind-stage" style="width:auto;min-width:180px" ${rewindableStages.length ? '' : 'disabled'}>
+            ${rewindableStages.length
+              ? rewindableStages.map((stage) => `<option value="${stage.key}">${stage.order}. ${escapeHtml(stage.label)}</option>`).join('')
+              : '<option value="">无可回退阶段</option>'}
+          </select>
+          <button class="btn btn-sm" id="pl-task-rewind" ${rewindableStages.length ? '' : 'disabled'}>回退到所选阶段</button>
+          <button class="btn btn-sm" id="pl-task-rewind-run" ${rewindableStages.length ? '' : 'disabled'}>回退并执行</button>
         </div>
       </div>
     `;
@@ -346,6 +496,16 @@ const PipelineView = {
     return implemented.find((stage) => !completed.has(stage.key)) || null;
   },
 
+  _getRewindableStages(task = this.state.taskSnapshot) {
+    const implemented = this._getImplementedStages();
+    if (implemented.length === 0) return [];
+    const anchorKey = task?.pendingConfirmationStage || task?.currentStage || '';
+    if (!anchorKey) return [];
+    const anchor = implemented.find((stage) => stage.key === anchorKey);
+    if (!anchor) return [];
+    return implemented.filter((stage) => stage.order <= anchor.order);
+  },
+
   _buildTaskRunPayload() {
     const fallbackPlatforms = this.state.platformResults.map((item) => item.platform).filter(Boolean);
     return {
@@ -364,8 +524,29 @@ const PipelineView = {
       draftFile: this.state.draftFile || '',
       draftContent: this.state.draftContent || '',
       note: 'WebApp 任务摘要卡阶段执行',
-      confirm: true,
+      confirm: false,
     };
+  },
+
+  async _confirmPendingStage(stageKey) {
+    if (!this.state.taskId || !stageKey) return null;
+    const result = await API.post(`/pipeline/tasks/${encodeURIComponent(this.state.taskId)}/advance`, {
+      toStage: stageKey,
+      confirm: true,
+      note: `WebApp 确认阶段: ${stageKey}`,
+    });
+    this._updateTaskFromResponse(result);
+    return result;
+  },
+
+  async _rewindTask(stageKey) {
+    if (!this.state.taskId || !stageKey) return null;
+    const result = await API.post(`/pipeline/tasks/${encodeURIComponent(this.state.taskId)}/rewind`, {
+      toStage: stageKey,
+      note: `WebApp 回退到阶段: ${stageKey}`,
+    });
+    this._updateTaskFromResponse(result);
+    return result;
   },
 
   async _runTaskStage(stageKey) {
@@ -399,10 +580,15 @@ const PipelineView = {
   _bindTaskActions() {
     const runNextBtn = document.getElementById('pl-task-run-next');
     const runRangeBtn = document.getElementById('pl-task-run-range');
+    const rewindSelect = document.getElementById('pl-task-rewind-stage');
+    const rewindBtn = document.getElementById('pl-task-rewind');
+    const rewindRunBtn = document.getElementById('pl-task-rewind-run');
     const statusEl = document.getElementById('pl-task-run-status');
-    if (!runNextBtn && !runRangeBtn) return;
+    if (!runNextBtn && !runRangeBtn && !rewindBtn && !rewindRunBtn) return;
     const baseRunNextDisabled = runNextBtn ? runNextBtn.disabled : true;
     const baseRunRangeDisabled = runRangeBtn ? runRangeBtn.disabled : true;
+    const baseRewindDisabled = rewindBtn ? rewindBtn.disabled : true;
+    const baseRewindRunDisabled = rewindRunBtn ? rewindRunBtn.disabled : true;
 
     const setStatus = (text, isError = false) => {
       if (!statusEl) return;
@@ -413,21 +599,36 @@ const PipelineView = {
     const setButtonsDisabled = (disabled) => {
       if (runNextBtn) runNextBtn.disabled = baseRunNextDisabled || disabled;
       if (runRangeBtn) runRangeBtn.disabled = baseRunRangeDisabled || disabled;
+      if (rewindBtn) rewindBtn.disabled = baseRewindDisabled || disabled;
+      if (rewindRunBtn) rewindRunBtn.disabled = baseRewindRunDisabled || disabled;
+      if (rewindSelect) rewindSelect.disabled = disabled || (!rewindSelect.options?.length);
     };
 
     if (runNextBtn) {
       runNextBtn.onclick = async () => {
+        const pendingStage = this.state.taskSnapshot?.pendingConfirmationStage || '';
         const next = this._resolveNextRunnableStage(this.state.taskSnapshot);
-        if (!next) {
+        if (!pendingStage && !next) {
           showToast('任务阶段已全部完成');
           return;
         }
         setButtonsDisabled(true);
-        setStatus(`执行中: ${next.key} ...`);
+        setStatus(pendingStage ? `确认中: ${pendingStage} ...` : `执行中: ${next.key} ...`);
         try {
-          await this._runTaskStage(next.key);
-          showToast(`阶段执行完成: ${next.key}`);
-          setStatus(`完成: ${next.key}`);
+          const result = pendingStage
+            ? await this._confirmPendingStage(pendingStage)
+            : await this._runTaskStage(next.key);
+          await this._hydrateTaskExecutionResults(result?.task || this.state.taskSnapshot);
+          if (pendingStage) {
+            showToast(`阶段确认完成: ${pendingStage}`);
+            setStatus(`已确认: ${pendingStage}`);
+          } else if (result?.requiresConfirmation) {
+            showToast(`阶段待确认: ${next.key}`);
+            setStatus(`待确认: ${next.key}`);
+          } else {
+            showToast(`阶段执行完成: ${next.key}`);
+            setStatus(`完成: ${next.key}`);
+          }
           await this.render();
         } catch (error) {
           showToast(error.message, 'error');
@@ -450,8 +651,13 @@ const PipelineView = {
         setStatus(`批量执行中: ${next.key} -> ${last.key} ...`);
         try {
           const result = await this._runTaskRange(next.key, last.key);
+          await this._hydrateTaskExecutionResults(this.state.taskSnapshot);
           const failed = Array.isArray(result?.failedStages) ? result.failedStages : [];
-          if (failed.length > 0) {
+          const pendingStage = result?.pendingConfirmationStage || '';
+          if (pendingStage) {
+            showToast(`批量执行已停在待确认阶段: ${pendingStage}`);
+            setStatus(`待确认: ${pendingStage}`);
+          } else if (failed.length > 0) {
             showToast(`批量执行完成，失败阶段: ${failed.join(', ')}`, 'error');
             setStatus(`完成（有失败）: ${failed.join(', ')}`, true);
           } else {
@@ -462,6 +668,60 @@ const PipelineView = {
         } catch (error) {
           showToast(error.message, 'error');
           setStatus(`失败: ${error.message}`, true);
+          setButtonsDisabled(false);
+        }
+      };
+    }
+
+    if (rewindBtn) {
+      rewindBtn.onclick = async () => {
+        const stageKey = rewindSelect?.value || '';
+        if (!stageKey) {
+          showToast('请选择回退阶段');
+          return;
+        }
+        setButtonsDisabled(true);
+        setStatus(`回退中: ${stageKey} ...`);
+        try {
+          const result = await this._rewindTask(stageKey);
+          this.state.step = this._mapStageToViewStep(stageKey);
+          await this._hydrateTaskExecutionResults(result?.task || this.state.taskSnapshot);
+          showToast(`已回退到阶段: ${stageKey}`);
+          setStatus(`已回退: ${stageKey}`);
+          await this.render();
+        } catch (error) {
+          showToast(error.message, 'error');
+          setStatus(`回退失败: ${error.message}`, true);
+          setButtonsDisabled(false);
+        }
+      };
+    }
+
+    if (rewindRunBtn) {
+      rewindRunBtn.onclick = async () => {
+        const stageKey = rewindSelect?.value || '';
+        if (!stageKey) {
+          showToast('请选择回退阶段');
+          return;
+        }
+        setButtonsDisabled(true);
+        setStatus(`回退并执行: ${stageKey} ...`);
+        try {
+          await this._rewindTask(stageKey);
+          const result = await this._runTaskStage(stageKey);
+          this.state.step = this._mapStageToViewStep(stageKey);
+          await this._hydrateTaskExecutionResults(result?.task || this.state.taskSnapshot);
+          if (result?.requiresConfirmation) {
+            showToast(`阶段待确认: ${stageKey}`);
+            setStatus(`待确认: ${stageKey}`);
+          } else {
+            showToast(`已回退并执行: ${stageKey}`);
+            setStatus(`完成: ${stageKey}`);
+          }
+          await this.render();
+        } catch (error) {
+          showToast(error.message, 'error');
+          setStatus(`回退并执行失败: ${error.message}`, true);
           setButtonsDisabled(false);
         }
       };
@@ -625,25 +885,13 @@ const PipelineView = {
     return 0;
   },
 
-  async _restoreTask(taskId) {
+  async _restoreTask(taskId, { silent = false, rerender = true } = {}) {
     try {
       const data = await API.get(`/pipeline/tasks/${encodeURIComponent(taskId)}`);
       this._updateTaskFromResponse(data);
       const task = data?.task;
       if (!task) return;
-
-      const draftFile = task?.metadata?.draftFile || '';
-      if (draftFile && draftFile.includes('/')) {
-        try {
-          const [platform, filename] = draftFile.split('/');
-          const draftData = await API.get(`/content/${encodeURIComponent(platform)}/${encodeURIComponent(filename)}`);
-          this.state.draftFile = draftFile;
-          this.state.draftContent = draftData?.content || '';
-        } catch {
-          this.state.draftFile = '';
-          this.state.draftContent = '';
-        }
-      }
+      await this._hydrateTaskExecutionResults(task);
 
       const restoreStep = this._mapStageToViewStep(task.currentStage);
       this.state.step = restoreStep;
@@ -672,13 +920,23 @@ const PipelineView = {
         this.state.hotspotConstraintsText = Array.isArray(enrich.constraints) ? enrich.constraints.join('\n') : '';
         this.state.hotspotMaterialsText = Array.isArray(enrich.materials) ? enrich.materials.join('\n') : '';
       }
-      showToast(`已恢复任务: ${task.id}`);
-      this.render();
+      if (!silent) {
+        showToast(`已恢复任务: ${task.id}`);
+      }
+      if (rerender) {
+        this.render();
+      }
     } catch (e) {
       showToast('恢复任务失败: ' + e.message, 'error');
     }
   },
 
+  async _restoreHandoffTask() {
+    const taskId = sessionStorage.getItem('pipeline_task_handoff');
+    if (!taskId || taskId === this.state.taskId) return;
+    sessionStorage.removeItem('pipeline_task_handoff');
+    await this._restoreTask(taskId, { silent: true, rerender: false });
+  },
   // ============================================================
   //  运行时选项加载（平台列表 + AI 引擎）
   // ============================================================
@@ -780,7 +1038,7 @@ const PipelineView = {
   },
 
   // ============================================================
-  //  Step 1: 输入素材
+  //  阶段 1-3: 热点准备
   // ============================================================
   _renderInput() {
     const el = document.getElementById('pipeline-content');
@@ -817,7 +1075,7 @@ const PipelineView = {
       : '';
 
     el.innerHTML = `
-      <h3>输入素材</h3>
+      <h3>阶段 1-3：热点准备</h3>
       <p style="font-size:13px;color:var(--muted);margin-bottom:16px">
         输入关键词、想法、长文本或热帖内容作为创作素材
       </p>
@@ -967,11 +1225,11 @@ const PipelineView = {
   },
 
   // ============================================================
-  //  Step 2: 选择创作方向 + 生成母稿
+  //  阶段 4: 选择创作方向 + 生成母稿
   // ============================================================
   _renderDraft() {
     const el = document.getElementById('pipeline-content');
-    let html = `<h3>选择创作方向 & AI 引擎</h3>`;
+    let html = `<h3>阶段 4：选择创作方向并生成母稿</h3>`;
     const styleList = this.state.styleCatalog.length > 0 ? this.state.styleCatalog : this.STYLE_FALLBACK;
     const engineOptions = this.state.engineOptions.length > 0
       ? this.state.engineOptions
@@ -1073,10 +1331,8 @@ const PipelineView = {
       saveDraftBtn.onclick = async () => {
         const editEl = document.getElementById('pl-draft-edit');
         if (!editEl || !this.state.draftFile) return;
-        const parts = this.state.draftFile.split('/');
-        if (parts.length !== 2) return;
         try {
-          await API.put(`/content/${parts[0]}/${parts[1]}`, { content: editEl.value });
+          await this._writeSharedExecutionText(this.state.draftFile, editEl.value);
           this.state.draftContent = editEl.value;
           showToast('母稿已保存');
         } catch (e) { showToast('保存失败: ' + e.message, 'error'); }
@@ -1125,7 +1381,7 @@ const PipelineView = {
   },
 
   // ============================================================
-  //  Step 3: 多平台生成 + 勾选式优化去AI
+  //  阶段 5-6: 多平台生成 + 勾选式优化去AI
   // ============================================================
   _renderPlatforms() {
     const el = document.getElementById('pipeline-content');
@@ -1133,7 +1389,7 @@ const PipelineView = {
     const allowedSet = new Set(platformList.map((item) => item.value));
     this.state.platforms = this.state.platforms.filter((name) => allowedSet.has(name));
     this.state.platformsOptimize = this.state.platformsOptimize.filter((name) => allowedSet.has(name));
-    let html = `<h3>选择目标平台</h3>`;
+    let html = `<h3>阶段 5-6：平台改写与审核优化</h3>`;
 
     // 平台选择
     html += `<div class="platform-grid">`;
@@ -1429,10 +1685,8 @@ const PipelineView = {
         const r = this.state.platformResults[idx];
         const textarea = document.getElementById(`pr-edit-${idx}`);
         if (!textarea || !r.file) return;
-        const parts = r.file.split('/');
-        if (parts.length !== 2) return;
         try {
-          await API.put(`/content/${parts[0]}/${parts[1]}`, { content: textarea.value });
+          await this._writeSharedExecutionText(r.file, textarea.value);
           r.content = textarea.value;
           r.length = textarea.value.length;
           btn.closest('.collapsible').querySelector('.collapsible-header').childNodes[0].textContent = `${r.platform} (${r.length}字) `;
@@ -1443,7 +1697,7 @@ const PipelineView = {
   },
 
   // ============================================================
-  //  Step 4: 双轨图片生成 (封面带文字 + 配图视觉隐喻)
+  //  阶段 7: 双轨图片生成 (封面带文字 + 配图视觉隐喻)
   // ============================================================
   async _renderImage() {
     const el = document.getElementById('pipeline-content');
@@ -1461,7 +1715,7 @@ const PipelineView = {
       platformConfig = pc.parsed || {};
     } catch {}
 
-    let html = `<h3>图片生成 (双轨模式)</h3>
+    let html = `<h3>阶段 7：图片生成 (双轨模式)</h3>
       <p style="font-size:13px;color:var(--muted);margin-bottom:16px">
         每平台 2 张图: <strong>封面</strong>(带文字海报) + <strong>配图</strong>(视觉隐喻) — 反AI荧光色已内置
       </p>
@@ -1809,26 +2063,27 @@ const PipelineView = {
   },
 
   // ============================================================
-  //  Step 5: 最终输出
+  //  阶段 8-9: 最终输出
   // ============================================================
   async _renderOutput() {
     const el = document.getElementById('pipeline-content');
     const finalContents = this.state.platformResults;
+    const hasFinalResults = this.state.finalResults.length > 0;
 
-    let html = `<h3>最终输出</h3>
+    let html = `<h3>阶段 8-9：排版与最终输出</h3>
       <p style="font-size:13px;color:var(--muted);margin-bottom:16px">
-        生成纯文本文件 + Obsidian 打开链接
+        先生成排版稿，再导出纯文本文件和 Obsidian 打开链接
       </p>
     `;
 
     html += `
-      <button class="btn btn-primary" id="pl-assemble" style="margin-bottom:20px">
-        组装最终文件
+      <button class="btn btn-primary" id="pl-assemble" style="margin-bottom:20px" ${finalContents.length === 0 ? 'disabled' : ''}>
+        ${hasFinalResults ? '重新组装最终文件' : '组装最终文件'}
       </button>
       <div id="pl-final-results"></div>
     `;
 
-    if (this.state.finalResults.length > 0) {
+    if (hasFinalResults) {
       html += `<div id="pl-final-links"></div>`;
     }
 
@@ -1841,7 +2096,7 @@ const PipelineView = {
 
     el.innerHTML = html;
 
-    if (this.state.finalResults.length > 0) {
+    if (hasFinalResults) {
       this._showFinalLinks();
     }
 
@@ -1919,11 +2174,11 @@ const PipelineView = {
         this._updateTaskFromResponse(result);
         this.state.finalResults = result.results;
         this._showFinalLinks();
-        btn.textContent = '重新组装';
+        btn.textContent = '重新组装最终文件';
         btn.disabled = false;
       } catch (e) {
         showToast(e.message, 'error');
-        btn.textContent = '组装最终文件';
+        btn.textContent = this.state.finalResults.length > 0 ? '重新组装最终文件' : '组装最终文件';
         btn.disabled = false;
       }
     };
@@ -1939,14 +2194,16 @@ const PipelineView = {
       <div class="file-links">`;
 
     this.state.finalResults.forEach(r => {
+      const copyArg = JSON.stringify(r.file || '');
+      const actionLink = r.obsidianUri
+        ? `<a class="link-action" href="${r.obsidianUri}" style="text-decoration:none;color:inherit">Obsidian 打开</a>`
+        : '<span class="link-action" style="opacity:.6">Obsidian 链接待恢复</span>';
       html += `
         <div class="file-link">
           <span class="link-icon">&#128196;</span>
           <span class="link-name">${r.file}</span>
-          <span class="link-action" onclick="PipelineView._copyFile('${r.file}')">复制</span>
-          <a class="link-action" href="${r.obsidianUri}" style="text-decoration:none;color:inherit">
-            Obsidian 打开
-          </a>
+          <span class="link-action" onclick='PipelineView._copyFile(${copyArg})'>复制</span>
+          ${actionLink}
         </div>
       `;
     });
@@ -1957,8 +2214,7 @@ const PipelineView = {
 
   async _copyFile(filePath) {
     try {
-      const parts = filePath.split('/');
-      const data = await API.get(`/content/${parts[0]}/${parts[1]}`);
+      const data = await this._readSharedExecutionText(filePath);
       await navigator.clipboard.writeText(data.content || data);
       showToast('已复制到剪贴板');
     } catch (e) {

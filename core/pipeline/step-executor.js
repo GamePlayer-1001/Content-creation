@@ -109,7 +109,7 @@ class PipelineStepExecutor {
       throw new Error(`CLI run-step 暂不支持阶段: ${stage}`);
     }
 
-    const shouldConfirm = stageDef.requiresConfirmation ? true : !!confirm;
+    const shouldConfirm = !!confirm;
 
     const metadataPatch = this._buildMetadataPatch(task, stage, {
       stageOutput: execution.stageOutput,
@@ -404,6 +404,11 @@ class PipelineStepExecutor {
           ...(task?.metadata?.platformFiles || {}),
           ...platformFiles,
         },
+        platformResults: results.map((item) => ({
+          platform: item.platform,
+          file: item.file,
+          length: item.length || 0,
+        })),
       },
     };
   }
@@ -598,6 +603,13 @@ class PipelineStepExecutor {
         path: item.file,
       })),
       metadataExtra: {
+        layoutResults: results.map((item) => ({
+          platform: item.platform,
+          sourceFile: item.sourceFile,
+          file: item.file,
+          imageCount: item.imageCount || 0,
+          length: item.length || 0,
+        })),
         layoutFiles: results.map((r) => r.file),
       },
     };
@@ -656,6 +668,12 @@ class PipelineStepExecutor {
         path: item.file,
       })),
       metadataExtra: {
+        finalResults: results.map((item) => ({
+          platform: item.platform,
+          file: item.file,
+          obsidianUri: item.obsidianUri,
+          length: item.length || 0,
+        })),
         finalFiles: results.map((r) => r.file),
       },
     };
