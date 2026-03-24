@@ -3,6 +3,7 @@
  * [INPUT]: 依赖 core/pipeline 共享层
  * [OUTPUT]: CLI Runner（阶段查看、热点读取、任务创建、任务推进、已实现阶段执行）
  * [POS]: app/cli 的最小可用入口，验证双通道共享任务状态与阶段执行
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 
 const path = require('path');

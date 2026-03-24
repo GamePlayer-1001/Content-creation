@@ -2,6 +2,7 @@
  * [INPUT]: 依赖阶段定义与 TaskStateStore
  * [OUTPUT]: 导出 WorkflowRunner（create/list/get/advance）
  * [POS]: core/pipeline 的任务推进器，统一阶段推进与确认策略
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 
 const {

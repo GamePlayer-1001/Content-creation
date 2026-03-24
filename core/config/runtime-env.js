@@ -2,6 +2,7 @@
  * [INPUT]: 读取 process.env
  * [OUTPUT]: 导出 resolveRuntimeEnv（统一环境变量口径 + 兼容映射）
  * [POS]: core/config 的运行时配置入口，被 WebApp/CLI/服务层复用
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 
 function resolveRuntimeEnv(env = process.env) {

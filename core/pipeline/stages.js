@@ -2,6 +2,7 @@
  * [INPUT]: 无外部输入，维护内容生产主流程的统一阶段定义
  * [OUTPUT]: 导出 PIPELINE_STAGES + 阶段查询工具函数
  * [POS]: core/pipeline 的阶段单一信号源，被 WebApp 与 CLI 共用
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 
 const PIPELINE_STAGES = Object.freeze([

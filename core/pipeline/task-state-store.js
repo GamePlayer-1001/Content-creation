@@ -2,6 +2,7 @@
  * [INPUT]: 依赖 fs/path, 读写任务状态 JSON 文件
  * [OUTPUT]: 导出 TaskStateStore 类（create/list/get/save）
  * [POS]: core/pipeline 的轻量任务状态存储，被 WebApp 与 CLI 共用
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 
 const fs = require('fs');

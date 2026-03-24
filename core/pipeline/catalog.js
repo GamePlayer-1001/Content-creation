@@ -2,6 +2,7 @@
  * [INPUT]: 无
  * [OUTPUT]: 导出 CREATION_STYLES / PLATFORM_CATALOG / 平台映射工具
  * [POS]: core/pipeline 的共享目录常量，避免 WebApp/CLI 常量漂移
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 
 const CREATION_STYLES = Object.freeze({

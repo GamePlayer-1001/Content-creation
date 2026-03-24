@@ -2,6 +2,7 @@
  * [INPUT]: runtimeEnv.hotspot + config/trending_topics_manual.json
  * [OUTPUT]: 导出 HotspotService（读取 Google Sheets / 手动热点池）
  * [POS]: core/services/hotspot 的统一热点读取层，被 WebApp/CLI 共用
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 
 const fs = require('fs');

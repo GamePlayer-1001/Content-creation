@@ -2,6 +2,7 @@
  * [INPUT]: 依赖 WorkflowRunner + AI/Skill/Output/Compliance/Image 服务
  * [OUTPUT]: 导出 PipelineStepExecutor（runStep 执行已实现阶段）
  * [POS]: core/pipeline 的阶段执行器，被 CLI 复用
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 
 const path = require('path');

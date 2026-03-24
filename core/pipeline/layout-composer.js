@@ -2,6 +2,7 @@
  * [INPUT]: 平台名 + 原始正文 + 图片信息 + 选题信息
  * [OUTPUT]: 排版 Markdown（按平台组模板组织结构）
  * [POS]: core/pipeline 的排版组装器，被 Web 路由与 CLI 阶段复用
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 
 const { PLATFORM_CATALOG, resolvePlatformSkillName } = require('./catalog');
