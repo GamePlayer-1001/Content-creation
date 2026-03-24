@@ -53,6 +53,7 @@ const PipelineView = {
   // ============================================================
   state: {
     step: 0,
+    activeStageKey: '',
     taskId: '',
     taskStatus: '',
     taskCurrentStage: '',
@@ -87,12 +88,12 @@ const PipelineView = {
     pipelineStages: [],
   },
 
-  STEPS: [
-    { label: '热点准备', key: 'input' },
-    { label: '母稿生成', key: 'draft' },
-    { label: '平台处理', key: 'platforms' },
-    { label: '视觉素材', key: 'image' },
-    { label: '排版导出', key: 'output' },
+  STAGE_GROUPS: [
+    { panel: 0, stages: ['hotspot-list', 'hotspot-select', 'hotspot-enrich'] },
+    { panel: 1, stages: ['draft-generate'] },
+    { panel: 2, stages: ['platform-rewrite', 'review-optimize'] },
+    { panel: 3, stages: ['visual-generate'] },
+    { panel: 4, stages: ['layout-compose', 'export-output'] },
   ],
 
   STYLE_FALLBACK: [
@@ -142,16 +143,30 @@ const PipelineView = {
       `;
       html += this._renderTaskSummaryCard();
     }
-    html += this._renderStageProgressStrip();
+    const navStages = Array.isArray(this.state.pipelineStages) ? this.state.pipelineStages : [];
+    const activeStageKey = this._getActiveNavigationStageKey();
+    const task = this.state.taskSnapshot || {};
+    const completed = new Set(Array.isArray(task?.completedStages) ? task.completedStages : []);
+    const currentStage = task?.currentStage || '';
+    const waitingStage = task?.pendingConfirmationStage || '';
+    const activeStage = navStages.find((stage) => stage.key === activeStageKey) || null;
+    const hasTaskProgress = completed.size > 0 || !!currentStage || !!waitingStage;
 
-    // 步骤指示器
+    // 阶段导航（9阶段真实导航，映射到 5 个内容面板）
     html += `<div class="pipeline-steps">`;
-    this.STEPS.forEach((s, i) => {
-      const cls = i === this.state.step ? 'active' : (i < this.state.step ? 'done' : '');
+    navStages.forEach((stage) => {
+      const panelIndex = this._mapStageToViewStep(stage.key);
+      const fallbackDone = !hasTaskProgress && activeStage && stage.order < activeStage.order;
+      const cls = [
+        stage.key === activeStageKey ? 'active' : '',
+        completed.has(stage.key) || fallbackDone ? 'done' : '',
+        currentStage === stage.key || (!hasTaskProgress && stage.key === activeStageKey) ? 'current' : '',
+        waitingStage === stage.key ? 'waiting' : '',
+      ].filter(Boolean).join(' ');
       html += `
-        <div class="pipeline-step ${cls}" data-step="${i}">
-          <span class="step-num"><span>${i + 1}</span></span>
-          ${s.label}
+        <div class="pipeline-step ${cls}" data-step="${panelIndex}" data-stage-key="${stage.key}" title="${escapeHtml(stage.description || stage.label || stage.key)}">
+          <span class="step-num"><span>${stage.order}</span></span>
+          <span class="step-label">${escapeHtml(stage.label || stage.key)}</span>
         </div>`;
     });
     html += `</div>`;
@@ -166,10 +181,11 @@ const PipelineView = {
     document.querySelectorAll('.pipeline-step').forEach(el => {
       el.onclick = () => {
         const targetStep = parseInt(el.dataset.step);
-        if (targetStep <= this.state.step) {
-          this.state.step = targetStep;
-          this.render();
-        }
+        const stageKey = el.dataset.stageKey || '';
+        if (targetStep > this.state.step) return;
+        this.state.step = targetStep;
+        this.state.activeStageKey = stageKey || this._getDefaultStageKeyForPanel(targetStep);
+        this.render();
       };
     });
 
@@ -189,6 +205,35 @@ const PipelineView = {
       () => this._renderOutput(),
     ];
     fns[this.state.step]();
+  },
+
+  _getStageGroupForPanel(panelIndex) {
+    return this.STAGE_GROUPS.find((group) => group.panel === panelIndex) || null;
+  },
+
+  _getDefaultStageKeyForPanel(panelIndex, { preferLast = false } = {}) {
+    const group = this._getStageGroupForPanel(panelIndex);
+    if (!group || !Array.isArray(group.stages) || group.stages.length === 0) return '';
+    return preferLast ? group.stages[group.stages.length - 1] : group.stages[0];
+  },
+
+  _getActiveNavigationStageKey() {
+    const stageKeys = new Set(
+      (Array.isArray(this.state.pipelineStages) ? this.state.pipelineStages : []).map((stage) => stage.key)
+    );
+    const candidate = this.state.activeStageKey
+      || this.state.taskSnapshot?.pendingConfirmationStage
+      || this.state.taskSnapshot?.currentStage
+      || this.state.taskCurrentStage
+      || this._getDefaultStageKeyForPanel(this.state.step);
+    if (candidate && stageKeys.has(candidate)) return candidate;
+    return this._getDefaultStageKeyForPanel(this.state.step);
+  },
+
+  _focusStage(stageKey, { preferLastInPanel = false } = {}) {
+    const panelIndex = this._mapStageToViewStep(stageKey);
+    this.state.step = panelIndex;
+    this.state.activeStageKey = stageKey || this._getDefaultStageKeyForPanel(panelIndex, { preferLast: preferLastInPanel });
   },
 
   // ============================================================
@@ -221,6 +266,7 @@ const PipelineView = {
     this.state.taskStatus = task.status || this.state.taskStatus;
     this.state.taskCurrentStage = task.currentStage || this.state.taskCurrentStage;
     this.state.taskSnapshot = task;
+    this.state.activeStageKey = task.pendingConfirmationStage || task.currentStage || this.state.activeStageKey;
     if (Array.isArray(this.state.recentTasks)) {
       const idx = this.state.recentTasks.findIndex(t => t.id === task.id);
       if (idx >= 0) {
@@ -684,7 +730,7 @@ const PipelineView = {
         setStatus(`回退中: ${stageKey} ...`);
         try {
           const result = await this._rewindTask(stageKey);
-          this.state.step = this._mapStageToViewStep(stageKey);
+          this._focusStage(stageKey);
           await this._hydrateTaskExecutionResults(result?.task || this.state.taskSnapshot);
           showToast(`已回退到阶段: ${stageKey}`);
           setStatus(`已回退: ${stageKey}`);
@@ -709,7 +755,7 @@ const PipelineView = {
         try {
           await this._rewindTask(stageKey);
           const result = await this._runTaskStage(stageKey);
-          this.state.step = this._mapStageToViewStep(stageKey);
+          this._focusStage(stageKey);
           await this._hydrateTaskExecutionResults(result?.task || this.state.taskSnapshot);
           if (result?.requiresConfirmation) {
             showToast(`阶段待确认: ${stageKey}`);
@@ -893,8 +939,10 @@ const PipelineView = {
       if (!task) return;
       await this._hydrateTaskExecutionResults(task);
 
-      const restoreStep = this._mapStageToViewStep(task.currentStage);
+      const restoreStage = task?.pendingConfirmationStage || task?.currentStage || '';
+      const restoreStep = this._mapStageToViewStep(restoreStage);
       this.state.step = restoreStep;
+      this.state.activeStageKey = restoreStage || this._getDefaultStageKeyForPanel(restoreStep, { preferLast: true });
       if (!this.state.input && task.title) {
         this.state.input = task.title;
       }
@@ -1170,7 +1218,7 @@ const PipelineView = {
         constraints: parseTextList(constraintsText),
         materials: parseTextList(materialsText),
       });
-      this.state.step = 1;
+      this._focusStage('draft-generate');
       this.render();
     };
 
@@ -1313,7 +1361,7 @@ const PipelineView = {
     };
 
     document.getElementById('pl-back2').onclick = () => {
-      this.state.step = 0;
+      this._focusStage('hotspot-enrich');
       this.render();
     };
 
@@ -1321,7 +1369,7 @@ const PipelineView = {
       // 如果有编辑区，保存编辑内容
       const editEl = document.getElementById('pl-draft-edit');
       if (editEl) this.state.draftContent = editEl.value;
-      this.state.step = 2;
+      this._focusStage('platform-rewrite');
       this.render();
     };
 
@@ -1485,8 +1533,8 @@ const PipelineView = {
       this._updateOptimizeChecks();
     };
 
-    document.getElementById('pl-back3').onclick = () => { this.state.step = 1; this.render(); };
-    document.getElementById('pl-next3').onclick = () => { this.state.step = 3; this.render(); };
+    document.getElementById('pl-back3').onclick = () => { this._focusStage('draft-generate'); this.render(); };
+    document.getElementById('pl-next3').onclick = () => { this._focusStage('visual-generate'); this.render(); };
 
     // --- 一键生成（生成 + 自动优化勾选平台）---
     document.getElementById('pl-gen-platforms').onclick = async () => {
@@ -1869,9 +1917,9 @@ const PipelineView = {
     });
 
     // 导航
-    document.getElementById('pl-back5').onclick = () => { this.state.step = 2; this.render(); };
-    document.getElementById('pl-next5').onclick = () => { this.state.step = 4; this.render(); };
-    document.getElementById('pl-skip-images').onclick = () => { this.state.step = 4; this.render(); };
+    document.getElementById('pl-back5').onclick = () => { this._focusStage('review-optimize'); this.render(); };
+    document.getElementById('pl-next5').onclick = () => { this._focusStage('layout-compose'); this.render(); };
+    document.getElementById('pl-skip-images').onclick = () => { this._focusStage('layout-compose'); this.render(); };
 
     // 单平台封面/配图生成
     finalContents.forEach((item, i) => {
@@ -2100,11 +2148,12 @@ const PipelineView = {
       this._showFinalLinks();
     }
 
-    document.getElementById('pl-back6').onclick = () => { this.state.step = 3; this.render(); };
+    document.getElementById('pl-back6').onclick = () => { this._focusStage('visual-generate'); this.render(); };
     document.getElementById('pl-restart').onclick = () => {
       const { engine, platformCatalog, styleCatalog, engineOptions, recentTasks, hotspotSource, pipelineStages } = this.state;
       this.state = {
         step: 0,
+        activeStageKey: '',
         taskId: '',
         taskStatus: '',
         taskCurrentStage: '',

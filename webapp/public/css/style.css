@@ -361,11 +361,19 @@ h3 {
   display: flex;
   align-items: center;
   gap: 6px;
+  position: relative;
 }
 .pipeline-step:hover { color: var(--fg); }
 .pipeline-step.active {
   color: var(--fg);
   border-bottom-color: var(--fg);
+  background: var(--light);
+}
+.pipeline-step.current {
+  color: var(--fg);
+}
+.pipeline-step.waiting {
+  color: #b45309;
 }
 .pipeline-step.done {
   color: var(--muted);
@@ -378,11 +386,26 @@ h3 {
   border: 1px solid currentColor;
   font-size: 11px;
   font-family: var(--font-mono);
+  flex: 0 0 auto;
+}
+.pipeline-step .step-label {
+  white-space: nowrap;
 }
 .pipeline-step.done .step-num::after {
   content: '\2713';
 }
 .pipeline-step.done .step-num span { display: none; }
+.pipeline-step.current .step-num {
+  background: var(--fg);
+  color: var(--bg);
+}
+.pipeline-step.waiting .step-num {
+  border-color: #b45309;
+  color: #b45309;
+}
+.pipeline-step.waiting.active {
+  border-bottom-color: #b45309;
+}
 
 .pipeline-content {
   min-height: 300px;
