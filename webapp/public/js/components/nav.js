@@ -1,4 +1,4 @@
-/**
+﻿/**
  * [INPUT]: 无
  * [OUTPUT]: renderNav 函数
  * [POS]: components/ 侧边导航栏
@@ -10,21 +10,18 @@ function renderNav() {
   const engine = localStorage.getItem('ai_engine') || 'claude';
 
   const items = [
-    { section: '概览' },
-    { hash: '#/',          label: '仪表盘' },
+    { section: '主入口' },
+    { hash: '#/', label: '首页总览' },
+    { hash: '#/hotspots', label: 'Google Sheets 热点' },
+    { hash: '#/pipeline', label: '全流程工作流' },
+    { hash: '#/toolbox', label: '工具箱' },
 
-    { section: '创作' },
-    { hash: '#/search',    label: '热帖搜索' },
-    { hash: '#/pipeline',  label: '内容流水线' },
-    { hash: '#/rewrite',   label: '洗稿' },
-
-    { section: '管理' },
-    { hash: '#/content',    label: '内容管理' },
+    { section: '模块直达' },
+    { hash: '#/rewrite', label: '洗稿改写' },
     { hash: '#/compliance', label: '合规检查' },
-    { hash: '#/config',     label: '配置管理' },
-
-    { section: '工具' },
-    { hash: '#/review',     label: '周复盘' },
+    { hash: '#/review', label: '周复盘' },
+    { hash: '#/content', label: '内容管理' },
+    { hash: '#/config', label: '配置管理' },
   ];
 
   let html = `
@@ -37,10 +34,11 @@ function renderNav() {
   for (const item of items) {
     if (item.section) {
       html += `<div class="nav-section">${item.section}</div>`;
-    } else {
-      const active = current === item.hash ? 'active' : '';
-      html += `<a class="nav-item ${active}" href="${item.hash}">${item.label}</a>`;
+      continue;
     }
+
+    const active = current === item.hash ? 'active' : '';
+    html += `<a class="nav-item ${active}" href="${item.hash}">${item.label}</a>`;
   }
 
   html += `

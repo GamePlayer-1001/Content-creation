@@ -14,7 +14,7 @@ router.get('/review/weekly', (req, res) => {
   try {
     const stats = outputManager.getStats();
     const dayN = scheduleEngine.getDayN();
-    const phase = scheduleEngine.getPhase();
+    const phase = scheduleEngine.getPhase(dayN);
 
     const now = new Date();
     const weekStart = new Date(now);
@@ -53,14 +53,17 @@ router.post('/review/generate', async (req, res) => {
   try {
     const stats = outputManager.getStats();
     const dayN = scheduleEngine.getDayN();
-    const phase = scheduleEngine.getPhase();
+    const phase = scheduleEngine.getPhase(dayN);
 
     const now = new Date();
     const weekStart = new Date(now);
     weekStart.setDate(now.getDate() - now.getDay() + 1);
     weekStart.setHours(0, 0, 0, 0);
 
-    let dataContext = `当前 Day ${dayN}，Phase ${phase}。\n`;
+    let dataContext = `当前 Day ${dayN}，阶段 ${phase.label}（Phase ${phase.phase}）。\n`;
+    if (phase.focus) {
+      dataContext += `当前重点: ${phase.focus}\n`;
+    }
     dataContext += `本周范围: ${weekStart.toISOString().slice(0, 10)} ~ ${now.toISOString().slice(0, 10)}\n\n`;
 
     let totalWeek = 0;

@@ -16,6 +16,15 @@ async function _extractError(res) {
 }
 
 const API = {
+  buildContentPath(filePath) {
+    const raw = String(filePath || '').trim();
+    const parts = raw.split('/').filter(Boolean);
+    if (parts.length < 2) {
+      throw new Error(`无效输出文件路径: ${raw || '(empty)'}`);
+    }
+    return `/content/${parts.map((part) => encodeURIComponent(part)).join('/')}`;
+  },
+
   async get(path) {
     const res = await fetch(`/api${path}`);
     if (!res.ok) throw new Error(await _extractError(res));
@@ -46,6 +55,14 @@ const API = {
     const res = await fetch(`/api${path}`, { method: 'DELETE' });
     if (!res.ok) throw new Error(await _extractError(res));
     return res.json();
+  },
+
+  async readOutputFile(filePath) {
+    return this.get(this.buildContentPath(filePath));
+  },
+
+  async writeOutputFile(filePath, content) {
+    return this.put(this.buildContentPath(filePath), { content });
   },
 
   // SSE 流式请求 — 统一事件回调
