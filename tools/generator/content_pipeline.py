@@ -1,4 +1,11 @@
 """
+[INPUT]: 依赖 ClaudeContentGenerator 图标封面生成器 与输出目录
+[OUTPUT]: 提供 ContentPipeline 类 与 main
+[POS]: tools/generator 编排脚本
+[PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+"""
+
+"""
 内容生成管道
 协调内容生成和图片渲染流程
 """

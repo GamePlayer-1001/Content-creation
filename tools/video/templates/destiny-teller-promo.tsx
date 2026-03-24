@@ -1,4 +1,11 @@
 /**
+ * [INPUT]: 依赖 React Remotion 与同目录共享组件
+ * [OUTPUT]: 导出 DestinyTellerPromo 相关类型与组件
+ * [POS]: tools/video/templates 命理推广模板
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
+
+/**
  * 玄学工坊 (Destiny Teller) 宣传视频模板
  *
  * 核心元素：

@@ -1,4 +1,11 @@
 /**
+ * [INPUT]: 依赖 React Remotion 与同目录共享组件
+ * [OUTPUT]: 导出 WeChatDestinyPromo 组件
+ * [POS]: tools/video/templates 微信命理宣传模板
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
+
+/**
  * 微信聊天风格 - Destiny Teller 软性推广视频
  * 故事：神秘预测成真
  * 时长：60秒（1800帧 @ 30fps）

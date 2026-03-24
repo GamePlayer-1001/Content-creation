@@ -1,4 +1,11 @@
 /**
+ * [INPUT]: 依赖 React Remotion 与同目录共享组件
+ * [OUTPUT]: 导出 ChatWeChatPreview 组件
+ * [POS]: tools/video/templates 微信预览模板
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
+
+/**
  * 微信聊天风格预览
  *
  * 翻倍参数（1080x1920完整分辨率）：气泡字体48px，内边距40x52px，顶部/底部各120px

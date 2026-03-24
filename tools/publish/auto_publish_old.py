@@ -1,6 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
+[INPUT]: 依赖 Playwright 与旧版发布流程配置
+[OUTPUT]: 提供旧版 auto_publish 流程
+[POS]: tools/publish 历史发布入口
+[PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+"""
+
+"""
 完全自动化发布到小红书
 使用 Playwright 实现真正的自动化
 """

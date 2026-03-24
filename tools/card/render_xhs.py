@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
 """
+[INPUT]: 依赖 Python 图像渲染库 与 Markdown 输入
+[OUTPUT]: 提供 Python 版卡片生成脚本
+[POS]: tools/card 早期 Python 渲染入口
+[PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+"""
+
+"""
 小红书卡片渲染脚本 - 增强版
 支持多种排版样式和智能分页策略
 

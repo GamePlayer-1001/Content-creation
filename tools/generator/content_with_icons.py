@@ -1,6 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
+[INPUT]: 依赖 icons 配置 HTML 模板 与输出目录
+[OUTPUT]: 提供 ContentGeneratorWithIcons 类
+[POS]: tools/generator 图标封面生成器
+[PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+"""
+
+"""
 内容生成器 - 强制使用 Lucide Icons
 完全自动化生成内容 + 图标封面
 """

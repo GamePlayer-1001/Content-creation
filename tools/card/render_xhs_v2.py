@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
 """
+[INPUT]: 依赖 Python 图像渲染库 与分页逻辑
+[OUTPUT]: 提供 V2 Python 卡片生成脚本
+[POS]: tools/card Python V2 渲染入口
+[PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+"""
+
+"""
 小红书卡片渲染脚本 V2 - 智能分页版
 将 Markdown 文件渲染为小红书风格的图片卡片
 

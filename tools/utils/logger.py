@@ -1,4 +1,11 @@
 """
+[INPUT]: 依赖 logging pathlib 与本地日志目录
+[OUTPUT]: 提供统一日志工具
+[POS]: tools/utils 日志基座
+[PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+"""
+
+"""
 日志系统配置
 提供统一的日志记录功能
 """

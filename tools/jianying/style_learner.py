@@ -1,4 +1,11 @@
 """
+[INPUT]: 依赖历史剪映样本 统计分析 与 JSON 导出
+[OUTPUT]: 提供 EditingPattern EditingStyle StyleLearner
+[POS]: tools/jianying 风格学习器
+[PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+"""
+
+"""
 剪辑风格学习器
 
 从多个草稿中学习剪辑风格和技巧，提取可复用的剪辑模式

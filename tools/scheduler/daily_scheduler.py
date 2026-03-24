@@ -1,4 +1,11 @@
 """
+[INPUT]: 依赖热点抓取 内容生成 发布脚本 与时间配置
+[OUTPUT]: 提供 DailyScheduler 与 main
+[POS]: tools/scheduler 日程编排器
+[PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+"""
+
+"""
 每日自动化调度器
 协调热点抓取、内容生成、图片渲染和自动发布的完整工作流程
 """

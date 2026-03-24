@@ -1,6 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
+[INPUT]: 依赖 tools 子模块与命令行参数
+[OUTPUT]: 提供 ProjectManager 入口
+[POS]: tools 总控 CLI
+[PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+"""
+
+"""
 项目管理工具 - Auto-Redbook-Skills
 统一入口管理所有功能
 """

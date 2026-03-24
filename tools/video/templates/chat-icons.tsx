@@ -1,4 +1,11 @@
 /**
+ * [INPUT]: 依赖 React Remotion 与同目录共享组件
+ * [OUTPUT]: 导出聊天图标组件集合
+ * [POS]: tools/video/templates 图标组件库
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
+
+/**
  * 聊天应用通用SVG图标库
  */
 

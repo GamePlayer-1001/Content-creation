@@ -1,4 +1,11 @@
 /**
+ * [INPUT]: 依赖 React Remotion 与同目录共享组件
+ * [OUTPUT]: 导出音效函数与 BGM_TRACKS
+ * [POS]: tools/video/templates 音效工具模块
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
+
+/**
  * 音频工具函数
  * 用于生成简单的音效（如提示音）
  */

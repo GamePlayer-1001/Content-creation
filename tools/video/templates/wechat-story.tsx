@@ -1,4 +1,11 @@
 /**
+ * [INPUT]: 依赖 React Remotion 与同目录共享组件
+ * [OUTPUT]: 导出 Message ChatStory WeChatStoryProps 与 WeChatStory
+ * [POS]: tools/video/templates 微信故事模板
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
+
+/**
  * 微信聊天故事视频模板
  *
  * 用真实的微信聊天场景讲述用户故事

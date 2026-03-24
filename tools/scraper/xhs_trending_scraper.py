@@ -1,4 +1,11 @@
 """
+[INPUT]: 依赖 Playwright 与小红书探索页 DOM 结构
+[OUTPUT]: 提供 XHSTrendingScraper 与 main
+[POS]: tools/scraper 小红书热点抓取器
+[PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+"""
+
+"""
 小红书热点抓取器
 使用 Playwright 抓取小红书热点话题和关键词标签
 """

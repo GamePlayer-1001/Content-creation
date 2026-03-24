@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
 """
+[INPUT]: 依赖 cookie API 配置 本地图片 与正文输入
+[OUTPUT]: 提供 LocalPublisher ApiPublisher 与 main
+[POS]: tools/publish 小红书发布入口
+[PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+"""
+
+"""
 小红书笔记发布脚本 - 增强版
 支持直接发布（本地签名）和通过 API 服务发布两种方式
 

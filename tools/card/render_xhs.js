@@ -1,5 +1,12 @@
 #!/usr/bin/env node
 /**
+ * [INPUT]: 依赖 marked js-yaml playwright 与卡片模板
+ * [OUTPUT]: 提供 Markdown 转卡片 CLI
+ * [POS]: tools/card Node 渲染入口
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
+
+/**
  * 小红书卡片渲染脚本 - Node.js 增强版
  * 支持多种排版样式和智能分页策略
  * 

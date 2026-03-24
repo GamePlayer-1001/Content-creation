@@ -1,5 +1,12 @@
 #!/usr/bin/env node
 /**
+ * [INPUT]: 依赖 Puppeteer 与封面 HTML 输入
+ * [OUTPUT]: 导出 renderCover
+ * [POS]: tools/card 封面截图器
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
+
+/**
  * 封面渲染脚本 - 直接渲染HTML为PNG
  * 支持 Lucide Icons
  */

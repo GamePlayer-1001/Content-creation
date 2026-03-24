@@ -1,4 +1,11 @@
 /**
+ * [INPUT]: 依赖 React Remotion 与同目录共享组件
+ * [OUTPUT]: 导出 ChatWhatsAppVideo 组件
+ * [POS]: tools/video/templates WhatsApp 正式渲染模板
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
+
+/**
  * WhatsApp 聊天风格动画视频
  * 通用模板 - 支持自定义对话内容
  * 默认故事：神秘预测成真（60秒）

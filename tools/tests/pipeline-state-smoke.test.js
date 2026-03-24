@@ -1,3 +1,10 @@
+/**
+ * [INPUT]: 依赖 WorkflowRunner 阶段定义 与 node:test
+ * [OUTPUT]: 提供任务状态 smoke tests
+ * [POS]: tools/tests 轻量回归测试
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
+
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');

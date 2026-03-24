@@ -1,4 +1,11 @@
 """
+[INPUT]: 依赖文件系统扫描 项目目录结构 与导出能力
+[OUTPUT]: 提供 DraftProject 与 DraftScanner
+[POS]: tools/jianying 批量扫描器
+[PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+"""
+
+"""
 剪映草稿扫描器
 
 功能:

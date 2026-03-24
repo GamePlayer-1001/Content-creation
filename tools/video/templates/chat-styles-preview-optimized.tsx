@@ -1,4 +1,11 @@
 /**
+ * [INPUT]: 依赖 React Remotion 与同目录共享组件
+ * [OUTPUT]: 导出 ChatStylesPreviewOptimized 组件
+ * [POS]: tools/video/templates 优化版多风格预览页
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
+
+/**
  * 4种聊天软件风格对比 - 优化版
  *
  * 使用方案A参数：气泡字体24px，内边距20x26px，顶部/底部各60px

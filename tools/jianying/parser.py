@@ -1,4 +1,11 @@
 """
+[INPUT]: 依赖剪映草稿 JSON dataclass 与文件扫描
+[OUTPUT]: 提供 TrackInfo SegmentInfo DraftAnalysis ConfigParser
+[POS]: tools/jianying 草稿解析器
+[PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+"""
+
+"""
 剪映草稿深度解析器
 
 使用 pyJianYingDraft 库解析草稿内容

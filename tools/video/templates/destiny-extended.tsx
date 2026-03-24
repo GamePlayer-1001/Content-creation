@@ -1,4 +1,11 @@
 /**
+ * [INPUT]: 依赖 React Remotion 与同目录共享组件
+ * [OUTPUT]: 导出 DestinyExtendedProps 与 DestinyExtended
+ * [POS]: tools/video/templates 命理扩展模板
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
+
+/**
  * DestinyTeller 扩展版视频模板
  *
  * 横版: 66 秒完整版

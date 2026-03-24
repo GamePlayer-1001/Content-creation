@@ -1,4 +1,11 @@
 """
+[INPUT]: 依赖发布脚本 平台配置 与异步入口
+[OUTPUT]: 提供发布流程测试脚本
+[POS]: tools/tests 标准发布验证脚本
+[PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+"""
+
+"""
 测试完整发布流程
 """
 import asyncio

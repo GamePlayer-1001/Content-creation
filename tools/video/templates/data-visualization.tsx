@@ -1,4 +1,11 @@
 /**
+ * [INPUT]: 依赖 React Remotion 与同目录共享组件
+ * [OUTPUT]: 导出 DataVisualization 相关类型与组件
+ * [POS]: tools/video/templates 数据可视化模板
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
+
+/**
  * 数据可视化模板
  *
  * 用于创建动画图表和数据展示视频

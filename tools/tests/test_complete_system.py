@@ -1,4 +1,11 @@
 """
+[INPUT]: 依赖 scraper generator publish 模块 与异步入口
+[OUTPUT]: 提供端到端联调测试脚本
+[POS]: tools/tests 全链路验收样本
+[PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+"""
+
+"""
 完整系统测试脚本
 测试所有核心功能：热点抓取、内容生成、图片渲染
 """

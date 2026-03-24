@@ -1,4 +1,11 @@
 """
+[INPUT]: 依赖 Playwright 页面操作 与平台表单选择器
+[OUTPUT]: 提供 PlaywrightPublisher 类 与 main
+[POS]: tools/publish 底层发布器
+[PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+"""
+
+"""
 Playwright 自动发布器
 使用 Playwright 自动发布内容到小红书
 """

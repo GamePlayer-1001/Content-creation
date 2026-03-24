@@ -1,4 +1,11 @@
 """
+[INPUT]: 依赖本地素材目录与终端交互
+[OUTPUT]: 提供 MaterialsViewer 与 main
+[POS]: tools 素材巡检脚本
+[PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+"""
+
+"""
 素材管理查看工具
 """
 import json

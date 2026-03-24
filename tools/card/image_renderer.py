@@ -1,4 +1,11 @@
 """
+[INPUT]: 依赖 Python 图像渲染库 字体 与主题配置
+[OUTPUT]: 提供 ImageRenderer 类
+[POS]: tools/card Python 渲染底座
+[PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+"""
+
+"""
 图片渲染器
 封装 render_xhs_v2.js 脚本，将 Markdown 渲染成图片
 """

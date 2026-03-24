@@ -1,4 +1,11 @@
 """
+[INPUT]: 依赖 aiohttp RSS 源配置 与手动热点模板
+[OUTPUT]: 提供 RSSTrendingScraper ManualTrendingGenerator 与 main
+[POS]: tools/scraper RSS 热点采集器
+[PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+"""
+
+"""
 RSS 热点抓取器
 使用 RSS 订阅源获取命理相关热点话题
 """

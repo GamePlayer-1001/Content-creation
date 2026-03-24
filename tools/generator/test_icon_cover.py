@@ -1,6 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
+[INPUT]: 依赖图标封面模板与本地输出目录
+[OUTPUT]: 提供图标封面测试脚本
+[POS]: tools/generator 验证脚本
+[PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+"""
+
+"""
 测试使用 Lucide Icons 的新封面生成
 """
 import json

@@ -1,4 +1,11 @@
 """
+[INPUT]: 依赖剪映草稿 JSON 媒体映射 与批量写回逻辑
+[OUTPUT]: 提供 MediaMapping TemplateExtractor DraftEditor BatchTemplateApplier
+[POS]: tools/jianying 模板提取与套用模块
+[PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+"""
+
+"""
 剪映草稿模板工具
 
 功能:

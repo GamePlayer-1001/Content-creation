@@ -1,4 +1,11 @@
 /**
+ * [INPUT]: 依赖 React Remotion 与同目录共享组件
+ * [OUTPUT]: 导出 WeChatPixelPerfect 组件
+ * [POS]: tools/video/templates 像素级微信模板
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
+
+/**
  * 微信聊天故事 - 像素级完美复刻版
  *
  * 更吸引人的故事：反转剧情，悬念设置

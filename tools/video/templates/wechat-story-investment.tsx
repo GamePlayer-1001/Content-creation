@@ -1,4 +1,11 @@
 /**
+ * [INPUT]: 依赖 React Remotion 与同目录共享组件
+ * [OUTPUT]: 导出 WeChatStoryInvestment 组件
+ * [POS]: tools/video/templates 投资题材微信故事模板
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
+
+/**
  * 微信聊天故事 - 投资翻盘记
  *
  * 完全基于 wechat-story.tsx 的尺寸

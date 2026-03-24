@@ -1,4 +1,11 @@
 /**
+ * [INPUT]: 依赖 React Remotion 与同目录共享组件
+ * [OUTPUT]: 导出 WeChatRealMobile 组件
+ * [POS]: tools/video/templates 移动端写实微信模板
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
+
+/**
  * 微信聊天 - 真实手机端还原
  *
  * 基于真实微信截图的像素级还原

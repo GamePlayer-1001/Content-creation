@@ -1,6 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
+[INPUT]: 依赖 Playwright 本地内容目录 与浏览器自动化
+[OUTPUT]: 提供 auto_publish 流程
+[POS]: tools/publish 通用自动发布脚本
+[PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+"""
+
+"""
 通用自动化发布脚本 - 支持命令行参数
 用法:
   python auto_publish.py                                    # 使用默认测试内容

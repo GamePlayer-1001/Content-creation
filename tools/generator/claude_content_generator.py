@@ -1,4 +1,11 @@
 """
+[INPUT]: 依赖 Claude 接口 提示词模板 与生成配置
+[OUTPUT]: 提供 ClaudeContentGenerator 类
+[POS]: tools/generator AI 文案生成器
+[PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+"""
+
+"""
 Claude 内容生成器（简化版本 - 直接生成）
 使用当前 Claude 会话直接生成内容
 """

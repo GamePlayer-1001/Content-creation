@@ -1,19 +1,16 @@
 # tools/tests/
-> L2 | 父级: tools/CLAUDE.md → /CLAUDE.md
+> L2 | 父级: /tools/CLAUDE.md
 
-从 Auto-Redbook-Skills 迁移的测试脚本集。覆盖发布、生成、封面等核心功能的集成测试。
+成员清单
+pipeline-state-smoke.test.js: 共享任务状态轻量回归测试，验证确认阻断与回退语义
+shared-pipeline-execution.test.js: 共享 step executor 集成测试，覆盖 draft 到 export 的主链路
+test_complete_system.py: 端到端系统测试，联调抓取、生成、发布等核心环节
+test_generation.py: 内容生成链路测试，验证抓取到生成的基础闭环
+test_icon_cover.py: 图标封面回归测试，检查图标封面渲染结果
+test_publish.py: 标准发布流程测试，验证发布脚本与平台配置
+test_publish_manual.py: 手工发布流程测试，验证人工辅助发布路径
+test_simple_publish.py: 简化版发布冒烟测试，快速检查发布最小闭环
 
-## 成员清单
-
-test_complete_system.py: 端到端系统测试，验证完整流水线
-test_generation.py: 内容生成测试，验证 Claude API 调用和模板渲染
-test_icon_cover.py: Lucide图标封面生成测试
-test_publish.py: 小红书发布功能测试
-test_publish_manual.py: 手动发布流程测试
-test_simple_publish.py: 简化发布测试（快速验证）
-
-## 注意
-
-这些测试脚本中的 import 路径仍引用原 Auto-Redbook-Skills 结构，运行前需适配为 tools/ 下的新路径。
+法则: tests 目录优先放回归与冒烟脚本，不承载生产逻辑；新增测试先说明覆盖边界，再落文件
 
 [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md

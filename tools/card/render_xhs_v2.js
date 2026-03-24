@@ -1,5 +1,12 @@
 #!/usr/bin/env node
 /**
+ * [INPUT]: 依赖 marked js-yaml playwright 与分页策略
+ * [OUTPUT]: 提供智能分页版卡片 CLI
+ * [POS]: tools/card Node V2 渲染入口
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
+
+/**
  * 小红书卡片渲染脚本 V2 - Node.js 智能分页版
  * 将 Markdown 文件渲染为小红书风格的图片卡片
  * 

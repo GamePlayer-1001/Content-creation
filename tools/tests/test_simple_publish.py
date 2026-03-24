@@ -1,6 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
+[INPUT]: 依赖简化发布流程与本地样本内容
+[OUTPUT]: 提供简化发布冒烟脚本
+[POS]: tools/tests 快速冒烟脚本
+[PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+"""
+
+"""
 简化的测试发布脚本 - 用于调试选择器
 """
 import asyncio

@@ -1,4 +1,11 @@
 /**
+ * [INPUT]: 依赖 React Remotion 与同目录共享组件
+ * [OUTPUT]: 导出 WeChatProIcons 组件
+ * [POS]: tools/video/templates 图标强化版微信模板
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
+
+/**
  * 微信聊天 - 专业图标版
  *
  * 基于 wechat-story.tsx 的良好尺寸比例

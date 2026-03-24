@@ -1,6 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
+[INPUT]: 依赖 Playwright 交互节奏函数 与发布目录
+[OUTPUT]: 提供 auto_publish_stealth 流程
+[POS]: tools/publish 实验性发布入口
+[PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+"""
+
+"""
 隐秘模式自动化发布到小红书
 使用多种反检测技术绕过自动化检测
 """

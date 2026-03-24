@@ -1,4 +1,11 @@
 /**
+ * [INPUT]: 依赖 React Remotion 与同目录共享组件
+ * [OUTPUT]: 导出 WeChatRealistic 组件
+ * [POS]: tools/video/templates 写实微信模板
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
+
+/**
  * 微信真实尺寸版本
  *
  * 所有元素按照真实手机界面比例设计

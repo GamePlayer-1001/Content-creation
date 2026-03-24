@@ -1,4 +1,11 @@
 /**
+ * [INPUT]: 依赖 React Remotion 与同目录共享组件
+ * [OUTPUT]: 导出 ChatStylesComparison 组件
+ * [POS]: tools/video/templates 多风格对比页
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
+
+/**
  * 4种聊天软件风格对比
  *
  * 用于生成静态截图，展示不同聊天平台的视觉效果

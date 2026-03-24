@@ -1,4 +1,11 @@
 /**
+ * [INPUT]: 依赖 React Remotion 与同目录共享组件
+ * [OUTPUT]: 导出 WeChatDestinyChat 组件
+ * [POS]: tools/video/templates 微信命理聊天模板
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
+
+/**
  * 微信风格对话 - 命运测算话题（竖版视频 1080x1920）
  * 时长：约60秒
  * 主题：通过朋友分享的方式自然推广 destinyteller.com

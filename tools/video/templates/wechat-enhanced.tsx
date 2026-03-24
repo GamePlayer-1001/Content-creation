@@ -1,4 +1,11 @@
 /**
+ * [INPUT]: 依赖 React Remotion 与同目录共享组件
+ * [OUTPUT]: 导出 WeChatEnhanced 组件
+ * [POS]: tools/video/templates 增强版微信模板
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
+
+/**
  * 微信聊天增强版 - 使用 SVG 图标和更真实的视觉效果
  *
  * 改进点：

@@ -1,3 +1,10 @@
+/**
+ * [INPUT]: 依赖 React Remotion 与同目录共享组件
+ * [OUTPUT]: 导出 TestSimple 组件
+ * [POS]: tools/video/templates 最小 Remotion 验证模板
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
+
 import React from 'react';
 import { AbsoluteFill, useCurrentFrame } from 'remotion';
 

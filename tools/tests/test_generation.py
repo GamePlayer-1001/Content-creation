@@ -1,4 +1,11 @@
 """
+[INPUT]: 依赖抓取器 生成器 与本地模板
+[OUTPUT]: 提供内容生成链路测试脚本
+[POS]: tools/tests 生成链路验证脚本
+[PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+"""
+
+"""
 测试内容生成流程
 """
 import asyncio
