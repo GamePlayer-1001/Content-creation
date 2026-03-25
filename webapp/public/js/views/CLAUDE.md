@@ -7,7 +7,7 @@ config.js: 配置管理页面视图。
 content.js: 内容管理页面视图。
 dashboard.js: 仪表盘页面视图。
 pipeline/: 流水线阶段子模块目录，按输入/母稿/平台/图片/输出拆分页面实现。
-pipeline-task-runtime.js: 流水线任务上下文、阶段控制与恢复逻辑。
+pipeline-task-runtime.js: 流水线运行时引导层，承接 runtime 子模块装配。
 pipeline.js: 9阶段内容流水线页面视图壳，负责输入/改写/图片/导出交互。
 review.js: 周复盘页面视图。
 rewrite.js: 洗稿页面视图。
