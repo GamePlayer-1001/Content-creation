@@ -9,6 +9,16 @@ const path = require('path');
 const { getPipelineStage } = require('./stages');
 const { composeLayoutMarkdown } = require('./layout-composer');
 const {
+  buildStepMetadataPatch,
+  mergeImageAssets,
+  todayTag,
+  safeFileName,
+  parseOutputPath,
+  stripMarkdown,
+  parseImageTypes,
+  toStringList,
+} = require('./step-executor-support');
+const {
   CREATION_STYLES,
   PLATFORM_CATALOG,
   resolvePlatformSkillName,
@@ -123,8 +133,8 @@ class PipelineStepExecutor {
       toStage: stage,
       confirm: shouldConfirm,
       note: note || execution.note || `CLI run-step 执行 ${stageDef.label}`,
-      metadataPatch,
-    });
+        metadataPatch,
+      });
 
     return {
       stage,
@@ -263,9 +273,9 @@ class PipelineStepExecutor {
       ? [selected.title, selected.summary].filter(Boolean).join('\n\n')
       : '';
     const finalEnrichment = rawText || fallback;
-    const normalizedFacts = _toStringList(facts);
-    const normalizedConstraints = _toStringList(constraints);
-    const normalizedMaterials = _toStringList(materials);
+    const normalizedFacts = toStringList(facts);
+    const normalizedConstraints = toStringList(constraints);
+    const normalizedMaterials = toStringList(materials);
 
     if (!finalEnrichment && !normalizedFacts.length && !normalizedConstraints.length && !normalizedMaterials.length) {
       throw new Error('hotspot-enrich 缺少内容，请传入 --enrichment 或 --input');
@@ -319,7 +329,7 @@ class PipelineStepExecutor {
     });
     const content = await this.aiAdapter.generate(prompt, engine);
 
-    const filename = `${_todayTag()}-${_safeFileName(topicInput, 20)}.md`;
+    const filename = `${todayTag()}-${safeFileName(topicInput, 20)}.md`;
     const file = `母稿/${filename}`;
     this.outputManager.writeFile('母稿', filename, content);
 
@@ -369,7 +379,7 @@ class PipelineStepExecutor {
         draftContent: sourceDraft,
       });
       const content = await this.aiAdapter.generate(prompt, engine);
-      const filename = `${_todayTag()}-${_safeFileName(sourceDraft, 15)}.md`;
+      const filename = `${todayTag()}-${safeFileName(sourceDraft, 15)}.md`;
       this.outputManager.writeFile(target.dir, filename, content);
       const file = `${target.dir}/${filename}`;
       platformFiles[target.skill] = file;
@@ -426,7 +436,7 @@ class PipelineStepExecutor {
     const results = [];
     for (const platformName of targetPlatforms) {
       const file = platformFileMap[platformName];
-      const parsed = _parseOutputPath(file);
+      const parsed = parseOutputPath(file);
       const sourceContent = this.outputManager.readFile(parsed.platform, parsed.filename);
       const compliance = this.complianceEngine.check(sourceContent);
 
@@ -487,7 +497,7 @@ class PipelineStepExecutor {
       throw new Error('visual-generate 未匹配到任何平台');
     }
 
-    const types = _parseImageTypes(imageType);
+    const types = parseImageTypes(imageType);
     const ratio = aspectRatio || '1:1';
     const size = imageSize || '1K';
     this.logger.log(`[CLI] 执行 visual-generate, targets=${targets.length}, types=${types.join('+')}`);
@@ -521,7 +531,7 @@ class PipelineStepExecutor {
       }
     }
 
-    const mergedImageAssets = this._mergeImageAssets(task?.metadata?.imageAssets, results);
+    const mergedImageAssets = mergeImageAssets(task?.metadata?.imageAssets, results);
 
     return {
       note: `CLI 生成配图完成 (${results.length} 张)`,
@@ -565,7 +575,7 @@ class PipelineStepExecutor {
 
     for (const platformName of targetPlatforms) {
       const sourceFile = platformFileMap[platformName];
-      const parsed = _parseOutputPath(sourceFile);
+      const parsed = parseOutputPath(sourceFile);
       const content = this.outputManager.readFile(parsed.platform, parsed.filename);
       const relatedImages = imageAssets.filter((img) => img.platform === platformName);
       const markdown = composeLayoutMarkdown({
@@ -577,7 +587,7 @@ class PipelineStepExecutor {
         images: relatedImages,
       });
 
-      const filename = `${_todayTag()}-layout-${_safeFileName(platformName, 20)}.md`;
+      const filename = `${todayTag()}-layout-${safeFileName(platformName, 20)}.md`;
       this.outputManager.writeFile(parsed.platform, filename, markdown);
       const layoutFile = `${parsed.platform}/${filename}`;
 
@@ -631,8 +641,8 @@ class PipelineStepExecutor {
 
     for (const platformName of targetPlatforms) {
       const file = platformFileMap[platformName];
-      const parsed = _parseOutputPath(file);
-      let clean = _stripMarkdown(this.outputManager.readFile(parsed.platform, parsed.filename));
+      const parsed = parseOutputPath(file);
+      let clean = stripMarkdown(this.outputManager.readFile(parsed.platform, parsed.filename));
 
       const relatedImages = imageAssets.filter((img) => img.platform === platformName);
       if (relatedImages.length > 0) {
@@ -643,7 +653,7 @@ class PipelineStepExecutor {
         });
       }
 
-      const finalName = `${_todayTag()}-final-${platformName}.txt`;
+      const finalName = `${todayTag()}-final-${platformName}.txt`;
       this.outputManager.writeFile(platformName, finalName, clean);
       const finalFile = `${platformName}/${finalName}`;
 
@@ -711,7 +721,7 @@ class PipelineStepExecutor {
     let contentHint = '';
     if (platformFile) {
       try {
-        const parsed = _parseOutputPath(platformFile);
+        const parsed = parseOutputPath(platformFile);
         contentHint = this.outputManager.readFile(parsed.platform, parsed.filename).slice(0, 360);
       } catch {}
     }
@@ -759,7 +769,7 @@ class PipelineStepExecutor {
       throw new Error('platform-rewrite 需要 --draft-content 或 --draft-file（或任务 metadata.draftFile）');
     }
 
-    const parsed = _parseOutputPath(candidateFile);
+    const parsed = parseOutputPath(candidateFile);
     const content = this.outputManager.readFile(parsed.platform, parsed.filename);
     return {
       text: content,
@@ -798,127 +808,14 @@ class PipelineStepExecutor {
     metadataExtra = {},
     checkpointNote = '',
   }) {
-    const now = new Date().toISOString();
-    const metadata = task?.metadata && typeof task.metadata === 'object' ? task.metadata : {};
-
-    const stageOutputs = {
-      ...(metadata.stageOutputs || {}),
-      [stageKey]: {
-        at: now,
-        ...(stageOutput || {}),
-      },
-    };
-
-    const mergedArtifacts = this._mergeArtifacts(metadata.artifacts, artifacts, now);
-    const checkpoints = [
-      ...(Array.isArray(metadata.checkpoints) ? metadata.checkpoints : []),
-      {
-        at: now,
-        stage: stageKey,
-        source: 'cli-runner',
-        note: checkpointNote || '',
-      },
-    ].slice(-80);
-
-    return {
-      ...metadata,
-      ...metadataExtra,
-      stageOutputs,
-      artifacts: mergedArtifacts,
-      checkpoints,
-      lastUpdatedBy: 'cli-runner',
-      lastUpdatedAt: now,
-    };
+    return buildStepMetadataPatch(task, stageKey, {
+      stageOutput,
+      artifacts,
+      metadataExtra,
+      checkpointNote,
+      source: 'cli-runner',
+    });
   }
-
-  _mergeArtifacts(currentArtifacts, newArtifacts, now) {
-    const existing = Array.isArray(currentArtifacts) ? currentArtifacts : [];
-    const incoming = Array.isArray(newArtifacts) ? newArtifacts : [];
-    const map = new Map();
-
-    for (const item of [...existing, ...incoming]) {
-      if (!item || !item.path) continue;
-      const normalized = {
-        at: item.at || now,
-        ...item,
-      };
-      const key = `${normalized.stage || '-'}|${normalized.type || '-'}|${normalized.path}`;
-      map.set(key, normalized);
-    }
-    return Array.from(map.values()).slice(-200);
-  }
-
-  _mergeImageAssets(currentAssets, newAssets) {
-    const current = Array.isArray(currentAssets) ? currentAssets : [];
-    const incoming = Array.isArray(newAssets) ? newAssets : [];
-    const map = new Map();
-    for (const item of [...current, ...incoming]) {
-      if (!item || !item.path) continue;
-      const key = `${item.platform || '-'}|${item.imageType || '-'}|${item.path}`;
-      map.set(key, item);
-    }
-    return Array.from(map.values()).slice(-300);
-  }
-}
-
-function _todayTag() {
-  return new Date().toISOString().slice(0, 10).replace(/-/g, '');
-}
-
-function _safeFileName(text, maxLen = 20) {
-  const safe = String(text || '')
-    .replace(/[<>:"/\\|?*\n\r#]/g, '_')
-    .replace(/\s+/g, '_')
-    .slice(0, maxLen)
-    .trim();
-  return safe || 'untitled';
-}
-
-function _parseOutputPath(file) {
-  const parts = String(file || '').split('/').filter(Boolean);
-  if (parts.length < 2) {
-    throw new Error(`文件路径无效: ${file}`);
-  }
-  return {
-    platform: parts[0],
-    filename: parts.slice(1).join('/'),
-  };
-}
-
-function _stripMarkdown(text) {
-  return String(text || '')
-    .replace(/^#{1,6}\s+/gm, '')
-    .replace(/\*\*(.*?)\*\*/g, '$1')
-    .replace(/\*(.*?)\*/g, '$1')
-    .replace(/`{1,3}([\s\S]*?)`{1,3}/g, '$1')
-    .replace(/^>\s+/gm, '')
-    .replace(/^[-*+]\s+/gm, '')
-    .replace(/^\d+\.\s+/gm, '')
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-    .replace(/!\[([^\]]*)\]\([^)]+\)/g, '')
-    .replace(/^---+$/gm, '')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
-}
-
-function _parseImageTypes(imageType) {
-  const raw = (imageType || '').trim().toLowerCase();
-  if (!raw || raw === 'illustration') return ['illustration'];
-  if (raw === 'cover') return ['cover'];
-  if (raw === 'both') return ['cover', 'illustration'];
-  throw new Error(`不支持的 imageType: ${imageType}（可选: cover|illustration|both）`);
-}
-
-function _toStringList(input) {
-  if (Array.isArray(input)) {
-    return input.map((x) => String(x || '').trim()).filter(Boolean);
-  }
-  const raw = String(input || '').trim();
-  if (!raw) return [];
-  return raw
-    .split(/[,\uFF0C;\n]/g)
-    .map((x) => x.trim())
-    .filter(Boolean);
 }
 
 module.exports = PipelineStepExecutor;

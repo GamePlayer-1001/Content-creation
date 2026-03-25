@@ -6,6 +6,7 @@ catalog.js: 创作方向与平台目录常量，避免 WebApp/CLI 常量漂移�
 layout-composer.js: 根据平台稿与视觉素材组装排版 Markdown。
 stages.js: 9阶段定义单一信号源，声明顺序、说明与确认策略。
 step-executor.js: 共享阶段执行器，串联热点、母稿、改写、优化、配图、排版与导出。
+step-executor-support.js: 执行器辅助层，负责命名、路径解析、Markdown 清洗与 metadata 合并纯函数。
 task-state-store.js: 任务状态 JSON 存储层，负责任务持久化。
 workflow-runner.js: 任务推进器，负责阶段推进、确认与回退。
 
