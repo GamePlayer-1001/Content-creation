@@ -1,7 +1,7 @@
 /**
  * [INPUT]: 依赖 shared pipeline runner/step-executor + outputManager
- * [OUTPUT]: GET /api/pipeline/stages + hotspots/platforms + task API + legacy-compatible draft/platforms/optimize/compose/assemble
- * [POS]: routes/ 的内容流水线 API，作为 Web 端兼容层，尽量将阶段执行收口到 core/pipeline
+ * [OUTPUT]: GET/POST /api/pipeline 的任务、阶段、热点、平台与样式 API，并挂载 legacy pipeline 子路由
+ * [POS]: routes/ 的内容流水线主入口，承接 Web 端任务编排并将兼容接口委托给 legacy 子路由
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 

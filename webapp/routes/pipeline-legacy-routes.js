@@ -10,10 +10,10 @@ const {
   ts: _ts,
   normalizeList: _normalizeList,
   toBoolean: _toBoolean,
-  applySseHeaders: _sseHeaders,
   sendSse: _send,
+  runLegacySseStep: _runLegacySseStep,
   requireTaskId: _requireTaskId,
-  readOutputText: _readOutputText,
+  hydrateTextResult: _hydrateTextResult,
   persistEditableContents: _persistEditableContents,
   resolveTargetPlatforms: _resolveTargetPlatforms,
 } = require('./pipeline-route-support');
@@ -26,42 +26,31 @@ router.post('/draft', async (req, res) => {
   const inputPreview = String(input || '').replace(/\s+/g, ' ').slice(0, 60);
   console.log(`  ${_ts()}  [流水线] Stage4 生成母稿  方向=${style || '默认'}  引擎=${engine}  输入="${inputPreview}..."`);
 
-  _sseHeaders(res);
-
-  try {
-    if (!String(input || '').trim()) {
-      _send(res, { type: 'error', message: '请输入素材内容' });
-      return res.end();
-    }
-
-    const resolvedTaskId = _requireTaskId(taskId);
-    _send(res, { type: 'status', message: `AI 引擎: ${engine} · 调用 shared pipeline 生成母稿...` });
-
-    const result = await stepExecutor.runStep(resolvedTaskId, {
+  await _runLegacySseStep(res, {
+    validate: () => (String(input || '').trim() ? null : '请输入素材内容'),
+    resolveTaskId: () => _requireTaskId(taskId),
+    beforeRun: () => {
+      _send(res, { type: 'status', message: `AI 引擎: ${engine} · 调用 shared pipeline 生成母稿...` });
+    },
+    run: (resolvedTaskId) => stepExecutor.runStep(resolvedTaskId, {
       stage: 'draft-generate',
       input: String(input || ''),
       style: String(style || ''),
       engine: String(engine || 'claude'),
       note: 'WebApp legacy /pipeline/draft -> shared draft-generate',
-    });
-    const draftFile = String(result?.output?.file || result?.task?.metadata?.draftFile || '').trim();
-    const fullContent = draftFile ? _readOutputText(outputManager, draftFile) : '';
-    if (fullContent) {
-      _send(res, { type: 'chunk', content: fullContent });
-    }
-
-    _send(res, {
-      type: 'done',
-      file: draftFile,
-      length: fullContent.length || result?.output?.length || 0,
-      task: result?.task || null,
-      taskProgressError: null,
-    });
-  } catch (error) {
-    console.error(`  ${_ts()}  [流水线] ✗ 母稿生成失败: ${error.message}`);
-    _send(res, { type: 'error', message: error.message });
-  }
-  res.end();
+    }),
+    afterRun: (result) => {
+      const payload = _hydrateTextResult(outputManager, {
+        file: String(result?.output?.file || result?.task?.metadata?.draftFile || '').trim(),
+        length: result?.output?.length || 0,
+      });
+      if (payload.content) {
+        _send(res, { type: 'chunk', content: payload.content });
+      }
+      return payload;
+    },
+    errorLabel: '母稿生成失败',
+  });
 });
 
 router.post('/platforms', async (req, res) => {
@@ -72,62 +61,43 @@ router.post('/platforms', async (req, res) => {
   const targetPlatforms = _resolveTargetPlatforms(platforms);
   console.log(`  ${_ts()}  [流水线] Stage5 多平台生成  平台=[${targetPlatforms.map((item) => item.skill).join(',') || '全部'}]  引擎=${engine}`);
 
-  _sseHeaders(res);
-
-  try {
-    if (!String(draftContent || '').trim()) {
-      _send(res, { type: 'error', message: '缺少母稿内容' });
-      return res.end();
-    }
-
-    const resolvedTaskId = _requireTaskId(taskId);
-    _send(res, {
-      type: 'status',
-      message: `开始生成 ${targetPlatforms.length} 个平台（shared pipeline）...`,
-      total: targetPlatforms.length,
-    });
-
-    const result = await stepExecutor.runStep(resolvedTaskId, {
+  await _runLegacySseStep(res, {
+    validate: () => (String(draftContent || '').trim() ? null : '缺少母稿内容'),
+    resolveTaskId: () => _requireTaskId(taskId),
+    beforeRun: () => {
+      _send(res, {
+        type: 'status',
+        message: `开始生成 ${targetPlatforms.length} 个平台（shared pipeline）...`,
+        total: targetPlatforms.length,
+      });
+    },
+    run: (resolvedTaskId) => stepExecutor.runStep(resolvedTaskId, {
       stage: 'platform-rewrite',
       draftContent: String(draftContent || ''),
       platforms: _normalizeList(platforms),
       engine: String(engine || 'claude'),
       note: 'WebApp legacy /pipeline/platforms -> shared platform-rewrite',
-    });
-    const stageResults = Array.isArray(result?.output?.results) ? result.output.results : [];
-    const results = [];
-
-    stageResults.forEach((item, index) => {
-      const content = item?.file ? _readOutputText(outputManager, item.file) : '';
-      _send(res, { type: 'platform_start', platform: item.platform, index });
-      _send(res, {
-        type: 'platform_done',
-        platform: item.platform,
-        file: item.file || '',
-        length: content.length || item.length || 0,
-        content,
+    }),
+    afterRun: (result) => {
+      const stageResults = Array.isArray(result?.output?.results) ? result.output.results : [];
+      const results = stageResults.map((item, index) => {
+        const payload = _hydrateTextResult(outputManager, item, { platform: item.platform });
+        _send(res, { type: 'platform_start', platform: item.platform, index });
+        _send(res, {
+          type: 'platform_done',
+          ...payload,
+        });
+        return payload;
       });
-      results.push({
-        platform: item.platform,
-        file: item.file || '',
-        content,
-        length: content.length || item.length || 0,
-      });
-    });
 
-    _send(res, {
-      type: 'done',
-      results,
-      success: results.length,
-      total: targetPlatforms.length,
-      task: result?.task || null,
-      taskProgressError: null,
-    });
-  } catch (error) {
-    console.error(`  ${_ts()}  [流水线] ✗ 多平台生成整体失败: ${error.message}`);
-    _send(res, { type: 'error', message: error.message });
-  }
-  res.end();
+      return {
+        results,
+        success: results.length,
+        total: targetPlatforms.length,
+      };
+    },
+    errorLabel: '多平台生成整体失败',
+  });
 });
 
 router.post('/optimize', async (req, res) => {
@@ -137,63 +107,47 @@ router.post('/optimize', async (req, res) => {
 
   console.log(`  ${_ts()}  [流水线] Stage6 优化去AI  待优化=${contents.length}篇  引擎=${engine}`);
 
-  _sseHeaders(res);
-
-  try {
-    if (!Array.isArray(contents) || contents.length === 0) {
-      _send(res, { type: 'error', message: '缺少待优化内容' });
-      return res.end();
-    }
-
-    const resolvedTaskId = _requireTaskId(taskId);
-    _persistEditableContents(outputManager, contents);
-    const targetPlatforms = contents.map((item) => item?.platform).filter(Boolean);
-    const result = await stepExecutor.runStep(resolvedTaskId, {
-      stage: 'review-optimize',
-      platforms: targetPlatforms,
-      engine: String(engine || 'claude'),
-      confirm: true,
-      note: 'WebApp legacy /pipeline/optimize -> shared review-optimize',
-    });
-    const stageResults = Array.isArray(result?.output?.results) ? result.output.results : [];
-    const results = [];
-
-    stageResults.forEach((item, index) => {
-      const content = item?.file ? _readOutputText(outputManager, item.file) : '';
-      _send(res, { type: 'optimize_start', platform: item.platform, index });
-      _send(res, {
-        type: 'compliance_result',
-        platform: item.platform,
-        score: item.complianceScore ?? null,
-        hits: item.hitCount ?? null,
+  await _runLegacySseStep(res, {
+    validate: () => (Array.isArray(contents) && contents.length > 0 ? null : '缺少待优化内容'),
+    resolveTaskId: () => _requireTaskId(taskId),
+    beforeRun: () => {
+      _persistEditableContents(outputManager, contents);
+    },
+    run: (resolvedTaskId) => {
+      const targetPlatforms = contents.map((item) => item?.platform).filter(Boolean);
+      return stepExecutor.runStep(resolvedTaskId, {
+        stage: 'review-optimize',
+        platforms: targetPlatforms,
+        engine: String(engine || 'claude'),
+        confirm: true,
+        note: 'WebApp legacy /pipeline/optimize -> shared review-optimize',
       });
-      _send(res, {
-        type: 'optimize_done',
-        platform: item.platform,
-        file: item.file || '',
-        length: content.length || item.length || 0,
-        content,
+    },
+    afterRun: (result) => {
+      const stageResults = Array.isArray(result?.output?.results) ? result.output.results : [];
+      const results = stageResults.map((item, index) => {
+        const payload = _hydrateTextResult(outputManager, item, {
+          platform: item.platform,
+          complianceScore: item.complianceScore ?? null,
+        });
+        _send(res, { type: 'optimize_start', platform: item.platform, index });
+        _send(res, {
+          type: 'compliance_result',
+          platform: item.platform,
+          score: item.complianceScore ?? null,
+          hits: item.hitCount ?? null,
+        });
+        _send(res, {
+          type: 'optimize_done',
+          ...payload,
+        });
+        return payload;
       });
-      results.push({
-        platform: item.platform,
-        file: item.file || '',
-        content,
-        length: content.length || item.length || 0,
-        complianceScore: item.complianceScore ?? null,
-      });
-    });
 
-    _send(res, {
-      type: 'done',
-      results,
-      task: result?.task || null,
-      taskProgressError: null,
-    });
-  } catch (error) {
-    console.error(`  ${_ts()}  [流水线] ✗ 优化整体失败: ${error.message}`);
-    _send(res, { type: 'error', message: error.message });
-  }
-  res.end();
+      return { results };
+    },
+    errorLabel: '优化整体失败',
+  });
 });
 
 router.post('/extract', async (req, res) => {

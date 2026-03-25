@@ -1,6 +1,6 @@
 /**
  * [INPUT]: 依赖 core/pipeline/catalog 的平台目录，依赖 Express req/app.locals 与 outputManager
- * [OUTPUT]: 导出 pipeline 路由复用的参数解析、SSE、任务快照与输出文件辅助函数
+ * [OUTPUT]: 导出 pipeline 路由复用的参数解析、legacy SSE 执行器、任务快照与输出文件辅助函数
  * [POS]: webapp/routes 的流水线辅助层，被 pipeline.js 复用以收口非协议逻辑
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
@@ -144,6 +144,48 @@ function sendSse(res, data) {
   res.write(`data: ${JSON.stringify(data)}\n\n`);
 }
 
+async function runLegacySseStep(res, {
+  validate = null,
+  resolveTaskId = null,
+  beforeRun = null,
+  run = null,
+  afterRun = null,
+  errorLabel = '执行失败',
+} = {}) {
+  applySseHeaders(res);
+
+  try {
+    const validationError = typeof validate === 'function' ? await validate() : null;
+    if (validationError) {
+      sendSse(res, { type: 'error', message: validationError });
+      return;
+    }
+
+    const taskId = typeof resolveTaskId === 'function' ? resolveTaskId() : '';
+    if (typeof beforeRun === 'function') {
+      await beforeRun(taskId);
+    }
+
+    if (typeof run !== 'function') {
+      throw new Error('legacy SSE 路由缺少 run 执行器');
+    }
+
+    const result = await run(taskId);
+    const donePayload = typeof afterRun === 'function' ? await afterRun(result, taskId) : {};
+    sendSse(res, {
+      type: 'done',
+      ...(donePayload && typeof donePayload === 'object' ? donePayload : {}),
+      task: result?.task || null,
+      taskProgressError: null,
+    });
+  } catch (error) {
+    console.error(`  ${ts()}  [流水线] ✗ ${errorLabel}: ${error.message}`);
+    sendSse(res, { type: 'error', message: error.message });
+  } finally {
+    res.end();
+  }
+}
+
 function saveRunRangeSnapshot(req, taskId, {
   fromStage,
   toStage,
@@ -263,6 +305,17 @@ function readOutputText(outputManager, file) {
   return outputManager.readFile(parsed.platform, parsed.filename);
 }
 
+function hydrateTextResult(outputManager, item, extra = {}) {
+  const file = String(item?.file || '').trim();
+  const content = file ? readOutputText(outputManager, file) : '';
+  return {
+    ...extra,
+    file,
+    content,
+    length: content.length || item?.length || 0,
+  };
+}
+
 function writeOutputText(outputManager, file, content) {
   const parsed = parseOutputPath(file);
   if (!parsed) return;
@@ -297,10 +350,12 @@ module.exports = {
   toInt,
   applySseHeaders,
   sendSse,
+  runLegacySseStep,
   saveRunRangeSnapshot,
   buildRewindMetadataPatch,
   requireTaskId,
   readOutputText,
+  hydrateTextResult,
   writeOutputText,
   persistEditableContents,
   resolveTargetPlatforms,

@@ -3,6 +3,7 @@
 
 成员清单
 pipeline-state-smoke.test.js: 共享任务状态轻量回归测试，验证确认阻断与回退语义
+pipeline-route-support.test.js: pipeline 路由辅助单测，验证 legacy SSE 收口 helper 与文本结果读取语义
 shared-pipeline-execution.test.js: 共享 step executor 集成测试，覆盖 draft 到 export 的主链路
 test_complete_system.py: 端到端系统测试，联调抓取、生成、发布等核心环节
 test_generation.py: 内容生成链路测试，验证抓取到生成的基础闭环
