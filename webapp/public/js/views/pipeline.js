@@ -83,6 +83,7 @@ const PipelineView = {
     html += `<div class="pipeline-steps">`;
     navStages.forEach((stage) => {
       const panelIndex = this._mapStageToViewStep(stage.key);
+      const displayOrder = panelIndex + 1;
       const fallbackDone = !hasTaskProgress && activeStage && stage.order < activeStage.order;
       const cls = [
         stage.key === activeStageKey ? 'active' : '',
@@ -92,7 +93,7 @@ const PipelineView = {
       ].filter(Boolean).join(' ');
       html += `
         <div class="pipeline-step ${cls}" data-step="${panelIndex}" data-stage-key="${stage.key}" title="${escapeHtml(stage.description || stage.label || stage.key)}">
-          <span class="step-num"><span>${stage.order}</span></span>
+          <span class="step-num"><span>${displayOrder}</span></span>
           <span class="step-label">${escapeHtml(stage.label || stage.key)}</span>
         </div>`;
     });
