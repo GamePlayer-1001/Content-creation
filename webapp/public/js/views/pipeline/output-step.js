@@ -1,48 +1,118 @@
 /**
  * [INPUT]: 依赖 PipelineView 状态、createInitialPipelineState 与共享文件读写
- * [OUTPUT]: 挂接排版导出阶段相关方法
- * [POS]: views/pipeline 的输出阶段模块，负责排版导出、结果展示与状态重置
+ * [OUTPUT]: 挂接排版与导出阶段相关方法
+ * [POS]: views/pipeline 的输出阶段模块，负责排版、导出、结果展示与状态重置
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 
 Object.assign(PipelineView, {
-  async _renderOutput() {
+  async _renderLayout() {
     const el = document.getElementById('pipeline-content');
     const finalContents = this.state.platformResults;
     const hasFinalResults = this.state.finalResults.length > 0;
 
-    let html = `<h3>阶段 8-9：排版与最终输出</h3>
+    let html = `<h3>第 5 步：排版</h3>
       <p style="font-size:13px;color:var(--muted);margin-bottom:16px">
-        先生成排版稿，再导出纯文本文件和 Obsidian 打开链接
+        先基于平台内容与配图生成排版稿，再进入最后的导出与打开。
       </p>
-    `;
-
-    html += `
-      <button class="btn btn-primary" id="pl-assemble" style="margin-bottom:20px" ${finalContents.length === 0 ? 'disabled' : ''}>
-        ${hasFinalResults ? '重新组装最终文件' : '组装最终文件'}
+      <button class="btn btn-primary" id="pl-compose-layout" style="margin-bottom:20px" ${finalContents.length === 0 ? 'disabled' : ''}>
+        生成排版稿
       </button>
-      <div id="pl-final-results"></div>
+      <div id="pl-layout-results"></div>
+      <div class="pipeline-nav">
+        <button class="btn" id="pl-back-layout">上一步</button>
+        <button class="btn btn-primary" id="pl-next-layout" ${!hasFinalResults ? 'disabled' : ''}>下一步: 导出结果并打开</button>
+      </div>
     `;
 
-    if (hasFinalResults) {
-      html += `<div id="pl-final-links"></div>`;
+    el.innerHTML = html;
+    this._renderLayoutSummary();
+
+    document.getElementById('pl-back-layout').onclick = () => {
+      this._focusStage('visual-generate');
+      this.render();
+    };
+    document.getElementById('pl-next-layout').onclick = () => {
+      this._focusStage('export-output');
+      this.render();
+    };
+
+    document.getElementById('pl-compose-layout').onclick = async () => {
+      const btn = document.getElementById('pl-compose-layout');
+      btn.disabled = true;
+      btn.textContent = '排版中...';
+
+      try {
+        const contents = finalContents.map((r) => ({
+          platform: r.platform,
+          content: r.content || '',
+          file: r.file || '',
+        }));
+
+        const composeResult = await API.post('/pipeline/compose', {
+          contents,
+          images: this.state.images,
+          taskId: this.state.taskId,
+        });
+        this._updateTaskFromResponse(composeResult);
+        this.state.finalResults = Array.isArray(composeResult?.results) ? composeResult.results : this.state.finalResults;
+        this._renderLayoutSummary();
+        const nextBtn = document.getElementById('pl-next-layout');
+        if (nextBtn) nextBtn.disabled = this.state.finalResults.length === 0;
+        btn.textContent = '重新生成排版稿';
+        btn.disabled = false;
+      } catch (e) {
+        showToast(e.message, 'error');
+        btn.textContent = '生成排版稿';
+        btn.disabled = false;
+      }
+    };
+  },
+
+  _renderLayoutSummary() {
+    const container = document.getElementById('pl-layout-results');
+    if (!container) return;
+    if (this.state.finalResults.length === 0) {
+      container.innerHTML = '<div class="empty">还没有排版稿，先执行一次排版。</div>';
+      return;
     }
 
-    html += `
+    const html = this.state.finalResults.map((item) => `
+      <div class="file-link">
+        <span class="link-icon">&#128221;</span>
+        <span class="link-name">${item.file}</span>
+      </div>
+    `).join('');
+    container.innerHTML = `<div class="file-links">${html}</div>`;
+  },
+
+  async _renderExport() {
+    const el = document.getElementById('pipeline-content');
+    const finalContents = this.state.platformResults;
+    const hasFinalResults = this.state.finalResults.length > 0;
+
+    let html = `<h3>第 6 步：导出结果并打开</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px">
+        把排版稿导出为最终图文结果，并提供复制与 Obsidian 打开入口。
+      </p>
+      <button class="btn btn-primary" id="pl-export-output" ${!hasFinalResults ? 'disabled' : ''}>
+        ${hasFinalResults ? '导出结果并打开' : '请先完成排版'}
+      </button>
+      <div id="pl-final-results"></div>
+      <div id="pl-final-links"></div>
       <div class="pipeline-nav">
-        <button class="btn" id="pl-back6">上一步</button>
+        <button class="btn" id="pl-back-export">上一步</button>
         <button class="btn btn-primary" id="pl-restart">重新开始</button>
       </div>
     `;
 
     el.innerHTML = html;
-
     if (hasFinalResults) {
       this._showFinalLinks();
     }
 
-    document.getElementById('pl-back6').onclick = () => {
-      this._focusStage('visual-generate');
+    document.getElementById('pl-back-export').onclick = () => {
+      this._focusStage('layout-compose');
       this.render();
     };
     document.getElementById('pl-restart').onclick = () => {
@@ -67,44 +137,31 @@ Object.assign(PipelineView, {
       this.render();
     };
 
-    document.getElementById('pl-assemble').onclick = async () => {
-      const btn = document.getElementById('pl-assemble');
+    document.getElementById('pl-export-output').onclick = async () => {
+      const btn = document.getElementById('pl-export-output');
       btn.disabled = true;
-      btn.textContent = '排版中...';
-
+      btn.textContent = '导出中...';
       try {
         const contents = finalContents.map((r) => ({
           platform: r.platform,
           content: r.content || '',
           file: r.file || '',
         }));
-
-        const composeResult = await API.post('/pipeline/compose', {
-          contents,
-          images: this.state.images,
-          taskId: this.state.taskId,
-        });
-        this._updateTaskFromResponse(composeResult);
-        const layoutFiles = Array.isArray(composeResult?.results)
-          ? composeResult.results.map((x) => x.file).filter(Boolean)
-          : [];
-
-        btn.textContent = '导出中...';
+        const layoutFiles = this.state.finalResults.map((item) => item.file).filter(Boolean);
         const result = await API.post('/pipeline/assemble', {
           contents,
           images: this.state.images,
           layoutFiles,
           taskId: this.state.taskId,
         });
-
         this._updateTaskFromResponse(result);
         this.state.finalResults = result.results;
         this._showFinalLinks();
-        btn.textContent = '重新组装最终文件';
+        btn.textContent = '重新导出';
         btn.disabled = false;
       } catch (e) {
         showToast(e.message, 'error');
-        btn.textContent = this.state.finalResults.length > 0 ? '重新组装最终文件' : '组装最终文件';
+        btn.textContent = '导出结果并打开';
         btn.disabled = false;
       }
     };

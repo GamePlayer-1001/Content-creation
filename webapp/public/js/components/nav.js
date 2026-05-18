@@ -1,7 +1,7 @@
 ﻿/**
  * [INPUT]: 无
  * [OUTPUT]: renderNav 函数
- * [POS]: components/ 侧边导航栏
+ * [POS]: components/ 侧边导航栏，负责主入口与工具箱分区导航
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 
@@ -12,11 +12,11 @@ function renderNav() {
   const items = [
     { section: '主入口' },
     { hash: '#/', label: '首页总览' },
-    { hash: '#/hotspots', label: 'Google Sheets 热点' },
+    { hash: '#/hotspots', label: '热点信息' },
     { hash: '#/pipeline', label: '全流程工作流' },
-    { hash: '#/toolbox', label: '工具箱' },
-
-    { section: '模块直达' },
+    
+    { section: '工具箱' },
+    { hash: '#/toolbox', label: '工具箱总览' },
     { hash: '#/rewrite', label: '洗稿改写' },
     { hash: '#/compliance', label: '合规检查' },
     { hash: '#/review', label: '周复盘' },

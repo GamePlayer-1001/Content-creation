@@ -1,18 +1,21 @@
 /**
  * [INPUT]: 依赖 PipelineView 状态、API 流式请求与共享文件读写
- * [OUTPUT]: 挂接平台改写阶段相关方法
- * [POS]: views/pipeline 的平台阶段模块，负责平台勾选、自然化编辑与结果保存
+ * [OUTPUT]: 挂接多平台改写与自然化编辑阶段相关方法
+ * [POS]: views/pipeline 的平台阶段模块，负责平台勾选、改写、审查与结果保存
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 
 Object.assign(PipelineView, {
-  _renderPlatforms() {
+  _renderRewrite() {
     const el = document.getElementById('pipeline-content');
     const platformList = this._getActivePlatforms();
     const allowedSet = new Set(platformList.map((item) => item.value));
     this.state.platforms = this.state.platforms.filter((name) => allowedSet.has(name));
     this.state.platformsOptimize = this.state.platformsOptimize.filter((name) => allowedSet.has(name));
-    let html = `<h3>阶段 5-6：平台改写与审核优化</h3>`;
+    let html = `<h3>第 2 步：根据母稿多平台改写</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px">
+        先选择要生成的平台，再决定哪些平台在下一步进入合规审查与去 AI 味优化。
+      </p>`;
 
     html += `<div class="platform-grid">`;
     platformList.forEach((p) => {
@@ -29,7 +32,7 @@ Object.assign(PipelineView, {
 
     html += `
       <div style="margin-top:16px">
-        <label class="form-label">自然化编辑 (可选 — 勾选的平台生成后自动进入质量门控)</label>
+        <label class="form-label">下一步进入合规审查与去 AI 味优化的平台</label>
         <div id="pl-optimize-picks" class="platform-grid" style="margin-top:4px"></div>
         <div class="btn-group" style="margin-top:4px">
           <button class="btn btn-sm" id="pl-opt-all">全选优化</button>
@@ -52,7 +55,7 @@ Object.assign(PipelineView, {
       <div class="pipeline-nav">
         <button class="btn" id="pl-back3">上一步</button>
         <button class="btn btn-primary" id="pl-next3" ${this.state.platformResults.length === 0 ? 'disabled' : ''}>
-          下一步: 图片生成
+          下一步: 合规审查与去 AI 味
         </button>
       </div>
     `;
@@ -106,7 +109,7 @@ Object.assign(PipelineView, {
       this.render();
     };
     document.getElementById('pl-next3').onclick = () => {
-      this._focusStage('visual-generate');
+      this._focusStage('review-optimize');
       this.render();
     };
 
@@ -171,19 +174,62 @@ Object.assign(PipelineView, {
         );
 
         if (toOptimize.length > 0) {
-          resultsEl.innerHTML += '<div class="loading" style="margin-top:12px">自然化编辑中...</div>';
+          resultsEl.innerHTML += '<div class="loading" style="margin-top:12px">合规审查与去 AI 味处理中...</div>';
           await this._runOptimize(toOptimize, optStreamEl);
         }
 
         document.getElementById('pl-next3').disabled = false;
         this._showPlatformResults();
-        showToast(toOptimize.length > 0 ? '生成 + 自然化编辑完成' : '生成完成');
+        showToast(toOptimize.length > 0 ? '多平台改写与审查优化完成' : '多平台改写完成');
       } catch (e) {
         showToast(e.message, 'error');
       }
 
       stopBtn.style.display = 'none';
       genBtn.style.display = 'inline-block';
+    };
+  },
+
+  _renderReview() {
+    const el = document.getElementById('pipeline-content');
+    const reviewedPlatforms = this.state.platformResults.filter((item) => this.state.platformsOptimize.includes(item.platform));
+    const skippedPlatforms = this.state.platformResults.filter((item) => !this.state.platformsOptimize.includes(item.platform));
+
+    let html = `<h3>第 3 步：合规审查这些多平台文章 + 去 AI 味优化</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px">
+        这里展示已经完成审查优化的平台结果。未勾选的平台会保留改写结果，直接进入后续步骤。
+      </p>
+    `;
+
+    html += `
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header">审查范围</div>
+        <div style="font-size:12px;line-height:1.8;color:var(--muted)">
+          已纳入审查优化: ${reviewedPlatforms.length > 0 ? reviewedPlatforms.map((item) => escapeHtml(item.platform)).join('、') : '未选择平台'}
+          <br>
+          仅保留改写结果: ${skippedPlatforms.length > 0 ? skippedPlatforms.map((item) => escapeHtml(item.platform)).join('、') : '无'}
+        </div>
+      </div>
+      <div id="pl-platform-results"></div>
+      <div id="pl-optimize-stream"></div>
+      <div class="pipeline-nav">
+        <button class="btn" id="pl-back-review">上一步</button>
+        <button class="btn btn-primary" id="pl-next-review" ${this.state.platformResults.length === 0 ? 'disabled' : ''}>
+          下一步: 生成多张配图
+        </button>
+      </div>
+    `;
+
+    el.innerHTML = html;
+    this._showPlatformResults();
+
+    document.getElementById('pl-back-review').onclick = () => {
+      this._focusStage('platform-rewrite');
+      this.render();
+    };
+    document.getElementById('pl-next-review').onclick = () => {
+      this._focusStage('visual-generate');
+      this.render();
     };
   },
 
@@ -279,6 +325,7 @@ Object.assign(PipelineView, {
   _showPlatformResults() {
     const el = document.getElementById('pl-platform-results');
     const optEl = document.getElementById('pl-optimize-stream');
+    if (!el) return;
     if (optEl) optEl.innerHTML = '';
     let html = '';
     this.state.platformResults.forEach((r, i) => {

@@ -1,7 +1,7 @@
 /**
  * [INPUT]: 依赖 API/showToast/escapeHtml/parseTextList/createInitialPipelineState
  * [OUTPUT]: 扩展 PipelineTaskRuntime 的状态恢复、热点同步与共享结果方法
- * [POS]: views/pipeline 的运行时状态层，被 pipeline.js 入口与阶段视图复用
+ * [POS]: views/pipeline 的运行时状态层，被 pipeline.js 入口与 6 步视图复用
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 
@@ -181,12 +181,12 @@ Object.assign(PipelineTaskRuntime, {
       { key: 'hotspot-list', order: 1, label: '读谷歌表格热点列表', implemented: true },
       { key: 'hotspot-select', order: 2, label: '选热点', implemented: true },
       { key: 'hotspot-enrich', order: 3, label: '录入热点详细内容', implemented: true },
-      { key: 'draft-generate', order: 4, label: '生成母稿', implemented: true },
-      { key: 'platform-rewrite', order: 5, label: '多平台改写', implemented: true },
-      { key: 'review-optimize', order: 6, label: '自然化编辑 / 质量门控', implemented: true },
-      { key: 'visual-generate', order: 7, label: '生成多张配图', implemented: true },
-      { key: 'layout-compose', order: 8, label: '排版', implemented: true },
-      { key: 'export-output', order: 9, label: '导出图文结果并可打开', implemented: true },
+      { key: 'draft-generate', order: 1, label: '根据输入内容生成母稿', implemented: true },
+      { key: 'platform-rewrite', order: 2, label: '根据母稿多平台改写', implemented: true },
+      { key: 'review-optimize', order: 3, label: '合规审查 + 去 AI 味优化', implemented: true },
+      { key: 'visual-generate', order: 4, label: '生成多张配图', implemented: true },
+      { key: 'layout-compose', order: 5, label: '排版', implemented: true },
+      { key: 'export-output', order: 6, label: '导出结果并打开', implemented: true },
     ];
   },
 
@@ -264,11 +264,12 @@ Object.assign(PipelineTaskRuntime, {
 
   _mapStageToViewStep(stageKey) {
     if (!stageKey) return 0;
-    if (['hotspot-list', 'hotspot-select', 'hotspot-enrich'].includes(stageKey)) return 0;
-    if (stageKey === 'draft-generate') return 1;
-    if (['platform-rewrite', 'review-optimize'].includes(stageKey)) return 2;
+    if (['hotspot-list', 'hotspot-select', 'hotspot-enrich', 'draft-generate'].includes(stageKey)) return 0;
+    if (stageKey === 'platform-rewrite') return 1;
+    if (stageKey === 'review-optimize') return 2;
     if (stageKey === 'visual-generate') return 3;
-    if (['layout-compose', 'export-output'].includes(stageKey)) return 4;
+    if (stageKey === 'layout-compose') return 4;
+    if (stageKey === 'export-output') return 5;
     return 0;
   },
 
@@ -322,8 +323,13 @@ Object.assign(PipelineTaskRuntime, {
 
   async _restoreHandoffTask() {
     const taskId = sessionStorage.getItem('pipeline_task_handoff');
+    const stageOverride = sessionStorage.getItem('pipeline_task_handoff_stage');
     if (!taskId || taskId === this.state.taskId) return;
     sessionStorage.removeItem('pipeline_task_handoff');
+    sessionStorage.removeItem('pipeline_task_handoff_stage');
     await this._restoreTask(taskId, { silent: true, rerender: false });
+    if (stageOverride) {
+      this._focusStage(stageOverride);
+    }
   },
 });

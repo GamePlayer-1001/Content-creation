@@ -1,7 +1,7 @@
 ﻿/**
  * [INPUT]: 依赖 API
  * [OUTPUT]: Views.search 对象
- * [POS]: views/ 的 Google Sheets 热点中心
+ * [POS]: views/ 的热点信息页面，负责热点读取与向工作流第一步导流
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 
@@ -42,16 +42,16 @@ const SearchView = {
           </div>
           <div class="hotspot-card-actions">
             ${item.url ? `<a class="btn btn-sm" href="${this._escapeAttr(item.url)}" target="_blank" rel="noreferrer">打开原链接</a>` : ''}
-            <button class="btn btn-primary btn-sm hs-import" data-idx="${idx}">导入全流程</button>
+            <button class="btn btn-primary btn-sm hs-import" data-idx="${idx}">全流程生成</button>
           </div>
         </div>
       `;
     }).join('');
 
     app.innerHTML = `
-      <h2>Google Sheets 热点中心</h2>
+      <h2>热点信息</h2>
       <p style="font-size:13px;color:var(--muted);margin-bottom:16px">
-        独立处理热点读取、筛选和导入。这里负责阶段 1-3，进入全流程后继续母稿、改写、审核和导出。
+        独立处理热点读取、筛选和导入。这里不再占用工作流步骤，只负责把热点内容送入工作流第一步。
       </p>
 
       <div class="card" style="margin-bottom:16px">
@@ -75,9 +75,9 @@ const SearchView = {
         <div class="card-header">导入说明</div>
         <div style="font-size:13px;line-height:1.8;color:var(--muted)">
           1. 读取 Google Sheets 热点池。<br>
-          2. 选择一个热点并创建任务。<br>
+          2. 选择一个热点并点击“全流程生成”。<br>
           3. 自动写入热点列表、选中热点和补充信息。<br>
-          4. 跳转到全流程工作流继续执行。
+          4. 跳转到工作流第 1 步“根据输入内容生成母稿”。
         </div>
       </div>
 
@@ -173,6 +173,7 @@ const SearchView = {
       });
 
       sessionStorage.setItem('pipeline_task_handoff', taskId);
+      sessionStorage.setItem('pipeline_task_handoff_stage', 'draft-generate');
       location.hash = '#/pipeline';
     } catch (e) {
       showToast(`导入失败: ${e.message}`, 'error');

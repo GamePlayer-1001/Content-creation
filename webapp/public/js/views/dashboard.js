@@ -1,7 +1,7 @@
 ﻿/**
  * [INPUT]: 依赖 API.get('/dashboard')
  * [OUTPUT]: Views.dashboard 对象
- * [POS]: views/ 的首页总览，三分区入口页
+ * [POS]: views/ 的首页总览，承接主入口与工具箱分区入口
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 
@@ -41,20 +41,20 @@ const DashboardView = {
         <div class="section-grid" style="margin-bottom:24px">
           <div class="feature-panel feature-panel-hotspot">
             <div class="feature-kicker">Part 1</div>
-            <h3>Google Sheets 热点</h3>
-            <p class="feature-copy">读取热点池、筛选主题、创建任务并导入全流程。</p>
-            <div class="feature-meta">面向阶段 1-3：list / select / enrich</div>
+            <h3>热点信息</h3>
+            <p class="feature-copy">读取热点池、筛选主题，把热点内容送入工作流第一步作为母稿输入素材。</p>
+            <div class="feature-meta">独立热点中心，负责选题导入，不再占用工作流步骤</div>
             <div class="feature-actions">
               <button class="btn btn-primary" onclick="location.hash='#/hotspots'">打开热点中心</button>
-              <button class="btn" onclick="location.hash='#/pipeline'">进入全流程</button>
+              <button class="btn" onclick="location.hash='#/pipeline'">直接进入工作流</button>
             </div>
           </div>
 
           <div class="feature-panel feature-panel-pipeline">
             <div class="feature-kicker">Part 2</div>
             <h3>全流程工作流</h3>
-            <p class="feature-copy">从热点导入、母稿生成、多平台改写、审核优化、配图、排版到导出。</p>
-            <div class="feature-meta">面向阶段 1-9：统一任务状态与续跑</div>
+            <p class="feature-copy">按 6 步推进：母稿、多平台改写、合规审查与去 AI 味、配图、排版、导出并打开。</p>
+            <div class="feature-meta">热点作为外部输入接入，工作流只承接正式生产步骤</div>
             <div class="feature-actions">
               <button class="btn btn-primary" onclick="location.hash='#/pipeline'">打开工作流</button>
             </div>
@@ -64,7 +64,7 @@ const DashboardView = {
             <div class="feature-kicker">Part 3</div>
             <h3>工具箱</h3>
             <p class="feature-copy">把全流程中的能力拆成可单独调用的工具模块，适合局部处理与人工补刀。</p>
-            <div class="feature-meta">洗稿、合规、复盘、内容管理、配置管理</div>
+            <div class="feature-meta">洗稿改写、合规检查、内容管理、配置管理、周复盘</div>
             <div class="feature-actions">
               <button class="btn btn-primary" onclick="location.hash='#/toolbox'">打开工具箱</button>
             </div>

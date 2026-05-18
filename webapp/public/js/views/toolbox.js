@@ -1,7 +1,7 @@
 ﻿/**
  * [INPUT]: 无
  * [OUTPUT]: Views.toolbox 对象
- * [POS]: views/ 的工具箱页面
+ * [POS]: views/ 的工具箱页面，聚合可脱离主工作流的独立模块
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 
@@ -13,7 +13,7 @@ const ToolboxView = {
       {
         title: '文本处理',
         items: [
-          { hash: '#/rewrite', title: '洗稿改写', desc: '对单篇内容做局部重写、降 AI 味、风格切换。' },
+          { hash: '#/rewrite', title: '洗稿改写', desc: '对单篇内容做局部重写、自然化处理、风格切换。' },
           { hash: '#/compliance', title: '合规检查', desc: '独立扫描文本风险，不必走完整流程。' },
         ],
       },
@@ -28,8 +28,8 @@ const ToolboxView = {
         title: '系统配置',
         items: [
           { hash: '#/config', title: '配置管理', desc: '维护平台、规则、环境相关配置。' },
-          { hash: '#/hotspots', title: '热点中心', desc: '把热点读取作为独立功能使用，不必进入全流程。' },
-          { hash: '#/pipeline', title: '全流程工作流', desc: '需要端到端串行执行时，回到工作流主线。' },
+          { hash: '#/hotspots', title: '热点信息', desc: '独立处理热点读取与筛选，再把内容送入工作流第一步。' },
+          { hash: '#/pipeline', title: '全流程工作流', desc: '需要端到端串行执行时，进入 6 步生产主线。' },
         ],
       },
     ];

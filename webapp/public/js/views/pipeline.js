@@ -1,7 +1,7 @@
 /**
  * [INPUT]: 依赖 API + PipelineTaskRuntime + views/pipeline/shared.js
  * [OUTPUT]: Views.pipeline 对象
- * [POS]: views/ 的内容流水线页面壳，编排 9 阶段分组视图与核心交互
+ * [POS]: views/ 的内容流水线页面壳，以 6 步生产主线编排 9 阶段共享执行能力
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 
@@ -12,11 +12,12 @@ const PipelineView = {
   state: createInitialPipelineState(),
 
   STAGE_GROUPS: [
-    { panel: 0, stages: ['hotspot-list', 'hotspot-select', 'hotspot-enrich'] },
-    { panel: 1, stages: ['draft-generate'] },
-    { panel: 2, stages: ['platform-rewrite', 'review-optimize'] },
+    { panel: 0, stages: ['draft-generate'] },
+    { panel: 1, stages: ['platform-rewrite'] },
+    { panel: 2, stages: ['review-optimize'] },
     { panel: 3, stages: ['visual-generate'] },
-    { panel: 4, stages: ['layout-compose', 'export-output'] },
+    { panel: 4, stages: ['layout-compose'] },
+    { panel: 5, stages: ['export-output'] },
   ],
 
   STYLE_FALLBACK: [
@@ -55,7 +56,7 @@ const PipelineView = {
 
     let html = `<h2>内容流水线</h2>
       <p style="font-size:13px;color:var(--muted);margin:-4px 0 12px">
-        当前页面是 9 阶段工作流的分组视图：1-3 热点准备，4 母稿，5-6 平台处理，7 视觉素材，8-9 排版导出。
+        当前页面按 6 步展示正式生产流程：1 母稿，2 多平台改写，3 合规审查与去 AI 味，4 配图，5 排版，6 导出并打开。热点输入已独立到“热点信息”页面。
       </p>`;
     if (this.state.taskId) {
       html += `
@@ -68,7 +69,9 @@ const PipelineView = {
       html += this._renderTaskSummaryCard();
     }
 
-    const navStages = Array.isArray(this.state.pipelineStages) ? this.state.pipelineStages : [];
+    const visibleStageKeys = new Set(this.STAGE_GROUPS.flatMap((group) => group.stages));
+    const navStages = (Array.isArray(this.state.pipelineStages) ? this.state.pipelineStages : [])
+      .filter((stage) => visibleStageKeys.has(stage.key));
     const activeStageKey = this._getActiveNavigationStageKey();
     const task = this.state.taskSnapshot || {};
     const completed = new Set(Array.isArray(task?.completedStages) ? task.completedStages : []);
@@ -119,11 +122,12 @@ const PipelineView = {
   // ============================================================
   _renderStep() {
     const renderers = [
-      () => this._renderInput(),
       () => this._renderDraft(),
-      () => this._renderPlatforms(),
+      () => this._renderRewrite(),
+      () => this._renderReview(),
       () => this._renderImage(),
-      () => this._renderOutput(),
+      () => this._renderLayout(),
+      () => this._renderExport(),
     ];
     renderers[this.state.step]();
   },

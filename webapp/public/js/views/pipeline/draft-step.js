@@ -1,14 +1,14 @@
 /**
  * [INPUT]: 依赖 PipelineView 状态与共享输出读写方法
  * [OUTPUT]: 挂接 _renderDraft 母稿阶段视图
- * [POS]: views/pipeline 的母稿阶段模块，负责创作方向选择、母稿生成与保存
+ * [POS]: views/pipeline 的母稿阶段模块，负责输入承接、创作方向选择、母稿生成与保存
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 
 Object.assign(PipelineView, {
   _renderDraft() {
     const el = document.getElementById('pipeline-content');
-    let html = `<h3>阶段 4：选择创作方向并生成母稿</h3>`;
+    let html = `<h3>第 1 步：根据输入内容生成母稿</h3>`;
     const styleList = this.state.styleCatalog.length > 0 ? this.state.styleCatalog : this.STYLE_FALLBACK;
     const engineOptions = this.state.engineOptions.length > 0
       ? this.state.engineOptions
@@ -23,6 +23,34 @@ Object.assign(PipelineView, {
       const suffix = unavailable ? ' (未配置)' : '';
       return `<option value="${escapeHtml(value)}" ${selected} ${disabled}>${escapeHtml(`${label}${suffix}`)}</option>`;
     }).join('');
+
+    html += this._buildInputSourceSummary();
+
+    html += `
+      <div class="form-group">
+        <label class="form-label">输入素材</label>
+        <textarea class="form-textarea" id="pl-input" placeholder="输入关键词、想法，或粘贴一段长文本/热帖内容..."
+          style="min-height:220px">${this.state.input}</textarea>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header">补充信息</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px">
+          这些内容会和输入素材一起进入母稿生成，适合承接热点页同步过来的事实、限制和参考链接。
+        </div>
+        <div class="form-group">
+          <label class="form-label">关键事实（facts）</label>
+          <textarea class="form-textarea" id="pl-hotspot-facts" style="min-height:80px">${escapeHtml(this.state.hotspotFactsText || '')}</textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">约束条件（constraints）</label>
+          <textarea class="form-textarea" id="pl-hotspot-constraints" style="min-height:80px">${escapeHtml(this.state.hotspotConstraintsText || '')}</textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">参考素材（materials）</label>
+          <textarea class="form-textarea" id="pl-hotspot-materials" style="min-height:80px">${escapeHtml(this.state.hotspotMaterialsText || '')}</textarea>
+        </div>
+      </div>
+    `;
 
     html += `<div class="style-grid">`;
     styleList.forEach((s) => {
@@ -64,14 +92,15 @@ Object.assign(PipelineView, {
 
     html += `
       <div class="pipeline-nav">
-        <button class="btn" id="pl-back2">上一步</button>
+        <button class="btn" id="pl-back2">返回热点信息</button>
         <button class="btn btn-primary" id="pl-next2" ${!this.state.draftContent ? 'disabled' : ''}>
-          下一步: 多平台生成
+          下一步: 多平台改写
         </button>
       </div>
     `;
 
     el.innerHTML = html;
+    this._bindInputSourceSummary();
 
     document.querySelectorAll('.style-option').forEach((opt) => {
       opt.onclick = () => {
@@ -87,8 +116,7 @@ Object.assign(PipelineView, {
     };
 
     document.getElementById('pl-back2').onclick = () => {
-      this._focusStage('hotspot-enrich');
-      this.render();
+      location.hash = '#/hotspots';
     };
 
     document.getElementById('pl-next2').onclick = () => {
@@ -119,8 +147,8 @@ Object.assign(PipelineView, {
     const outputEl = document.getElementById('pl-draft-output');
 
     genBtn.onclick = async () => {
-      const ready = await this._ensureTaskContext();
-      if (!ready) return;
+      const synced = await this._syncDraftInputFromForm();
+      if (!synced) return;
 
       outputEl.style.display = 'block';
       genBtn.style.display = 'none';
