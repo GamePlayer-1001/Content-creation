@@ -74,6 +74,7 @@ class PipelineStepExecutor {
     imageSize = '',
     note = '',
     confirm = false,
+    promotionProduct = '',
   } = {}) {
     const stageDef = getPipelineStage(stage);
     if (!stageDef) throw new Error(`未知阶段: ${stage}`);
@@ -98,7 +99,7 @@ class PipelineStepExecutor {
         input,
       });
     } else if (stage === 'draft-generate') {
-      execution = await this._runDraftGenerate(task, { input, style, engine });
+      execution = await this._runDraftGenerate(task, { input, style, engine, promotionProduct });
     } else if (stage === 'platform-rewrite') {
       execution = await this._runPlatformRewrite(task, { draftFile, draftContent, engine, platforms });
     } else if (stage === 'review-optimize') {
@@ -312,7 +313,7 @@ class PipelineStepExecutor {
     };
   }
 
-  async _runDraftGenerate(task, { input, style, engine }) {
+  async _runDraftGenerate(task, { input, style, engine, promotionProduct = '' }) {
     const topicInput = (input || task?.metadata?.inputSnapshot || task.title || '').trim();
     if (!topicInput) {
       throw new Error('draft-generate 需要输入内容: --input 或任务 metadata.inputSnapshot');
@@ -331,10 +332,13 @@ class PipelineStepExecutor {
       limit: 4,
       extraTerms: ['母稿', '写作规则', '质量门控', styleKey],
     });
+    const productHint = promotionProduct && promotionProduct.trim()
+      ? `\n\n---\n【推广产品软植入】\n以下是需要在文章中自然提及的产品信息。请以真实使用者体验、工具推荐或场景引入的方式，将该产品有机融入文章叙述；不要生硬推销，不要出现"推广""广告""赞助"等字眼，让读者感觉是作者的真实推荐。\n\n${promotionProduct.trim()}`
+      : '';
     const prompt = this.skillLoader.buildPrompt('母稿', {
       topic: stylePrefix + topicInput,
       draftContent: '',
-    }) + knowledge.context;
+    }) + knowledge.context + productHint;
     const content = await this.aiAdapter.generate(prompt, engine);
 
     const filename = `${todayTag()}-${safeFileName(topicInput, 20)}.md`;

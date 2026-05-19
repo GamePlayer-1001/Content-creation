@@ -2,6 +2,9 @@
 > L2 | 父级: D:\Software\knowledge_box\知识库\CLAUDE.md
 
 成员清单
+公众号: 中文子目录，收纳 source 命中 mp.weixin.qq.com 的中文文章。
+头条: 中文子目录，收纳 source 命中 www.toutiao.com 且非视频的中文文章。
+小红书: 中文子目录，收纳 source 命中 www.xiaohongshu.com 的中文文章。
 【杨彧鑫AI】OpenClaw蓝皮书-1.0.0版.pdf: 中文 PDF 资料，记录 OpenClaw 蓝皮书内容。
 1600 Star！用自然语言就能剪视频？这个开源AI视频编辑Agent有点东西.md: 中文文档，记录 AI 视频编辑 Agent 项目资料。
 2.4k stars！SEO Machine：用 Claude Code 打造你的 AI 内容自动化工厂！.md: 中文文档，记录 SEO Machine 与内容自动化资料。

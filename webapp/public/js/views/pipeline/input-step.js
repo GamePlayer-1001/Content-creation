@@ -62,9 +62,7 @@ Object.assign(PipelineView, {
 
   async _syncDraftInputFromForm() {
     const inputEl = document.getElementById('pl-input');
-    const factsEl = document.getElementById('pl-hotspot-facts');
-    const constraintsEl = document.getElementById('pl-hotspot-constraints');
-    const materialsEl = document.getElementById('pl-hotspot-materials');
+    const promotionEl = document.getElementById('pl-promotion-product');
     const val = inputEl?.value.trim() || '';
 
     if (!val) {
@@ -73,9 +71,7 @@ Object.assign(PipelineView, {
     }
 
     this.state.input = val;
-    this.state.hotspotFactsText = factsEl?.value.trim() || '';
-    this.state.hotspotConstraintsText = constraintsEl?.value.trim() || '';
-    this.state.hotspotMaterialsText = materialsEl?.value.trim() || '';
+    this.state.promotionProduct = promotionEl?.value.trim() || '';
 
     const ready = await this._ensureTaskContext();
     if (!ready) return false;

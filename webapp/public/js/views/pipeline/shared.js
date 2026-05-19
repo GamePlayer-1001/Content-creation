@@ -67,6 +67,7 @@ function createInitialPipelineState(overrides = {}) {
     hotspotConstraintsText: '',
     hotspotMaterialsText: '',
     input: '',
+    promotionProduct: '',
     style: '',
     engine: 'claude',
     draftContent: '',

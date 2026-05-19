@@ -32,23 +32,14 @@ Object.assign(PipelineView, {
         <textarea class="form-textarea" id="pl-input" placeholder="输入关键词、想法，或粘贴一段长文本/热帖内容..."
           style="min-height:220px">${this.state.input}</textarea>
       </div>
-      <div class="card" style="margin-bottom:16px">
-        <div class="card-header">补充信息</div>
-        <div style="font-size:11px;color:var(--muted);margin-bottom:8px">
-          这些内容会和输入素材一起进入母稿生成，适合承接热点页同步过来的事实、限制和参考链接。
-        </div>
-        <div class="form-group">
-          <label class="form-label">关键事实（facts）</label>
-          <textarea class="form-textarea" id="pl-hotspot-facts" style="min-height:80px">${escapeHtml(this.state.hotspotFactsText || '')}</textarea>
-        </div>
-        <div class="form-group">
-          <label class="form-label">约束条件（constraints）</label>
-          <textarea class="form-textarea" id="pl-hotspot-constraints" style="min-height:80px">${escapeHtml(this.state.hotspotConstraintsText || '')}</textarea>
-        </div>
-        <div class="form-group">
-          <label class="form-label">参考素材（materials）</label>
-          <textarea class="form-textarea" id="pl-hotspot-materials" style="min-height:80px">${escapeHtml(this.state.hotspotMaterialsText || '')}</textarea>
-        </div>
+      <div class="form-group">
+        <label class="form-label" style="display:flex;align-items:center;gap:6px">
+          推广产品
+          <span style="font-size:11px;font-weight:400;color:var(--muted);">（可选）AI 会将产品以使用者体验或工具推荐的方式自然融入文章，不生硬推销</span>
+        </label>
+        <textarea class="form-textarea" id="pl-promotion-product"
+          placeholder="填写产品名称、核心功能、适用场景、主要卖点等，AI 会软植入到文章中..."
+          style="min-height:90px">${escapeHtml(this.state.promotionProduct || '')}</textarea>
       </div>
     `;
 
@@ -160,6 +151,7 @@ Object.assign(PipelineView, {
         style: this.state.style,
         engine: this.state.engine,
         taskId: this.state.taskId,
+        promotionProduct: this.state.promotionProduct || '',
       });
 
       stopBtn.style.display = 'none';

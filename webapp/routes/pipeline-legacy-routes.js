@@ -19,7 +19,7 @@ const {
 } = require('./pipeline-route-support');
 
 router.post('/draft', async (req, res) => {
-  const { input = '', style = '', engine = 'claude', taskId = '' } = req.body || {};
+  const { input = '', style = '', engine = 'claude', taskId = '', promotionProduct = '' } = req.body || {};
   const stepExecutor = req.app.locals.pipelineStepExecutor;
   const { outputManager } = req.app.locals;
 
@@ -37,6 +37,7 @@ router.post('/draft', async (req, res) => {
       input: String(input || ''),
       style: String(style || ''),
       engine: String(engine || 'claude'),
+      promotionProduct: String(promotionProduct || ''),
       note: 'WebApp legacy /pipeline/draft -> shared draft-generate',
     }),
     afterRun: (result) => {
