@@ -22,6 +22,7 @@ const SkillLoader = require('../../webapp/services/skill-loader');
 const ComplianceEngine = require('../../webapp/services/compliance-engine');
 const ImageGenerator = require('../../webapp/services/image-generator');
 const HotspotService = require('../../core/services/hotspot/hotspot-service');
+const { LightweightKnowledgeRetriever } = require('../../core/services/knowledge/knowledge-retriever');
 const { resolveRuntimeEnv } = require('../../core/config/runtime-env');
 
 const PROJECT_ROOT = path.join(__dirname, '..', '..');
@@ -43,6 +44,9 @@ const hotspotService = new HotspotService({
   configDir: CONFIG_DIR,
   runtimeEnv,
 });
+const knowledgeRetriever = new LightweightKnowledgeRetriever({
+  projectRoot: PROJECT_ROOT,
+});
 const imageGenerator = runtimeEnv.image.apiKey
   ? new ImageGenerator(runtimeEnv.image.apiKey, OUTPUT_DIR, runtimeEnv.image.model)
   : null;
@@ -54,6 +58,7 @@ const stepExecutor = new PipelineStepExecutor({
   outputManager,
   complianceEngine,
   imageGenerator,
+  knowledgeRetriever,
   projectRoot: PROJECT_ROOT,
 });
 const EXECUTABLE_STAGE_SET = new Set([

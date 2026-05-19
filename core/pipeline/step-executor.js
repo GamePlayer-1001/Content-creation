@@ -33,6 +33,7 @@ class PipelineStepExecutor {
     outputManager,
     complianceEngine,
     imageGenerator = null,
+    knowledgeRetriever = null,
     projectRoot,
     logger = console,
   }) {
@@ -43,6 +44,7 @@ class PipelineStepExecutor {
     this.outputManager = outputManager;
     this.complianceEngine = complianceEngine;
     this.imageGenerator = imageGenerator;
+    this.knowledgeRetriever = knowledgeRetriever;
     this.projectRoot = projectRoot;
     this.logger = logger;
   }
@@ -323,10 +325,16 @@ class PipelineStepExecutor {
       : '';
 
     this.logger.log(`[CLI] 执行 draft-generate, engine=${engine}, style=${styleKey || 'default'}`);
+    const knowledge = this._retrieveKnowledge({
+      stage: 'draft-generate',
+      query: [stylePrefix, topicInput, task?.metadata?.hotspotEnrichment?.enrichment || ''].join('\n'),
+      limit: 4,
+      extraTerms: ['母稿', '写作规则', '质量门控', styleKey],
+    });
     const prompt = this.skillLoader.buildPrompt('母稿', {
       topic: stylePrefix + topicInput,
       draftContent: '',
-    });
+    }) + knowledge.context;
     const content = await this.aiAdapter.generate(prompt, engine);
 
     const filename = `${todayTag()}-${safeFileName(topicInput, 20)}.md`;
@@ -345,6 +353,7 @@ class PipelineStepExecutor {
         engine,
         style: styleKey || '',
         inputPreview: topicInput.slice(0, 100),
+        knowledgeSources: knowledge.sources,
       },
       artifacts: [
         { type: 'text', stage: 'draft-generate', path: file },
@@ -354,6 +363,7 @@ class PipelineStepExecutor {
         style: styleKey || '',
         engine,
         draftFile: file,
+        knowledgeUsage: this._mergeKnowledgeUsage(task, 'draft-generate', knowledge.sources),
       },
     };
   }
@@ -373,11 +383,20 @@ class PipelineStepExecutor {
 
     const results = [];
     const platformFiles = {};
+    const knowledgeUsage = {};
     for (const target of targets) {
+      const knowledge = this._retrieveKnowledge({
+        stage: 'platform-rewrite',
+        platform: target.skill,
+        query: sourceDraft,
+        limit: 3,
+        extraTerms: [target.skill, target.dir, '平台改写', '术语', '禁忌', '表达'],
+      });
+      knowledgeUsage[target.skill] = knowledge.sources;
       const prompt = this.skillLoader.buildPrompt(target.skill, {
         topic: '',
         draftContent: sourceDraft,
-      });
+      }) + knowledge.context;
       const content = await this.aiAdapter.generate(prompt, engine);
       const filename = `${todayTag()}-${safeFileName(sourceDraft, 15)}.md`;
       this.outputManager.writeFile(target.dir, filename, content);
@@ -402,6 +421,7 @@ class PipelineStepExecutor {
         success: results.length,
         engine,
         platformFiles,
+        knowledgeSources: knowledgeUsage,
       },
       artifacts: results.map((item) => ({
         type: 'text',
@@ -420,6 +440,7 @@ class PipelineStepExecutor {
           file: item.file,
           length: item.length || 0,
         })),
+        knowledgeUsage: this._mergeKnowledgeUsage(task, 'platform-rewrite', knowledgeUsage),
       },
     };
   }
@@ -800,6 +821,41 @@ class PipelineStepExecutor {
       const skillName = resolvePlatformSkillName(name) || name;
       return allow.has(skillName);
     });
+  }
+
+  _retrieveKnowledge({ stage, query, platform = '', limit = 3, extraTerms = [] } = {}) {
+    if (!this.knowledgeRetriever || typeof this.knowledgeRetriever.retrieve !== 'function') {
+      return { context: '', sources: [] };
+    }
+
+    try {
+      const result = this.knowledgeRetriever.retrieve({
+        stage,
+        query,
+        platform,
+        limit,
+        extraTerms,
+      }) || {};
+      const matches = Array.isArray(result.matches) ? result.matches : [];
+      return {
+        context: String(result.context || ''),
+        sources: matches.map((item) => ({
+          source: item.source || '',
+          title: item.title || '',
+          score: item.score || 0,
+        })).filter((item) => item.source),
+      };
+    } catch (error) {
+      this.logger?.warn?.(`[knowledge] ${stage || 'unknown'} 检索失败: ${error.message}`);
+      return { context: '', sources: [] };
+    }
+  }
+
+  _mergeKnowledgeUsage(task, stage, sources) {
+    return {
+      ...(task?.metadata?.knowledgeUsage || {}),
+      [stage]: sources,
+    };
   }
 
   _buildMetadataPatch(task, stageKey, {

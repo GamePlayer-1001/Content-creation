@@ -33,6 +33,7 @@ const TaskStateStore   = require('../core/pipeline/task-state-store');
 const WorkflowRunner   = require('../core/pipeline/workflow-runner');
 const PipelineStepExecutor = require('../core/pipeline/step-executor');
 const HotspotService   = require('../core/services/hotspot/hotspot-service');
+const { LightweightKnowledgeRetriever } = require('../core/services/knowledge/knowledge-retriever');
 const { PIPELINE_STAGES } = require('../core/pipeline/stages');
 const { resolveRuntimeEnv } = require('../core/config/runtime-env');
 
@@ -50,6 +51,9 @@ const hotspotService   = new HotspotService({
   configDir: CONFIG_DIR,
   runtimeEnv,
 });
+const knowledgeRetriever = new LightweightKnowledgeRetriever({
+  projectRoot: PROJECT_ROOT,
+});
 
 // 图片生成: 优先读取规范变量，兼容旧变量
 const googleImageKey = runtimeEnv.image.apiKey;
@@ -64,6 +68,7 @@ const pipelineStepExecutor = new PipelineStepExecutor({
   outputManager,
   complianceEngine,
   imageGenerator,
+  knowledgeRetriever,
   projectRoot: PROJECT_ROOT,
 });
 
