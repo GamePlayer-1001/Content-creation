@@ -1,0 +1,199 @@
+{
+  "rows": [
+    [
+      "period_family",
+      "yearly_all_time",
+      "period_value",
+      "2026",
+      "generated_at",
+      "2026-03-19T20:20:01.876418+08:00"
+    ],
+    [],
+    [
+      "平台",
+      "AI 科技",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "编号",
+      "最多浏览",
+      "最多点赞",
+      "最多收藏",
+      "上升趋势最快",
+      "错误码+说明"
+    ],
+    [
+      "GitHub",
+      "1",
+      "",
+      "",
+      "",
+      "",
+      "最多浏览：insufficient_unique_candidates | 0/3；history_dedup=12\n最多点赞：na | GitHub 不适合按媒体式点赞口径做“最多点赞”。\n最多收藏：insufficient_unique_candidates | 0/3；history_dedup=12\n上升趋势最快：insufficient_unique_candidates | 0/3；history_dedup=12"
+    ],
+    [
+      "",
+      "2",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "3",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [],
+    [
+      "Twitter/X",
+      "1",
+      "",
+      "",
+      "",
+      "港大专门为OPC一人公司开发的基于OpenClaw龙虾的Agent群协作开源项目，离超级个体又近了一步！  现在大家玩AI Agent都是一个agent一个任务，跟单线程一样。复杂点的项目？你得自己当项目经理，手动拆任务、分配、汇总。Agent号称替你打工，结果你管agent比管人还累。  港大数据科学实验室刚开源了一个叫 ClawTeam 的框架（https://t.co/543JyK4M4O），思路很直接——让AI Agent自己组\n作者：1207019158791229440\n时间：2026-03-19T16:11:31+08:00\n指标：likes=36；retweets=10；replies=4；quotes=2\nhttps://x.com/i/web/status/2034543276855017814",
+      "最多浏览：insufficient_unique_candidates | 0/3；history_dedup=12\n最多点赞：insufficient_unique_candidates | 0/3；history_dedup=12\n最多收藏：insufficient_unique_candidates | 0/3；history_dedup=12\n上升趋势最快：insufficient_unique_candidates | 1/3；history_dedup=11"
+    ],
+    [
+      "",
+      "2",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "3",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [],
+    [
+      "Reddit",
+      "1",
+      "",
+      "",
+      "",
+      "",
+      "最多浏览：insufficient_unique_candidates | 0/3；history_dedup=12\n最多点赞：insufficient_unique_candidates | 0/3；history_dedup=12\n最多收藏：na | Reddit 缺公开 save / 收藏排序。\n上升趋势最快：insufficient_unique_candidates | 0/3；history_dedup=12"
+    ],
+    [
+      "",
+      "2",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "3",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [],
+    [
+      "B站",
+      "1",
+      "一个视频搞懂OpenClaw！\n作者：林亦LYi\n时间：2026-02-28T20:39:20+08:00\n指标：views=4123311；favorites=96845；likes=110345；comments=9045\nhttps://www.bilibili.com/video/BV1jEAaz3E6K",
+      "",
+      "手把手彻底学会 Agent Skills！【小白教程】\n作者：秋芝2046\n时间：2026-02-02T20:10:27+08:00\n指标：views=423452；favorites=29290；likes=21120；comments=6090\nhttps://www.bilibili.com/video/BV1G3FNznEiS",
+      "",
+      "最多浏览：insufficient_unique_candidates | 1/3；history_dedup=11\n最多点赞：insufficient_unique_candidates | 0/3；history_dedup=11；run_dedup=1\n最多收藏：insufficient_unique_candidates | 1/3；history_dedup=10；run_dedup=1\n上升趋势最快：insufficient_unique_candidates | 0/3；history_dedup=11；run_dedup=1"
+    ],
+    [
+      "",
+      "2",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "3",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [],
+    [
+      "微博",
+      "1",
+      "",
+      "",
+      "",
+      "",
+      "最多浏览：insufficient_unique_candidates | 0/3\n最多点赞：insufficient_unique_candidates | 0/3\n最多收藏：na | 微博缺公开收藏排序。\n上升趋势最快：insufficient_unique_candidates | 0/3"
+    ],
+    [
+      "",
+      "2",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "3",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [],
+    [
+      "YouTube",
+      "1",
+      "AI Agents, Clearly Explained\n作者：Jeff Su\n时间：2025-04-08T08:00:00+08:00\n指标：views=3978702；likes=98422；comments=2600\nhttps://www.youtube.com/watch?v=FwOTs4UxQS4",
+      "The \"vibe coding\" mind virus explained…\n作者：Fireship\n时间：2025-03-26T08:00:00+08:00\n指标：views=1853113；likes=65750；comments=3500\nhttps://www.youtube.com/watch?v=Tw18-4U7mts",
+      "",
+      "Building AI Agents that actually work (Full Course)\n作者：Greg Isenberg\n时间：2026-03-17T08:00:00+08:00\n指标：views=43100；likes=1555；comments=107\nhttps://www.youtube.com/watch?v=eA9Zf2-qYYM",
+      "最多点赞：run_dedup=3\n最多收藏：na | YouTube 缺公开收藏 / favorite 排序。"
+    ],
+    [
+      "",
+      "2",
+      "From Zero to Your First AI Agent in 25 Minutes (No Coding)\n作者：Futurepedia\n时间：2025-05-21T08:00:00+08:00\n指标：views=3369389；likes=89817；comments=1900\nhttps://www.youtube.com/watch?v=EH5jx5qPabU",
+      "Don't learn AI Agents without Learning these Fundamentals\n作者：KodeKloud\n时间：2025-10-21T08:00:00+08:00\n指标：views=566007；likes=13045；comments=370\nhttps://www.youtube.com/watch?v=ZaPbP9DwBOE",
+      "",
+      "\"50 AI Agents Running My Company\" Is a Lie. Here's How I Build It | Gumloop, Max Brodeur-Urbas\n作者：EO\n时间：2026-03-16T08:00:00+08:00\n指标：views=37090；likes=1359；comments=55\nhttps://www.youtube.com/watch?v=CxFQykWiJqY",
+      ""
+    ],
+    [
+      "",
+      "3",
+      "Vibe Coding Fundamentals In 33 minutes\n作者：Tina Huang\n时间：2025-05-19T08:00:00+08:00\n指标：views=824920；likes=25548；comments=1000\nhttps://www.youtube.com/watch?v=iLCDSY2XX7E",
+      "Tips for building AI agents\n作者：Anthropic\n时间：2025-02-13T08:00:00+08:00\n指标：views=560796；likes=11854；comments=336\nhttps://www.youtube.com/watch?v=LP5OCa20Zpg",
+      "",
+      "AI Agents Full Course 2026: Master Agentic AI (2 Hours)\n作者：Nick Saraev\n时间：2026-03-08T08:00:00+08:00\n指标：views=94858；likes=3784；comments=234\nhttps://www.youtube.com/watch?v=EsTrWCV0Ph4",
+      ""
+    ],
+    []
+  ]
+}

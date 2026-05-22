@@ -1,0 +1,59 @@
+{
+  "rows": [
+    [
+      "period_family",
+      "yearly_all_time",
+      "period_value",
+      "2026",
+      "generated_at",
+      "2026-03-20T12:40:25.815164+08:00"
+    ],
+    [],
+    [
+      "平台",
+      "AI 科技",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "编号",
+      "最多浏览",
+      "最多点赞",
+      "最多收藏",
+      "上升趋势最快",
+      "错误码+说明"
+    ],
+    [
+      "YouTube",
+      "1",
+      "AI Agents, Clearly Explained\n作者：Jeff Su\n时间：2025-04-08T08:00:00+08:00\n指标：views=3982986；likes=98507；comments=2600\nhttps://www.youtube.com/watch?v=FwOTs4UxQS4",
+      "",
+      "",
+      "",
+      "最多点赞：na | YouTube 近期反爬/校验波动，当前版本统一按 N/A 处理。\n最多收藏：na | YouTube 缺公开收藏 / favorite 排序。\n上升趋势最快：na | YouTube 近期反爬/校验波动，当前版本统一按 N/A 处理。"
+    ],
+    [
+      "",
+      "2",
+      "What are AI Agents?\n作者：IBM Technology\n时间：2024-07-15T08:00:00+08:00\n指标：views=1668363；likes=31116；comments=1000\nhttps://www.youtube.com/watch?v=F8NKVhkZZWI",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "3",
+      "I spoke to AI agent Claude\n作者：Senator Bernie Sanders\n时间：2026-03-19T08:00:00+08:00\n指标：views=273845；likes=33075；comments=4700\nhttps://www.youtube.com/watch?v=h3AtWdeu_G0",
+      "",
+      "",
+      "",
+      ""
+    ],
+    []
+  ]
+}

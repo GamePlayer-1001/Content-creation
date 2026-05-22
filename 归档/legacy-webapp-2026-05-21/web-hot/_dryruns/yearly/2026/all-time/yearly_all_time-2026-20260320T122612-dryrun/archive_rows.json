@@ -1,0 +1,64 @@
+{
+  "header": [
+    "run_id",
+    "generated_at",
+    "period_family",
+    "period_value",
+    "platform",
+    "topic",
+    "mode",
+    "rank",
+    "title",
+    "author",
+    "url",
+    "created_at",
+    "error_code_note"
+  ],
+  "rows": [
+    [
+      "yearly_all_time-2026-20260320T122612-dryrun",
+      "2026-03-20T12:26:12.072203+08:00",
+      "yearly_all_time",
+      "2026",
+      "即刻",
+      "AI 科技",
+      "最多浏览",
+      "1",
+      "生活",
+      "jike_topic_rank_manifest",
+      "https://web.okjike.com/topic/5a58cfa4b97f2b75f35f294f",
+      "",
+      ""
+    ],
+    [
+      "yearly_all_time-2026-20260320T122612-dryrun",
+      "2026-03-20T12:26:12.072203+08:00",
+      "yearly_all_time",
+      "2026",
+      "即刻",
+      "AI 科技",
+      "最多浏览",
+      "2",
+      "影视",
+      "jike_topic_rank_manifest",
+      "https://web.okjike.com/topic/5a58d14db97f2b75f35f2955",
+      "",
+      ""
+    ],
+    [
+      "yearly_all_time-2026-20260320T122612-dryrun",
+      "2026-03-20T12:26:12.072203+08:00",
+      "yearly_all_time",
+      "2026",
+      "即刻",
+      "AI 科技",
+      "最多浏览",
+      "3",
+      "明星",
+      "jike_topic_rank_manifest",
+      "https://web.okjike.com/topic/5a58d20fb97f2b75f35f2959",
+      "",
+      ""
+    ]
+  ]
+}

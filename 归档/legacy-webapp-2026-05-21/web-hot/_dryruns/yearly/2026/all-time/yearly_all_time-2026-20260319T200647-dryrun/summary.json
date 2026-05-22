@@ -1,0 +1,355 @@
+{
+  "run_id": "yearly_all_time-2026-20260319T200647-dryrun",
+  "generated_at": "2026-03-19T20:06:47.803824+08:00",
+  "period": "yearly_all_time",
+  "period_value": "2026",
+  "period_label": "不限时间 / 历史总榜",
+  "mode_order": [
+    "hot",
+    "attractive",
+    "useful",
+    "rising"
+  ],
+  "final_limit": 2,
+  "candidate_limit": 6,
+  "delay_policy": {
+    "query_delay_range_seconds": [
+      0,
+      0
+    ],
+    "read_delay_range_seconds": [
+      0,
+      0
+    ]
+  },
+  "topics": [
+    {
+      "id": "ai_tech",
+      "name": "AI 科技",
+      "queries": [
+        "AI agent",
+        "vibe coding",
+        "OpenClaw",
+        "agentic workflow",
+        "AI coding",
+        "AI skill"
+      ]
+    }
+  ],
+  "platforms": [
+    {
+      "id": "github",
+      "label": "GitHub",
+      "topics": [
+        {
+          "id": "ai_tech",
+          "name": "AI 科技",
+          "modes": {
+            "hot": {
+              "accepted": [],
+              "candidate_count": 6,
+              "accepted_count": 0,
+              "skipped_history": 6,
+              "skipped_run": 0,
+              "queries_hit": [
+                "AI agent"
+              ],
+              "errors": [],
+              "status_code_note": "insufficient_unique_candidates | 0/2；history_dedup=6"
+            },
+            "attractive": {
+              "accepted": [],
+              "candidate_count": 0,
+              "accepted_count": 0,
+              "skipped_history": 0,
+              "skipped_run": 0,
+              "queries_hit": [],
+              "errors": [],
+              "status_code_note": "na | GitHub 不适合按媒体式点赞口径做“最多点赞”。"
+            },
+            "useful": {
+              "accepted": [],
+              "candidate_count": 6,
+              "accepted_count": 0,
+              "skipped_history": 6,
+              "skipped_run": 0,
+              "queries_hit": [
+                "AI agent"
+              ],
+              "errors": [],
+              "status_code_note": "insufficient_unique_candidates | 0/2；history_dedup=6"
+            },
+            "rising": {
+              "accepted": [],
+              "candidate_count": 6,
+              "accepted_count": 0,
+              "skipped_history": 6,
+              "skipped_run": 0,
+              "queries_hit": [
+                "AI agent"
+              ],
+              "errors": [],
+              "status_code_note": "insufficient_unique_candidates | 0/2；history_dedup=6"
+            }
+          },
+          "status_cell": "最多浏览：insufficient_unique_candidates | 0/2；history_dedup=6\n最多点赞：na | GitHub 不适合按媒体式点赞口径做“最多点赞”。\n最多收藏：insufficient_unique_candidates | 0/2；history_dedup=6\n上升趋势最快：insufficient_unique_candidates | 0/2；history_dedup=6"
+        }
+      ]
+    }
+  ],
+  "raw_records": [
+    {
+      "run_id": "yearly_all_time-2026-20260319T200647-dryrun",
+      "generated_at": "2026-03-19T20:06:47.803824+08:00",
+      "period_family": "yearly_all_time",
+      "period_value": "2026",
+      "platform": "github",
+      "topic_id": "ai_tech",
+      "topic_name": "AI 科技",
+      "mode": "hot",
+      "slot_rank": 1,
+      "selection_status": "missing",
+      "content_key": "",
+      "source_id": "",
+      "title": "",
+      "author": "",
+      "url": "",
+      "created_at": "",
+      "rank_score": "",
+      "matched_queries_json": "[]",
+      "metrics_json": "{}",
+      "note": "insufficient_unique_candidates | 0/2；history_dedup=6"
+    },
+    {
+      "run_id": "yearly_all_time-2026-20260319T200647-dryrun",
+      "generated_at": "2026-03-19T20:06:47.803824+08:00",
+      "period_family": "yearly_all_time",
+      "period_value": "2026",
+      "platform": "github",
+      "topic_id": "ai_tech",
+      "topic_name": "AI 科技",
+      "mode": "hot",
+      "slot_rank": 2,
+      "selection_status": "missing",
+      "content_key": "",
+      "source_id": "",
+      "title": "",
+      "author": "",
+      "url": "",
+      "created_at": "",
+      "rank_score": "",
+      "matched_queries_json": "[]",
+      "metrics_json": "{}",
+      "note": "insufficient_unique_candidates | 0/2；history_dedup=6"
+    },
+    {
+      "run_id": "yearly_all_time-2026-20260319T200647-dryrun",
+      "generated_at": "2026-03-19T20:06:47.803824+08:00",
+      "period_family": "yearly_all_time",
+      "period_value": "2026",
+      "platform": "github",
+      "topic_id": "ai_tech",
+      "topic_name": "AI 科技",
+      "mode": "attractive",
+      "slot_rank": 1,
+      "selection_status": "na",
+      "content_key": "",
+      "source_id": "",
+      "title": "",
+      "author": "",
+      "url": "",
+      "created_at": "",
+      "rank_score": "",
+      "matched_queries_json": "[]",
+      "metrics_json": "{}",
+      "note": "na | GitHub 不适合按媒体式点赞口径做“最多点赞”。"
+    },
+    {
+      "run_id": "yearly_all_time-2026-20260319T200647-dryrun",
+      "generated_at": "2026-03-19T20:06:47.803824+08:00",
+      "period_family": "yearly_all_time",
+      "period_value": "2026",
+      "platform": "github",
+      "topic_id": "ai_tech",
+      "topic_name": "AI 科技",
+      "mode": "attractive",
+      "slot_rank": 2,
+      "selection_status": "na",
+      "content_key": "",
+      "source_id": "",
+      "title": "",
+      "author": "",
+      "url": "",
+      "created_at": "",
+      "rank_score": "",
+      "matched_queries_json": "[]",
+      "metrics_json": "{}",
+      "note": "na | GitHub 不适合按媒体式点赞口径做“最多点赞”。"
+    },
+    {
+      "run_id": "yearly_all_time-2026-20260319T200647-dryrun",
+      "generated_at": "2026-03-19T20:06:47.803824+08:00",
+      "period_family": "yearly_all_time",
+      "period_value": "2026",
+      "platform": "github",
+      "topic_id": "ai_tech",
+      "topic_name": "AI 科技",
+      "mode": "useful",
+      "slot_rank": 1,
+      "selection_status": "missing",
+      "content_key": "",
+      "source_id": "",
+      "title": "",
+      "author": "",
+      "url": "",
+      "created_at": "",
+      "rank_score": "",
+      "matched_queries_json": "[]",
+      "metrics_json": "{}",
+      "note": "insufficient_unique_candidates | 0/2；history_dedup=6"
+    },
+    {
+      "run_id": "yearly_all_time-2026-20260319T200647-dryrun",
+      "generated_at": "2026-03-19T20:06:47.803824+08:00",
+      "period_family": "yearly_all_time",
+      "period_value": "2026",
+      "platform": "github",
+      "topic_id": "ai_tech",
+      "topic_name": "AI 科技",
+      "mode": "useful",
+      "slot_rank": 2,
+      "selection_status": "missing",
+      "content_key": "",
+      "source_id": "",
+      "title": "",
+      "author": "",
+      "url": "",
+      "created_at": "",
+      "rank_score": "",
+      "matched_queries_json": "[]",
+      "metrics_json": "{}",
+      "note": "insufficient_unique_candidates | 0/2；history_dedup=6"
+    },
+    {
+      "run_id": "yearly_all_time-2026-20260319T200647-dryrun",
+      "generated_at": "2026-03-19T20:06:47.803824+08:00",
+      "period_family": "yearly_all_time",
+      "period_value": "2026",
+      "platform": "github",
+      "topic_id": "ai_tech",
+      "topic_name": "AI 科技",
+      "mode": "rising",
+      "slot_rank": 1,
+      "selection_status": "missing",
+      "content_key": "",
+      "source_id": "",
+      "title": "",
+      "author": "",
+      "url": "",
+      "created_at": "",
+      "rank_score": "",
+      "matched_queries_json": "[]",
+      "metrics_json": "{}",
+      "note": "insufficient_unique_candidates | 0/2；history_dedup=6"
+    },
+    {
+      "run_id": "yearly_all_time-2026-20260319T200647-dryrun",
+      "generated_at": "2026-03-19T20:06:47.803824+08:00",
+      "period_family": "yearly_all_time",
+      "period_value": "2026",
+      "platform": "github",
+      "topic_id": "ai_tech",
+      "topic_name": "AI 科技",
+      "mode": "rising",
+      "slot_rank": 2,
+      "selection_status": "missing",
+      "content_key": "",
+      "source_id": "",
+      "title": "",
+      "author": "",
+      "url": "",
+      "created_at": "",
+      "rank_score": "",
+      "matched_queries_json": "[]",
+      "metrics_json": "{}",
+      "note": "insufficient_unique_candidates | 0/2；history_dedup=6"
+    }
+  ],
+  "run_logs": [
+    {
+      "run_id": "yearly_all_time-2026-20260319T200647-dryrun",
+      "generated_at": "2026-03-19T20:06:47.803824+08:00",
+      "period_family": "yearly_all_time",
+      "period_value": "2026",
+      "platform": "github",
+      "topic_id": "ai_tech",
+      "topic_name": "AI 科技",
+      "mode": "hot",
+      "support_status": "supported",
+      "candidate_count": 6,
+      "accepted_count": 0,
+      "skipped_history": 6,
+      "skipped_run": 0,
+      "fetch_error_count": 0,
+      "status_code_note": "insufficient_unique_candidates | 0/2；history_dedup=6"
+    },
+    {
+      "run_id": "yearly_all_time-2026-20260319T200647-dryrun",
+      "generated_at": "2026-03-19T20:06:47.803824+08:00",
+      "period_family": "yearly_all_time",
+      "period_value": "2026",
+      "platform": "github",
+      "topic_id": "ai_tech",
+      "topic_name": "AI 科技",
+      "mode": "attractive",
+      "support_status": "na",
+      "candidate_count": 0,
+      "accepted_count": 0,
+      "skipped_history": 0,
+      "skipped_run": 0,
+      "fetch_error_count": 0,
+      "status_code_note": "na | GitHub 不适合按媒体式点赞口径做“最多点赞”。"
+    },
+    {
+      "run_id": "yearly_all_time-2026-20260319T200647-dryrun",
+      "generated_at": "2026-03-19T20:06:47.803824+08:00",
+      "period_family": "yearly_all_time",
+      "period_value": "2026",
+      "platform": "github",
+      "topic_id": "ai_tech",
+      "topic_name": "AI 科技",
+      "mode": "useful",
+      "support_status": "supported",
+      "candidate_count": 6,
+      "accepted_count": 0,
+      "skipped_history": 6,
+      "skipped_run": 0,
+      "fetch_error_count": 0,
+      "status_code_note": "insufficient_unique_candidates | 0/2；history_dedup=6"
+    },
+    {
+      "run_id": "yearly_all_time-2026-20260319T200647-dryrun",
+      "generated_at": "2026-03-19T20:06:47.803824+08:00",
+      "period_family": "yearly_all_time",
+      "period_value": "2026",
+      "platform": "github",
+      "topic_id": "ai_tech",
+      "topic_name": "AI 科技",
+      "mode": "rising",
+      "support_status": "supported",
+      "candidate_count": 6,
+      "accepted_count": 0,
+      "skipped_history": 6,
+      "skipped_run": 0,
+      "fetch_error_count": 0,
+      "status_code_note": "insufficient_unique_candidates | 0/2；history_dedup=6"
+    }
+  ],
+  "sheet": {
+    "status": "skipped",
+    "reason": "disabled_by_flag"
+  },
+  "linux_output_path": "/mnt/d/Software/内容生成输出/web hot/_dryruns/yearly/2026/all-time/yearly_all_time-2026-20260319T200647-dryrun",
+  "workspace_output_path": "/home/openclaw-liuxin/.openclaw/workspace/reports/rankings/_dryruns/yearly/2026/all-time/yearly_all_time-2026-20260319T200647-dryrun",
+  "windows_output_path": "D:\\Software\\内容生成输出\\web hot\\_dryruns\\yearly\\2026\\all-time\\yearly_all_time-2026-20260319T200647-dryrun"
+}

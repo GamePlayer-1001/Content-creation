@@ -1,0 +1,59 @@
+{
+  "rows": [
+    [
+      "period_family",
+      "yearly_all_time",
+      "period_value",
+      "2026",
+      "generated_at",
+      "2026-03-20T11:31:30.336299+08:00"
+    ],
+    [],
+    [
+      "平台",
+      "AI 科技",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "编号",
+      "最多浏览",
+      "最多点赞",
+      "最多收藏",
+      "上升趋势最快",
+      "错误码+说明"
+    ],
+    [
+      "今日头条",
+      "1",
+      "春分巧遇“龙抬头”本世纪仅有三次\n作者：toutiao_hot_board\n指标：hot_value=31315736；label=hot\nhttps://www.toutiao.com/trending/7618811572610089014/?category_name=topic_innerflow&event_type=hot_board&log_pb=%7B%22category_name%22%3A%22topic_innerflow%22%2C%22cluster_type%22%3A%221%22%2C%22enter_from%22%3A%22click_category%22%2C%22entrance_hotspot%22%3A%22outside%22%2C%22event_type%22%3A%22hot_board%22%2C%22hot_board_cluster_id%22%3A%227618811572610089014%22%2C%22hot_board_impr_id%22%3A%22202603201131312336DF062C73EA93B628%22%2C%22jump_page%22%3A%22hot_board_page%22%2C%22location%22%3A%22news_hot_card%22%2C%22page_location%22%3A%22hot_board_page%22%2C%22source%22%3A%22trending_tab%22%2C%22style_id%22%3A%2240132%22%2C%22title%22%3A%22%E6%98%A5%E5%88%86%E5%B7%A7%E9%81%87%E2%80%9C%E9%BE%99%E6%8A%AC%E5%A4%B4%E2%80%9D%E6%9C%AC%E4%B8%96%E7%BA%AA%E4%BB%85%E6%9C%89%E4%B8%89%E6%AC%A1%22%7D&rank=&style_id=40132&topic_id=7618811572610089014",
+      "",
+      "",
+      "",
+      "最多点赞：na | 今日头条尚未完成稳定榜单闭环。\n最多收藏：na | 今日头条尚未完成稳定榜单闭环。\n上升趋势最快：na | 今日头条尚未完成稳定榜单闭环。"
+    ],
+    [
+      "",
+      "2",
+      "人民日报：请给AI起个中文名字\n作者：toutiao_hot_board\n指标：hot_value=28335650\nhttps://www.toutiao.com/trending/7618806460609200137/?category_name=topic_innerflow&event_type=hot_board&log_pb=%7B%22category_name%22%3A%22topic_innerflow%22%2C%22cluster_type%22%3A%226%22%2C%22enter_from%22%3A%22click_category%22%2C%22entrance_hotspot%22%3A%22outside%22%2C%22event_type%22%3A%22hot_board%22%2C%22hot_board_cluster_id%22%3A%227618806460609200137%22%2C%22hot_board_impr_id%22%3A%22202603201131312336DF062C73EA93B628%22%2C%22jump_page%22%3A%22hot_board_page%22%2C%22location%22%3A%22news_hot_card%22%2C%22page_location%22%3A%22hot_board_page%22%2C%22source%22%3A%22trending_tab%22%2C%22style_id%22%3A%2240132%22%2C%22title%22%3A%22%E4%BA%BA%E6%B0%91%E6%97%A5%E6%8A%A5%EF%BC%9A%E8%AF%B7%E7%BB%99AI%E8%B5%B7%E4%B8%AA%E4%B8%AD%E6%96%87%E5%90%8D%E5%AD%97%22%7D&rank=&style_id=40132&topic_id=7618806460609200137",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "3",
+      "特色文旅激活春日消费新动能\n作者：toutiao_hot_board\n指标：hot_value=25639156；label=new\nhttps://www.toutiao.com/article/7618960216427594240",
+      "",
+      "",
+      "",
+      ""
+    ],
+    []
+  ]
+}

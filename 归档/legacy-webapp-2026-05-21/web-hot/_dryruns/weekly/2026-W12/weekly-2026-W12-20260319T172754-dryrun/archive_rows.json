@@ -1,0 +1,79 @@
+{
+  "header": [
+    "run_id",
+    "generated_at",
+    "period_family",
+    "period_value",
+    "platform",
+    "topic",
+    "mode",
+    "rank",
+    "title",
+    "author",
+    "url",
+    "created_at",
+    "error_code_note"
+  ],
+  "rows": [
+    [
+      "weekly-2026-W12-20260319T172754-dryrun",
+      "2026-03-19T17:27:54.796980+08:00",
+      "weekly",
+      "2026-W12",
+      "Reddit",
+      "AI 科技",
+      "最多浏览",
+      "1",
+      "My cousin let me post his search history (he made me erase 3 of them)",
+      "Flask3729",
+      "https://reddit.com/r/notinteresting/comments/1rw0fgp/my_cousin_let_me_post_his_search_history_he_made/",
+      "2026-03-17T16:02:19+08:00",
+      ""
+    ],
+    [
+      "weekly-2026-W12-20260319T172754-dryrun",
+      "2026-03-19T17:27:54.796980+08:00",
+      "weekly",
+      "2026-W12",
+      "Reddit",
+      "AI 科技",
+      "最多浏览",
+      "2",
+      "whenLifeImitatesMemes",
+      "honeyCrisis",
+      "https://reddit.com/r/ProgrammerHumor/comments/1rwqboh/whenlifeimitatesmemes/",
+      "2026-03-18T09:35:21+08:00",
+      ""
+    ],
+    [
+      "weekly-2026-W12-20260319T172754-dryrun",
+      "2026-03-19T17:27:54.796980+08:00",
+      "weekly",
+      "2026-W12",
+      "Reddit",
+      "AI 科技",
+      "最多点赞",
+      "1",
+      "Tell me capitalism is trash without telling me",
+      "FearlessAir1238",
+      "https://reddit.com/r/WorkersStrikeBack/comments/1rtzxjk/tell_me_capitalism_is_trash_without_telling_me/",
+      "2026-03-15T08:36:23+08:00",
+      ""
+    ],
+    [
+      "weekly-2026-W12-20260319T172754-dryrun",
+      "2026-03-19T17:27:54.796980+08:00",
+      "weekly",
+      "2026-W12",
+      "Reddit",
+      "AI 科技",
+      "最多点赞",
+      "2",
+      "Dude",
+      "Old-Pen-3595",
+      "https://reddit.com/r/OKbuddyHalfLife/comments/1ru74co/dude/",
+      "2026-03-15T14:46:38+08:00",
+      ""
+    ]
+  ]
+}

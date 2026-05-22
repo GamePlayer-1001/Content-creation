@@ -1,0 +1,18 @@
+{
+  "header": [
+    "run_id",
+    "generated_at",
+    "period_family",
+    "period_value",
+    "platform",
+    "topic",
+    "mode",
+    "rank",
+    "title",
+    "author",
+    "url",
+    "created_at",
+    "error_code_note"
+  ],
+  "rows": []
+}

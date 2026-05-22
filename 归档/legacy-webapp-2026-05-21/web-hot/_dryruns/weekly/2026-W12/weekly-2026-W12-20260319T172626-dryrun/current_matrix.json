@@ -1,0 +1,50 @@
+{
+  "rows": [
+    [
+      "period_family",
+      "weekly",
+      "period_value",
+      "2026-W12",
+      "generated_at",
+      "2026-03-19T17:26:26.311849+08:00"
+    ],
+    [],
+    [
+      "平台",
+      "AI 科技",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "编号",
+      "最多浏览",
+      "最多点赞",
+      "最多收藏",
+      "上升趋势最快",
+      "错误码+说明"
+    ],
+    [
+      "Reddit",
+      "1",
+      "My cousin let me post his search history (he made me erase 3 of them)\n作者：Flask3729\n时间：2026-03-17T16:02:19+08:00\n指标：ups=3204；comments=296；upvote_ratio=0.97\nhttps://reddit.com/r/notinteresting/comments/1rw0fgp/my_cousin_let_me_post_his_search_history_he_made/",
+      "Tell me capitalism is trash without telling me\n作者：FearlessAir1238\n时间：2026-03-15T08:36:23+08:00\n指标：ups=2507；comments=35；upvote_ratio=1.0\nhttps://reddit.com/r/WorkersStrikeBack/comments/1rtzxjk/tell_me_capitalism_is_trash_without_telling_me/",
+      "",
+      "",
+      "最多点赞：run_dedup=1\n最多收藏：na | Reddit 缺公开 save / 收藏排序。\n上升趋势最快：insufficient_unique_candidates | 0/2；run_dedup=4"
+    ],
+    [
+      "",
+      "2",
+      "whenLifeImitatesMemes\n作者：honeyCrisis\n时间：2026-03-18T09:35:21+08:00\n指标：ups=1654；comments=8；upvote_ratio=0.99\nhttps://reddit.com/r/ProgrammerHumor/comments/1rwqboh/whenlifeimitatesmemes/",
+      "Dude\n作者：Old-Pen-3595\n时间：2026-03-15T14:46:38+08:00\n指标：ups=2463；comments=63；upvote_ratio=0.99\nhttps://reddit.com/r/OKbuddyHalfLife/comments/1ru74co/dude/",
+      "",
+      "",
+      ""
+    ],
+    []
+  ]
+}

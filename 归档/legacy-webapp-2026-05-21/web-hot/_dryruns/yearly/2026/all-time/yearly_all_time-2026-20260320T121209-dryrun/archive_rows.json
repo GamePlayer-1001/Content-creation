@@ -1,0 +1,64 @@
+{
+  "header": [
+    "run_id",
+    "generated_at",
+    "period_family",
+    "period_value",
+    "platform",
+    "topic",
+    "mode",
+    "rank",
+    "title",
+    "author",
+    "url",
+    "created_at",
+    "error_code_note"
+  ],
+  "rows": [
+    [
+      "yearly_all_time-2026-20260320T121209-dryrun",
+      "2026-03-20T12:12:09.486826+08:00",
+      "yearly_all_time",
+      "2026",
+      "抖音",
+      "AI 科技",
+      "最多浏览",
+      "1",
+      "在春分记录春天",
+      "douyin_hot_board",
+      "https://www.douyin.com/hot/在春分记录春天",
+      "",
+      ""
+    ],
+    [
+      "yearly_all_time-2026-20260320T121209-dryrun",
+      "2026-03-20T12:12:09.486826+08:00",
+      "yearly_all_time",
+      "2026",
+      "抖音",
+      "AI 科技",
+      "最多浏览",
+      "2",
+      "2026第5届潮汕服博会",
+      "douyin_hot_board",
+      "https://www.douyin.com/hot/2026第5届潮汕服博会",
+      "",
+      ""
+    ],
+    [
+      "yearly_all_time-2026-20260320T121209-dryrun",
+      "2026-03-20T12:12:09.486826+08:00",
+      "yearly_all_time",
+      "2026",
+      "抖音",
+      "AI 科技",
+      "最多浏览",
+      "3",
+      "春分巧遇“龙抬头”",
+      "douyin_hot_board",
+      "https://www.douyin.com/hot/春分巧遇“龙抬头”",
+      "",
+      ""
+    ]
+  ]
+}

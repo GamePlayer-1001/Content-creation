@@ -1,0 +1,36 @@
+{
+  "name": "content-forge",
+  "version": "1.0.0",
+  "private": true,
+  "description": "轻量级自动化营销内容生成器",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "node --watch server/index.js",
+    "dev:client": "vite",
+    "build": "vite build",
+    "start": "node server/index.js"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "marked": "^15.0.6",
+    "gray-matter": "^4.0.3",
+    "glob": "^11.0.2"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.4",
+    "@types/react-dom": "^19.1.5",
+    "@vitejs/plugin-react": "^4.5.2",
+    "autoprefixer": "^10.4.21",
+    "concurrently": "^9.1.2",
+    "postcss": "^8.5.3",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "tailwindcss": "^4.1.7",
+    "vite": "^6.3.5",
+    "@tailwindcss/vite": "^4.1.7",
+    "lucide-react": "^0.511.0"
+  }
+}

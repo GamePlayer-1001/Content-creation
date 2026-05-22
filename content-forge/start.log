@@ -1,0 +1,4 @@
+[2026/05/21 周四 12:53:38.40] start.bat launched 
+APP=D:\Software\内容生成输出\content-forge
+NODE=v24.14.0
+NPM=11.9.0

@@ -1,0 +1,64 @@
+{
+  "header": [
+    "run_id",
+    "generated_at",
+    "period_family",
+    "period_value",
+    "platform",
+    "topic",
+    "mode",
+    "rank",
+    "title",
+    "author",
+    "url",
+    "created_at",
+    "error_code_note"
+  ],
+  "rows": [
+    [
+      "yearly_all_time-2026-20260320T131531-dryrun",
+      "2026-03-20T13:15:31.484417+08:00",
+      "yearly_all_time",
+      "2026",
+      "知乎",
+      "AI 科技",
+      "最多浏览",
+      "1",
+      "小米新一代 SU7 发布，王传福、李想、何小鹏纷纷到场助阵，怎样解读？小米汽车在行业内有怎样的影响力？",
+      "用户",
+      "https://www.zhihu.com/question/2018050979702989965",
+      "",
+      ""
+    ],
+    [
+      "yearly_all_time-2026-20260320T131531-dryrun",
+      "2026-03-20T13:15:31.484417+08:00",
+      "yearly_all_time",
+      "2026",
+      "知乎",
+      "AI 科技",
+      "最多浏览",
+      "2",
+      "如何看待内存条价格崩了？",
+      "用户",
+      "https://www.zhihu.com/question/2017860793417356112",
+      "",
+      ""
+    ],
+    [
+      "yearly_all_time-2026-20260320T131531-dryrun",
+      "2026-03-20T13:15:31.484417+08:00",
+      "yearly_all_time",
+      "2026",
+      "知乎",
+      "AI 科技",
+      "最多浏览",
+      "3",
+      "为什么网友们能接受振金盾牌，但接受不了振金长矛？",
+      "用户",
+      "https://www.zhihu.com/question/2018013243478689766",
+      "",
+      ""
+    ]
+  ]
+}

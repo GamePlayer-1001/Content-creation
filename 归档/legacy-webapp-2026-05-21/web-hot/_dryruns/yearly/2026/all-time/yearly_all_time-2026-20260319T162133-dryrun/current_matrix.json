@@ -1,0 +1,77 @@
+{
+  "rows": [
+    [
+      "period_family",
+      "yearly_all_time",
+      "period_value",
+      "2026",
+      "generated_at",
+      "2026-03-19T16:21:33.267275+08:00"
+    ],
+    [],
+    [
+      "平台",
+      "AI 科技",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "编号",
+      "最多浏览",
+      "最多点赞",
+      "最多收藏",
+      "上升趋势最快",
+      "错误码+说明"
+    ],
+    [
+      "YouTube",
+      "1",
+      "AI Agents, Clearly Explained\n作者：Jeff Su\n时间：2025-04-08T08:00:00+08:00\n指标：views=3977734；likes=98405；comments=2600\nhttps://www.youtube.com/watch?v=FwOTs4UxQS4",
+      "9 AI Skills You MUST Have to Become Rich in 2026\n作者：Dan Martell\n时间：2025-04-29T08:00:00+08:00\n指标：views=1974835；likes=59403；comments=2000\nhttps://www.youtube.com/watch?v=Eq8JgI3HmjI",
+      "",
+      "",
+      "最多浏览：fetch_error(1)\n最多点赞：run_dedup=5\n最多收藏：na | YouTube 缺公开收藏 / favorite 排序。\n上升趋势最快：na | 当前版本未打通该平台/指标组合，按约定标记 N/A。"
+    ],
+    [
+      "",
+      "2",
+      "From Zero to Your First AI Agent in 25 Minutes (No Coding)\n作者：Futurepedia\n时间：2025-05-21T08:00:00+08:00\n指标：views=3368670；likes=89802；comments=1900\nhttps://www.youtube.com/watch?v=EH5jx5qPabU",
+      "AI Agents Fundamentals In 21 Minutes\n作者：Tina Huang\n时间：2025-02-16T08:00:00+08:00\n指标：views=1466169；likes=49895；comments=1200\nhttps://www.youtube.com/watch?v=qU3fmidNbJE",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "3",
+      "How to Build & Sell AI Agents: Ultimate Beginner’s Guide\n作者：Liam Ottley\n时间：2025-03-27T08:00:00+08:00\n指标：views=2215989；likes=74466；comments=2500\nhttps://www.youtube.com/watch?v=w0H1-b044KY",
+      "The wild rise of OpenClaw...\n作者：Fireship\n时间：2026-01-30T08:00:00+08:00\n指标：views=1853457；likes=48840；comments=1800\nhttps://www.youtube.com/watch?v=ssYt09bCgUY",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "4",
+      "99% of Beginners Don't Know the Basics of AI\n作者：Jeff Su\n时间：2024-09-03T08:00:00+08:00\n指标：views=2959126；likes=63362；comments=2200\nhttps://www.youtube.com/watch?v=nVyD6THcvDQ",
+      "7 new open source AI tools you need right now…\n作者：Fireship\n时间：2026-03-12T08:00:00+08:00\n指标：views=651710；likes=31292；comments=1000\nhttps://www.youtube.com/watch?v=Xn-gtHDsaPY",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "5",
+      "The \"vibe coding\" mind virus explained…\n作者：Fireship\n时间：2025-03-26T08:00:00+08:00\n指标：views=1852997；likes=65749；comments=3500\nhttps://www.youtube.com/watch?v=Tw18-4U7mts",
+      "What are AI Agents?\n作者：IBM Technology\n时间：2024-07-15T08:00:00+08:00\n指标：views=1667887；likes=31104；comments=1000\nhttps://www.youtube.com/watch?v=F8NKVhkZZWI",
+      "",
+      "",
+      ""
+    ],
+    []
+  ]
+}

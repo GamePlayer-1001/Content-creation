@@ -1,0 +1,59 @@
+{
+  "rows": [
+    [
+      "period_family",
+      "yearly_all_time",
+      "period_value",
+      "2026",
+      "generated_at",
+      "2026-03-20T12:31:11.599934+08:00"
+    ],
+    [],
+    [
+      "平台",
+      "AI 科技",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "编号",
+      "最多浏览",
+      "最多点赞",
+      "最多收藏",
+      "上升趋势最快",
+      "错误码+说明"
+    ],
+    [
+      "LinuxDo",
+      "1",
+      "最近openai封号频繁了\n作者：lingdong\n时间：2026-03-20T12:30:51+08:00\n指标：query_match_terms=1；category=搞七捻三；rank_position=1\nhttps://linux.do/t/topic/1787426",
+      "",
+      "",
+      "",
+      "最多点赞：na | LinuxDo 尚未完成稳定榜单闭环。\n最多收藏：na | LinuxDo 尚未完成稳定榜单闭环。\n上升趋势最快：na | LinuxDo 尚未完成稳定榜单闭环。"
+    ],
+    [
+      "",
+      "2",
+      "Google AI Studio 升级全栈 vibe coding 体验，可直接构建带登录和数据库的应用\n作者：Subin\n时间：2026-03-20T12:30:18+08:00\n指标：query_match_terms=1；category=前沿快讯；rank_position=4\nhttps://linux.do/t/topic/1787421",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "3",
+      "业务的随机算法求助贴\n作者：fcxxz\n时间：2026-03-20T12:29:15+08:00\n指标：query_match_terms=1；category=开发调优；rank_position=7\nhttps://linux.do/t/topic/1787415",
+      "",
+      "",
+      "",
+      ""
+    ],
+    []
+  ]
+}

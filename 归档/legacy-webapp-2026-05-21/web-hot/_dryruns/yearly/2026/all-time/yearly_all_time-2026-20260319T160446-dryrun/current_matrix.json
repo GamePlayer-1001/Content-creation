@@ -1,0 +1,77 @@
+{
+  "rows": [
+    [
+      "period_family",
+      "yearly_all_time",
+      "period_value",
+      "2026",
+      "generated_at",
+      "2026-03-19T16:04:46.415251+08:00"
+    ],
+    [],
+    [
+      "平台",
+      "AI 科技",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "编号",
+      "最多浏览",
+      "最多点赞",
+      "最多收藏",
+      "上升趋势最快",
+      "错误码+说明"
+    ],
+    [
+      "B站",
+      "1",
+      "【全748集】目前B站最全最细的AI大模型零基础全套教程，2025最新版，包含所有干货！七天就能从小白到大神！少走99%的弯路！存下吧！很难找全的！\n作者：大模型官方课程\n时间：2024-12-20T15:56:52+08:00\n指标：views=3397461；favorites=151821；likes=55593；comments=16510\nhttps://www.bilibili.com/video/BV1uNk1YxEJQ",
+      "",
+      "Claude Code 从 0 到 1 全攻略：MCP / SubAgent / Agent Skill / Hook / 图片 / 上下文处理/ 后台任务\n作者：马克的技术工作坊\n时间：2026-01-25T16:55:20+08:00\n指标：views=590471；favorites=56719；likes=23642；comments=1378\nhttps://www.bilibili.com/video/BV14rzQB9EJj",
+      "",
+      "最多点赞：na | B 站暂未验证稳定公开点赞排序。\n最多收藏：run_dedup=5\n上升趋势最快：na | B 站暂未验证稳定公开 rising 口径。"
+    ],
+    [
+      "",
+      "2",
+      "一个视频搞懂OpenClaw！\n作者：林亦LYi\n时间：2026-02-28T20:39:20+08:00\n指标：views=4110313；favorites=96592；likes=110031；comments=9031\nhttps://www.bilibili.com/video/BV1jEAaz3E6K",
+      "",
+      "OpenClaw小龙虾保姆级安装教程！小白10分钟搞定本地部署【Windows系统 + 接入飞书】\n作者：林粒粒呀\n时间：2026-03-05T21:38:26+08:00\n指标：views=890467；favorites=52976；likes=21612；comments=5319\nhttps://www.bilibili.com/video/BV1UsP1zqEWc",
+      "",
+      ""
+    ],
+    [
+      "",
+      "3",
+      "爆肝10亿token，我给OpenClaw做了个龙虾管家！【一键安装龙虾】\n作者：秋芝2046\n时间：2026-03-10T18:00:35+08:00\n指标：views=2730341；favorites=57184；likes=53239；comments=5945\nhttps://www.bilibili.com/video/BV1mYPSzmEkV",
+      "",
+      "黑马程序员DeepSeek+Cursor+Devbox+Sealos带你零代码搞定实战项目开发部署视频教程，基于AI完成项目的设计、开发、测试、联调、部署全流程\n作者：黑马程序员\n时间：2025-03-04T15:00:00+08:00\n指标：views=864969；favorites=47205；likes=14066；comments=1608\nhttps://www.bilibili.com/video/BV1ig9jYUERk",
+      "",
+      ""
+    ],
+    [
+      "",
+      "4",
+      "【闪客】一口气拆穿Skill/MCP/RAG/Agent/OpenClaw底层逻辑\n作者：飞天闪客\n时间：2026-02-03T23:37:23+08:00\n指标：views=595260；favorites=57715；likes=45678；comments=1488\nhttps://www.bilibili.com/video/BV1ojfDBSEPv",
+      "",
+      "从0开始“做”一个Agent！【n8n草履虫教程】\n作者：秋芝2046\n时间：2025-06-20T17:23:43+08:00\n指标：views=559913；favorites=33529；likes=19302；comments=2284\nhttps://www.bilibili.com/video/BV1KSKwzJEEV",
+      "",
+      ""
+    ],
+    [
+      "",
+      "5",
+      "10分钟讲清楚 Prompt, Agent, MCP 是什么\n作者：隔壁的程序员老王\n时间：2025-05-01T17:00:00+08:00\n指标：views=750761；favorites=51392；likes=43905；comments=838\nhttps://www.bilibili.com/video/BV1aeLqzUE6L",
+      "",
+      "翻遍整个B站，这绝对是2026讲的最好的AI Agent智能体教程，手把手教你从0基础开始搭建企业级Agent智能体！全程干货无废话，让你少走99%弯路！！\n作者：AI学习课堂\n时间：2025-09-11T20:48:57+08:00\n指标：views=632302；favorites=33057；likes=15229；comments=2970\nhttps://www.bilibili.com/video/BV1zuHizBE8B",
+      "",
+      ""
+    ],
+    []
+  ]
+}

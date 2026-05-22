@@ -1,0 +1,96 @@
+@import "tailwindcss";
+
+:root {
+  --bg-primary: #ffffff;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f5f7fa;
+  --border: #e8eaed;
+  --text-primary: #1d1d1f;
+  --text-secondary: #5f6368;
+  --accent: #e94560;
+  --accent-soft: rgba(233, 69, 96, 0.08);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #d9dce0 transparent;
+}
+
+body {
+  margin: 0;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  -webkit-text-size-adjust: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 平台预览器基础样式 */
+.preview-frame {
+  background: #fff;
+  color: #333;
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', sans-serif;
+  line-height: 1.8;
+  font-size: 16px;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.preview-frame h1 { font-size: 22px; font-weight: 700; margin: 24px 0 12px; color: #1a1a1a; }
+.preview-frame h2 { font-size: 19px; font-weight: 700; margin: 20px 0 10px; color: #1a1a1a; }
+.preview-frame h3 { font-size: 17px; font-weight: 600; margin: 16px 0 8px; color: #1a1a1a; }
+.preview-frame p { margin: 8px 0; }
+.preview-frame strong { color: #e94560; }
+.preview-frame blockquote {
+  border-left: 3px solid #e94560;
+  padding: 8px 16px;
+  margin: 12px 0;
+  background: #f7f7f8;
+  color: #555;
+}
+.preview-frame ul, .preview-frame ol { padding-left: 20px; margin: 8px 0; }
+.preview-frame li { margin: 4px 0; }
+.preview-frame code {
+  background: #f3f3f5;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 14px;
+  color: #c7254e;
+}
+.preview-frame pre {
+  background: #f6f8fa;
+  color: #24292f;
+  padding: 16px;
+  border-radius: 8px;
+  overflow-x: auto;
+  font-size: 13px;
+  line-height: 1.6;
+  border: 1px solid #e8eaed;
+}
+.preview-frame img {
+  max-width: 100%;
+  border-radius: 6px;
+  margin: 12px 0;
+}
+.preview-frame a { color: #e94560; text-decoration: none; }
+.preview-frame hr {
+  border: none;
+  border-top: 1px solid #e8e8ed;
+  margin: 24px 0;
+}
+
+/* 平台特定样式 */
+.platform-wechat .preview-frame { padding: 20px 16px; font-size: 16px; }
+.platform-wechat .preview-frame p { margin: 12px 0; line-height: 2; }
+
+.platform-xiaohongshu .preview-frame { padding: 16px; font-size: 15px; line-height: 1.7; }
+.platform-xiaohongshu .preview-frame h1 { font-size: 18px; }
+.platform-xiaohongshu .preview-frame p { margin: 6px 0; }
+
+.platform-toutiao .preview-frame { padding: 20px 16px; font-size: 17px; }
+.platform-toutiao .preview-frame h1 { font-size: 24px; font-weight: 800; }
+.platform-toutiao .preview-frame p { margin: 10px 0; line-height: 1.9; }
+
+.platform-zhihu .preview-frame { padding: 20px 24px; font-size: 16px; }
+.platform-zhihu .preview-frame blockquote { background: #f6f9ff; border-left-color: #0066ff; }
+.platform-zhihu .preview-frame a { color: #0066ff; }

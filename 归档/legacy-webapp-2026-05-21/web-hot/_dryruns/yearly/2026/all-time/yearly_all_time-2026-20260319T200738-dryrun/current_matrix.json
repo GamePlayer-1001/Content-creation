@@ -1,0 +1,50 @@
+{
+  "rows": [
+    [
+      "period_family",
+      "yearly_all_time",
+      "period_value",
+      "2026",
+      "generated_at",
+      "2026-03-19T20:07:38.586196+08:00"
+    ],
+    [],
+    [
+      "平台",
+      "AI 科技",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "编号",
+      "最多浏览",
+      "最多点赞",
+      "最多收藏",
+      "上升趋势最快",
+      "错误码+说明"
+    ],
+    [
+      "YouTube",
+      "1",
+      "AI Agents, Clearly Explained\n作者：Jeff Su\n时间：2025-04-08T08:00:00+08:00\n指标：views=3978655；likes=98419；comments=2600\nhttps://www.youtube.com/watch?v=FwOTs4UxQS4",
+      "From Zero to Your First AI Agent in 25 Minutes (No Coding)\n作者：Futurepedia\n时间：2025-05-21T08:00:00+08:00\n指标：views=3369359；likes=89817；comments=1900\nhttps://www.youtube.com/watch?v=EH5jx5qPabU",
+      "",
+      "What are AI Agents?\n作者：IBM Technology\n时间：2024-07-15T08:00:00+08:00\n指标：views=1667997；likes=31105；comments=1000\nhttps://www.youtube.com/watch?v=F8NKVhkZZWI",
+      "最多点赞：run_dedup=1\n最多收藏：na | YouTube 缺公开收藏 / favorite 排序。\n上升趋势最快：run_dedup=2"
+    ],
+    [
+      "",
+      "2",
+      "Don't learn AI Agents without Learning these Fundamentals\n作者：KodeKloud\n时间：2025-10-21T08:00:00+08:00\n指标：views=565978；likes=13043；comments=370\nhttps://www.youtube.com/watch?v=ZaPbP9DwBOE",
+      "AI Agents Fundamentals In 21 Minutes\n作者：Tina Huang\n时间：2025-02-16T08:00:00+08:00\n指标：views=1466197；likes=49896；comments=1200\nhttps://www.youtube.com/watch?v=qU3fmidNbJE",
+      "",
+      "Building AI Agents In 44 Minutes\n作者：Tina Huang\n时间：2025-04-21T08:00:00+08:00\n指标：views=398490；likes=12514；comments=356\nhttps://www.youtube.com/watch?v=_Udb5NC6vTI",
+      ""
+    ],
+    []
+  ]
+}

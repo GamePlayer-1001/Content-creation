@@ -1,0 +1,64 @@
+{
+  "header": [
+    "run_id",
+    "generated_at",
+    "period_family",
+    "period_value",
+    "platform",
+    "topic",
+    "mode",
+    "rank",
+    "title",
+    "author",
+    "url",
+    "created_at",
+    "error_code_note"
+  ],
+  "rows": [
+    [
+      "yearly_all_time-2026-20260320T123552-dryrun",
+      "2026-03-20T12:35:52.627176+08:00",
+      "yearly_all_time",
+      "2026",
+      "稀土掘金",
+      "AI 科技",
+      "最多浏览",
+      "1",
+      "我是IDEA重度用户，试了4款AI编程插件：有一款有并发Bug，有一款越用越香",
+      "栈外",
+      "https://juejin.cn/post/7618456150179332122",
+      "",
+      ""
+    ],
+    [
+      "yearly_all_time-2026-20260320T123552-dryrun",
+      "2026-03-20T12:35:52.627176+08:00",
+      "yearly_all_time",
+      "2026",
+      "稀土掘金",
+      "AI 科技",
+      "最多浏览",
+      "2",
+      "有个同事因为恐惧 AI 要离职了",
+      "码上实战",
+      "https://juejin.cn/post/7618503673094062131",
+      "",
+      ""
+    ],
+    [
+      "yearly_all_time-2026-20260320T123552-dryrun",
+      "2026-03-20T12:35:52.627176+08:00",
+      "yearly_all_time",
+      "2026",
+      "稀土掘金",
+      "AI 科技",
+      "最多浏览",
+      "3",
+      "我把 CompletableFuture 踩坑经验写成了 AI Skill，比自己写代码还靠谱",
+      "桦说编程",
+      "https://juejin.cn/post/7616129123816112155",
+      "",
+      ""
+    ]
+  ]
+}
