@@ -12,6 +12,15 @@ import configRouter from './routes/config.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3210;
 
+// 全局异常捕获 — 防止未处理的异常导致进程崩溃
+process.on('uncaughtException', (err) => {
+  console.error('[FATAL] 未捕获异常:', err.message);
+  console.error(err.stack);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('[FATAL] 未处理的 Promise 拒绝:', reason);
+});
+
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));

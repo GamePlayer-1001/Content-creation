@@ -23,20 +23,38 @@ const targets = [
     type: 'academic_paper'
   },
   {
-    title: '智能治理伦理风险的关键影响因素研究',
-    author: '开放全文页面作者',
+    title: '教育领域数字孪生技术应用的伦理问题研究',
+    author: '刁生富（佛山科学技术学院教授，博士）',
     source: 'html.rhhz.net',
-    url: 'https://html.rhhz.net/KXYSH/html/a3ebb157-9853-424d-80d3-a9e5811bcb13.htm',
-    out: 'templates/中文/学术论文/智能治理伦理风险的关键影响因素研究.md',
+    url: 'https://html.rhhz.net/HNLGDXXBSKB/html/2022-6-16.htm',
+    out: 'templates/中文/学术论文/教育领域数字孪生技术应用的伦理问题研究.md',
     language: 'zh',
     type: 'academic_paper'
   },
   {
-    title: '实验型硕博士学位论文英语摘要的语步研究',
-    author: '开放全文页面作者',
+    title: '信息技术对未来社会的影响',
+    author: '王克迪（中央党校哲学教研部教授）',
     source: 'html.rhhz.net',
-    url: 'https://html.rhhz.net/XNSYDXXBSKB/HTML/2020-4-103.htm',
-    out: 'templates/中文/学术论文/实验型硕博士学位论文英语摘要的语步研究.md',
+    url: 'https://html.rhhz.net/KXYSH/html/f212e051-e77a-49f2-946f-dc675d2871bf.htm',
+    out: 'templates/中文/学术论文/信息技术对未来社会的影响.md',
+    language: 'zh',
+    type: 'academic_paper'
+  },
+  {
+    title: '下一代人工智能的挑战与思考',
+    author: '焦李成（西安电子科技大学教授，博士生导师）',
+    source: 'html.rhhz.net',
+    url: 'http://html.rhhz.net/tis/html/202103043.htm',
+    out: 'templates/中文/学术论文/下一代人工智能的挑战与思考.md',
+    language: 'zh',
+    type: 'academic_paper'
+  },
+  {
+    title: '机制主义人工智能理论——一种通用的人工智能理论',
+    author: '钟义信（北京邮电大学教授，博士生导师）',
+    source: 'html.rhhz.net',
+    url: 'http://html.rhhz.net/tis/html/201711032.htm',
+    out: 'templates/中文/学术论文/机制主义人工智能理论.md',
     language: 'zh',
     type: 'academic_paper'
   },
@@ -84,6 +102,69 @@ const targets = [
     out: 'templates/英文/academic/ethics-and-journalistic-challenges-in-ai-age.md',
     language: 'en',
     type: 'academic_paper'
+  },
+  {
+    title: '生成式人工智能对研究生师生角色的消解与重构',
+    author: '开放全文页面作者',
+    source: 'html.rhhz.net',
+    url: 'https://html.rhhz.net/yjyjyyj/html/20230507.htm',
+    out: 'templates/中文/学术论文/生成式人工智能对研究生师生角色的消解与重构.md',
+    language: 'zh',
+    type: 'academic_paper'
+  },
+  {
+    title: '政务短视频发展现状及在政府传播中的作用',
+    author: '开放全文页面作者',
+    source: 'html.rhhz.net',
+    url: 'http://html.rhhz.net/BJHKHTDXXBSKB/20190618.htm',
+    out: 'templates/中文/学术论文/政务短视频发展现状及在政府传播中的作用.md',
+    language: 'zh',
+    type: 'academic_paper'
+  },
+  {
+    title: '面向智能教育的自适应学习关键技术与应用',
+    author: '开放全文页面作者',
+    source: 'html.rhhz.net',
+    url: 'https://html.rhhz.net/tis/html/202105036.htm',
+    out: 'templates/中文/学术论文/面向智能教育的自适应学习关键技术与应用.md',
+    language: 'zh',
+    type: 'academic_paper'
+  },
+  {
+    title: 'Community Guidelines Make this the Best Party on the Internet: An In-Depth Study of Online Platforms',
+    author: 'arXiv authors (CHI 2024)',
+    source: 'arXiv',
+    url: 'https://arxiv.org/html/2405.05225v1',
+    out: 'templates/英文/academic/community-guidelines-best-party-internet.md',
+    language: 'en',
+    type: 'academic_preprint'
+  },
+  {
+    title: 'Content ARCs: Decentralized Content Rights in the Age of Generative AI',
+    author: 'arXiv authors',
+    source: 'arXiv',
+    url: 'https://arxiv.org/html/2503.14519v2',
+    out: 'templates/英文/academic/content-arcs-decentralized-rights.md',
+    language: 'en',
+    type: 'academic_preprint'
+  },
+  {
+    title: 'Rich-Get-Richer? Analyzing Content Creator Earnings Across Online Platforms',
+    author: 'Ilan Strauss et al. (arXiv)',
+    source: 'arXiv',
+    url: 'https://arxiv.org/html/2509.26523v1',
+    out: 'templates/英文/academic/rich-get-richer-creator-earnings.md',
+    language: 'en',
+    type: 'academic_preprint'
+  },
+  {
+    title: 'Designing Usable Controls for Customizable Social Media Feeds',
+    author: 'arXiv authors',
+    source: 'arXiv',
+    url: 'https://arxiv.org/html/2509.19615v1',
+    out: 'templates/英文/academic/designing-usable-controls-social-media-feeds.md',
+    language: 'en',
+    type: 'academic_preprint'
   }
 ];
 

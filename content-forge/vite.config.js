@@ -15,6 +15,8 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:3210',
         changeOrigin: true,
+        timeout: 300000,       // 5分钟超时，SSE长连接需要
+        proxyTimeout: 300000,
       },
     },
   },

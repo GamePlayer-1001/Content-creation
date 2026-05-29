@@ -65,6 +65,8 @@ async function loadTemplates() {
         platform,
         kind,
         language,
+        quality: data.quality || null, // gold | avoid | suspect | likely_human | null
+        humanScore: typeof data.human_score === 'number' ? data.human_score : null,
         content: content.slice(0, 3000), // 截取前3000字作为参考
         filename: path.basename(file),
       });
@@ -80,32 +82,42 @@ async function loadTemplates() {
 
 /**
  * 按平台随机抽取范文
+ *
+ * 采样策略（2026-05-22 重构）：
+ * - platform === 'master' | 'draft' → 仅采样学术论文（母稿统一用学术范文）
+ * - platform 为具体平台名（wechat / toutiao / xiaohongshu / x / medium / quora / reddit）
+ *   → 仅采样该平台真人范文；若数量不足，fallback 到学术论文（按语言匹配）
+ * - 学术论文按 kind === 'academic' 识别，平台真人稿排除 kind === 'academic'
+ * - quality: avoid 的范文一律剔除（朱雀实测为 AI 协助稿）
  */
 export async function sampleTemplates(platform, count = 2) {
   const templates = await loadTemplates();
+  const isMaster = platform === 'master' || platform === 'draft';
   const preferredLanguage = ENGLISH_PLATFORMS.has(platform) ? 'en' : 'zh';
 
-  // 优先抽取目标平台的真人范文
-  const platformTemplates = templates.filter(t => t.platform === platform && t.kind !== 'academic');
-  const academicTemplates = templates.filter(t => t.kind === 'academic' && t.language === preferredLanguage);
-  const platformCount = academicTemplates.length > 0 && count > 1 ? count - 1 : count;
-  const picked = [];
+  // 全局先排除被标记为 avoid 的范文
+  const usable = templates.filter(t => t.quality !== 'avoid');
 
-  // 从目标平台随机抽取
-  const shuffledPlatform = platformTemplates.sort(() => Math.random() - 0.5);
-  picked.push(...shuffledPlatform.slice(0, platformCount));
+  const academicPool = usable.filter(t => t.kind === 'academic' && t.language === preferredLanguage);
 
-  if (picked.length < count && academicTemplates.length > 0) {
-    const shuffledAcademic = academicTemplates.sort(() => Math.random() - 0.5);
-    picked.push(...shuffledAcademic.slice(0, count - picked.length));
+  // 母稿：直接返回学术论文
+  if (isMaster) {
+    const shuffled = academicPool.sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, count);
   }
 
-  // 如果目标平台范文不够，从其他平台的真人范文中补充（跨平台多样性）
-  if (picked.length < count) {
-    const otherTemplates = templates
-      .filter(t => !picked.includes(t) && t.language === preferredLanguage)
-      .sort(() => Math.random() - 0.5);
-    picked.push(...otherTemplates.slice(0, count - picked.length));
+  // 平台稿：优先该平台真人范文
+  const platformPool = usable.filter(t => t.platform === platform && t.kind !== 'academic');
+  const shuffledPlatform = platformPool.sort(() => Math.random() - 0.5);
+  const picked = shuffledPlatform.slice(0, count);
+
+  // 数量不足 → fallback 到学术
+  if (picked.length < count && academicPool.length > 0) {
+    const shuffledAcademic = academicPool.sort(() => Math.random() - 0.5);
+    for (const t of shuffledAcademic) {
+      if (picked.length >= count) break;
+      if (!picked.includes(t)) picked.push(t);
+    }
   }
 
   return picked;

@@ -64,11 +64,13 @@ const REWRITE_SYSTEM = `你的任务：把一篇文章用完全不同的措辞�
  * 生成母稿（两阶段：DeepSeek初稿 → GPT-4o-mini改写 → 代码后处理）
  */
 export async function generateDraft(topic, context, res) {
-  const samples = await sampleTemplates('wechat', 3);
+  // 母稿统一使用学术论文作为风格参考（2026-05-22 重构）
+  // 平台改写阶段才使用对应平台真人范文
+  const samples = await sampleTemplates('master', 3);
   const styleHint = buildStylePrompt(samples);
 
   const sampleTexts = samples
-    .map((s, i) => `--- 范文${i + 1}「${s.title}」---\n${s.content.slice(0, 2500)}`)
+    .map((s, i) => `--- 学术范文${i + 1}「${s.title}」---\n${s.content.slice(0, 2500)}`)
     .join('\n\n');
 
   // SSE 流式返回
@@ -122,7 +124,7 @@ ${context ? `补充：${context}` : ''}
     return '';
   }
 
-  // ===== 阶段2：GPT-4o-mini 用不同的token分布改写（流式给用户）=====
+  // ===== 阶段2：用不同的 temperature/prompt 改写（流式给用户）=====
   res.write(`data: ${JSON.stringify({ type: 'phase', content: '✍️ 阶段2/2：正在深度改写去AI化...' })}\n\n`);
 
   const rewriteMessages = [
@@ -130,18 +132,15 @@ ${context ? `补充：${context}` : ''}
     { role: 'user', content: `改写这篇文章：\n\n${rawDraft}` },
   ];
 
-  // 使用 dlapi 端点 + GPT-4o-mini（与DeepSeek不同的模型架构 = 不同的token分布）
-  const rewriteApiBase = process.env.AI_API_BASE || 'https://api.dlapi.xyz/v1';
-  const rewriteApiKey = process.env.AI_API_KEY || '';
-
+  // 改写阶段使用配置的模型（通过不同的 temperature 和 prompt 实现不同的表达分布）
   let finalContent = '';
+  const isClientClosed = res._isClientClosed || (() => false);
   try {
     finalContent = await streamChat(rewriteMessages, (chunk) => {
-      res.write(`data: ${JSON.stringify({ type: 'chunk', content: chunk })}\n\n`);
+      if (!isClientClosed()) {
+        try { res.write(`data: ${JSON.stringify({ type: 'chunk', content: chunk })}\n\n`); } catch {}
+      }
     }, {
-      model: 'gpt-4o-mini',
-      apiBase: rewriteApiBase,
-      apiKey: rewriteApiKey,
       temperature: 0.85,
       maxTokens: 6000,
       frequencyPenalty: 0.3,
@@ -152,8 +151,8 @@ ${context ? `补充：${context}` : ''}
     const humanized = humanizeText(finalContent);
     res.write(`data: ${JSON.stringify({ type: 'done', content: humanized })}\n\n`);
   } catch (rewriteErr) {
-    // GPT-4o-mini改写失败，回退到直接用代码后处理DeepSeek初稿
-    console.warn('GPT-4o-mini改写失败，回退到代码后处理：', rewriteErr.message);
+    // 改写失败，回退到直接用代码后处理初稿
+    console.warn('改写阶段失败，回退到代码后处理：', rewriteErr.message);
     const fallback = humanizeText(rawDraft);
     res.write(`data: ${JSON.stringify({ type: 'done', content: fallback })}\n\n`);
   }
